@@ -5,6 +5,17 @@
 #include "fork.h"
 #include "error.h"
 #include "tcpto.h"
+#include "env.h"
+
+static char *qrargs[1] = { 0 };
+
+static void setup_qrargs()
+{
+ if (!qrargs[0])
+  qrargs[0] = env_get("QMAILREMOTE");
+ if (!qrargs[0])
+  qrargs[0] = "qmail-remote";
+}
 
 void initialize(argc,argv)
 int argc;
@@ -84,7 +95,9 @@ char *s; char *r; int at;
  int f;
  char *(args[5]);
 
- args[0] = "qmail-remote";
+ setup_qrargs();
+
+ args[0] = qrargs[0];
  args[1] = r + at + 1;
  args[2] = s;
  args[3] = r;
