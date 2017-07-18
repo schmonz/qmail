@@ -136,6 +136,11 @@ auto_usera.o: \
 compile auto_usera.c
 	./compile auto_usera.c
 
+badrcptto.o: \
+compile badrcptto.c byte.h constmap.h control.h env.h fmt.h str.h \
+stralloc.h strerr.h
+	./compile badrcptto.c
+
 binm1: \
 binm1.sh conf-qmail
 	cat binm1.sh \
@@ -236,6 +241,10 @@ compile case_lowerb.c case.h
 case_lowers.o: \
 compile case_lowers.c case.h
 	./compile case_lowers.c
+
+case_startb2.o: \
+compile case_startb2.c case.h
+	./compile case_startb2.c
 
 case_starts.o: \
 compile case_starts.c case.h
@@ -1331,6 +1340,44 @@ fmt.h str.h scan.h open.h error.h getln.h auto_break.h auto_qmail.h \
 auto_usera.h
 	./compile qmail-pw2u.c
 
+qmail-qfilter-ofmipd-queue: \
+load qmail-qfilter-ofmipd-queue.o control.o error.a fs.a getln.a \
+open.a stralloc.a substdio.a str.a alloc.a wait.a
+	./load qmail-qfilter-ofmipd-queue control.o error.a fs.a getln.a \
+	open.a stralloc.a substdio.a str.a alloc.a wait.a
+
+qmail-qfilter-ofmipd-queue.c: \
+qmail-qfilter-smtpd-queue.c
+	cat qmail-qfilter-smtpd-queue.c \
+	| sed s}control/smtpfilters}control/ofmipfilters}g \
+	> qmail-qfilter-ofmipd-queue.c
+
+qmail-qfilter-ofmipd-queue.o: \
+compile qmail-qfilter-ofmipd-queue.c control.h stralloc.h wait.h
+	./compile qmail-qfilter-ofmipd-queue.c
+
+qmail-qfilter-smtpd-queue: \
+load qmail-qfilter-smtpd-queue.o control.o error.a fs.a getln.a \
+open.a stralloc.a substdio.a str.a alloc.a wait.a
+	./load qmail-qfilter-smtpd-queue control.o error.a fs.a getln.a \
+	open.a stralloc.a substdio.a str.a alloc.a wait.a
+
+qmail-qfilter-smtpd-queue.o: \
+compile qmail-qfilter-smtpd-queue.c control.h stralloc.h wait.h
+	./compile qmail-qfilter-smtpd-queue.c
+
+qmail-qfilter-viruscan: \
+load qmail-qfilter-viruscan.o viruscan.o case_startb2.o control.o \
+env.a error.a case.a fs.a getln.a open.a stralloc.a substdio.a \
+str.a alloc.a
+	./load qmail-qfilter-viruscan viruscan.o case_startb2.o control.o \
+	env.a error.a case.a fs.a getln.a open.a stralloc.a substdio.a \
+	str.a alloc.a
+
+qmail-qfilter-viruscan.o: \
+compile qmail-qfilter-viruscan.c viruscan.h
+	./compile qmail-qfilter-viruscan.c
+
 qmail-qmqpc: \
 load qmail-qmqpc.o slurpclose.o timeoutread.o timeoutwrite.o \
 timeoutconn.o ip.o control.o auto_qmail.o sig.a ndelay.a open.a \
@@ -1436,6 +1483,54 @@ compile qmail-queue.c readwrite.h sig.h exit.h open.h seek.h fmt.h \
 alloc.h substdio.h datetime.h now.h datetime.h triggerpull.h extra.h \
 auto_qmail.h auto_uids.h date822fmt.h fmtqfn.h
 	./compile qmail-queue.c
+
+qmail-rcptcheck: \
+load qmail-rcptcheck.o control.o error.a fs.a getln.a open.a \
+stralloc.a substdio.a str.a alloc.a wait.a
+	./load qmail-rcptcheck control.o error.a fs.a getln.a open.a \
+	stralloc.a substdio.a str.a alloc.a wait.a
+
+qmail-rcptcheck-badrcptto: \
+load qmail-rcptcheck-badrcptto.o badrcptto.o control.o constmap.o \
+case.a env.a fs.a getln.a open.a stralloc.a strerr.a substdio.a \
+error.a str.a alloc.a
+	./load qmail-rcptcheck-badrcptto badrcptto.o control.o constmap.o \
+	case.a env.a fs.a getln.a open.a stralloc.a strerr.a substdio.a \
+	error.a str.a alloc.a
+
+qmail-rcptcheck-badrcptto.o: \
+compile qmail-rcptcheck-badrcptto.c badrcptto.h env.h
+	./compile qmail-rcptcheck-badrcptto.c
+
+qmail-rcptcheck-qregex: \
+load qmail-rcptcheck-qregex.o qregexrcptto.o control.o env.a \
+qregex.o stralloc.a strerr.a error.a getln.a open.a fs.a \
+substdio.a str.a alloc.a
+	./load qmail-rcptcheck-qregex qregexrcptto.o control.o env.a \
+	qregex.o stralloc.a strerr.a error.a getln.a open.a fs.a \
+	substdio.a str.a alloc.a
+
+qmail-rcptcheck-qregex.o: \
+compile qmail-rcptcheck-qregex.c env.h qregexrcptto.h
+	./compile qmail-rcptcheck-qregex.c
+
+qmail-rcptcheck-realrcptto: \
+load qmail-rcptcheck-realrcptto.o realrcptto.o auto_break.o \
+auto_usera.o control.o constmap.o timeoutwrite.o \
+case.a cdb.a env.a error.a fs.a getln.a open.a str.a stralloc.a \
+alloc.a substdio.a
+	./load qmail-rcptcheck-realrcptto realrcptto.o auto_break.o \
+	auto_usera.o control.o constmap.o timeoutwrite.o \
+	case.a cdb.a env.a error.a fs.a getln.a open.a str.a stralloc.a \
+	alloc.a substdio.a
+
+qmail-rcptcheck-realrcptto.o: \
+compile qmail-rcptcheck-realrcptto.c env.h realrcptto.h
+	./compile qmail-rcptcheck-realrcptto.c
+
+qmail-rcptcheck.o: \
+compile qmail-rcptcheck.c control.h stralloc.h wait.h
+	./compile qmail-rcptcheck.c
 
 qmail-remote: \
 load qmail-remote.o control.o constmap.o timeoutread.o timeoutwrite.o \
@@ -1655,6 +1750,14 @@ gen_alloc.h error.h gen_alloc.h gen_allocdefs.h headerbody.h exit.h \
 open.h quote.h qmail.h substdio.h
 	./compile qreceipt.c
 
+qregex.o: \
+compile qregex.c qregex.h
+	./compile qregex.c
+
+qregexrcptto.o: \
+compile qregexrcptto.c control.h env.h qregex.h stralloc.h strerr.h
+	./compile qregexrcptto.c
+
 qsmhook: \
 load qsmhook.o sig.a case.a fd.a wait.a getopt.a env.a stralloc.a \
 alloc.a substdio.a error.a str.a
@@ -1686,6 +1789,11 @@ compile readsubdir.c readsubdir.h direntry.h fmt.h scan.h str.h \
 auto_split.h
 	./compile readsubdir.c
 
+realrcptto.o: \
+compile realrcptto.c auto_break.h auto_usera.h byte.h case.h cdb.h \
+constmap.h error.h fmt.h open.h str.h stralloc.h uint32.h
+	./compile realrcptto.c
+
 received.o: \
 compile received.c fmt.h qmail.h substdio.h now.h datetime.h \
 datetime.h date822fmt.h received.h
@@ -1695,6 +1803,12 @@ remoteinfo.o: \
 compile remoteinfo.c byte.h substdio.h ip.h fmt.h timeoutconn.h \
 timeoutread.h timeoutwrite.h remoteinfo.h
 	./compile remoteinfo.c
+
+rejectutils: \
+qmail-qfilter-ofmipd-queue qmail-qfilter-smtpd-queue \
+qmail-qfilter-viruscan \
+qmail-rcptcheck \
+qmail-rcptcheck-badrcptto qmail-rcptcheck-qregex qmail-rcptcheck-realrcptto
 
 scan_8long.o: \
 compile scan_8long.c scan.h
@@ -2127,6 +2241,10 @@ tryulong32.c compile load uint32.h1 uint32.h2
 	./tryulong32 ) >/dev/null 2>&1 \
 	&& cat uint32.h2 || cat uint32.h1 ) > uint32.h
 	rm -f tryulong32.o tryulong32
+
+viruscan.o: \
+compile viruscan.c byte.h case.h control.h env.h fmt.h getln.h str.h stralloc.h substdio.h
+	./compile viruscan.c
 
 wait.a: \
 makelib wait_pid.o wait_nohang.o
