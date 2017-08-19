@@ -1,0 +1,61 @@
+.TH qmail-smtpup 8
+.SH NAME
+qmail-smtpup \- read an SMTP username and password
+.SH SYNOPSIS
+.B qmail-smtpup
+.I hostname
+.I subprogram
+.SH DESCRIPTION
+.B qmail-smtpup
+reads an SMTP username and password from the network.
+It then runs
+.IR subprogram .
+
+.B qmail-smtpup
+is most commonly invoked from
+.B tcpserver
+as
+
+.EX
+   qmail-smtpup CHANGEME checkpassword qmail-fixsmtpio qmail-smtpd
+.EE
+
+with
+CHANGEME
+replaced by the fully qualified domain name of the local host.
+
+.B qmail-smtpup
+expects descriptor 0 to read from the network
+and descriptor 1 to write to the network.
+It reads a username and password from descriptor 0
+in SMTP's AUTH LOGIN style or AUTH PLAIN style.
+It invokes
+.IR subprogram ,
+with the same descriptors 0 and 1;
+descriptor 2 writing to the network;
+and descriptor 3 reading the username, a 0 byte, the password,
+and a final 0 byte.
+.B qmail-smtpup
+then waits for
+.I subprogram
+to finish.
+It prints an error message if
+.I subprogram
+crashes or exits nonzero.
+
+.B qmail-smtpup
+should be used only within
+a secure network.
+Otherwise an eavesdropper can steal passwords.
+
+.B qmail-smtpup
+has a 20-minute idle timeout.
+
+.B qmail-smtpup
+is based on
+.BR qmail-popup
+and XXX's SMTP AUTH patch for
+.BR qmail-smtpd.
+.SH "SEE ALSO"
+qmail-fixsmtpio(8),
+qmail-smtpd(8)
