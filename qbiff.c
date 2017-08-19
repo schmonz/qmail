@@ -115,7 +115,7 @@ void main()
      byte_copy(line,sizeof(ut.ut_line),ut.ut_line);
      line[sizeof(ut.ut_line)] = 0;
 #else
- while ((ut = getutxent()) != NULL)
+ while ((ut = getutxent()))
    if (ut->ut_type == USER_PROCESS && !str_diffn(ut->ut_user,user,sizeof(ut->ut_user)))
     {
      byte_copy(line,sizeof(ut->ut_line),ut->ut_line);
