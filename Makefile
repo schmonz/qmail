@@ -94,6 +94,10 @@ auto_qmail.o: \
 compile auto_qmail.c
 	./compile auto_qmail.c
 
+base64.o: \
+compile base64.c base64.h
+	./compile base64.c
+
 auto_spawn.c: \
 auto-int conf-spawn
 	./auto-int auto_spawn `head -1 conf-spawn` > auto_spawn.c
@@ -1555,6 +1559,20 @@ error.h ipme.h ip.h ipalloc.h ip.h gen_alloc.h ip.h qmail.h \
 substdio.h str.h fmt.h scan.h byte.h case.h env.h now.h datetime.h \
 exit.h rcpthosts.h timeoutread.h timeoutwrite.h commands.h
 	./compile qmail-smtpd.c
+
+qmail-smtpup: \
+load qmail-smtpup.o base64.o commands.o timeoutread.o timeoutwrite.o now.o \
+case.a env.a fd.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
+fs.a socket.lib
+	./load qmail-smtpup base64.o commands.o timeoutread.o timeoutwrite.o \
+	now.o case.a env.a fd.a sig.a wait.a stralloc.a alloc.a \
+	substdio.a error.a str.a fs.a  `cat socket.lib`
+
+qmail-smtpup.o: \
+compile qmail-smtpup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
+substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
+readwrite.h timeoutread.h timeoutwrite.h base64.h case.h
+	./compile qmail-smtpup.c
 
 qmail-start: \
 load qmail-start.o prot.o fd.a auto_uids.o
