@@ -388,3 +388,5 @@ check
 base64.o
 qmail-smtpup
 qmail-smtpup.o
+qmail-fixsmtpio
+qmail-fixsmtpio.o
