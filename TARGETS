@@ -390,3 +390,5 @@ qmail-smtpup
 qmail-smtpup.o
 qmail-fixsmtpio
 qmail-fixsmtpio.o
+checkpassword-rejectroot
+checkpassword-rejectroot.o

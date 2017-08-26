@@ -287,6 +287,14 @@ check: \
 it man
 	./instcheck
 
+checkpassword-rejectroot: \
+load checkpassword-rejectroot.o substdio.a error.a str.a
+	./load checkpassword-rejectroot substdio.a error.a str.a
+
+checkpassword-rejectroot.o: \
+compile checkpassword-rejectroot.c exit.h readwrite.h substdio.h
+	./compile checkpassword-rejectroot.c
+
 chkshsgr: \
 load chkshsgr.o
 	./load chkshsgr 
