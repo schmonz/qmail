@@ -113,6 +113,10 @@ sub is_network_service {
 sub main {
     my (@args) = @_;
 
+    if ($< == 0) {
+        warn "fixsmtpio.pl refuses to run as root\n";
+        exit(1);
+    }
     die "usage: fixsmtpio.pl program [ arg ... ]\n" unless @args >= 1;
 
     pipe(my $from_smtpd, my $to_proxy) or die "pipe: $!";
