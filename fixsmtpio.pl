@@ -8,6 +8,7 @@ use POSIX qw(_exit);
 sub send_request {
     my ($to_smtpd, $verb, $arg) = @_;
     print $to_smtpd "$verb $arg$/";
+    $to_smtpd->flush();
 }
 
 sub receive_response {
@@ -20,7 +21,7 @@ sub munge_response {
     my ($verb, $arg, $response) = @_;
 
     if ('banner' eq $verb) {;
-        $response = qq{235 ok go ahead (#2.0.0)};
+        $response = qq{235 ok go ahead $< (#2.0.0)};
         if (defined $ENV{SMTPUSER}) {
             $response =~ s/ok go/ok, $ENV{SMTPUSER}, go/;
         }
@@ -39,6 +40,7 @@ sub munge_response {
 sub send_response {
     my ($to_client, $response) = @_;
     print $to_client "$response$/";
+    $to_client->flush();
 }
 
 sub setup_smtpd {
@@ -71,6 +73,7 @@ sub setup_proxy {
     my ($from_proxy, $to_proxy) = @_;
     close($from_proxy);
     close($to_proxy);
+    $/ = "\r\n" if is_network_service();
 }
 
 sub do_proxy_stuff {
@@ -112,17 +115,11 @@ sub main {
 
     die "usage: fixsmtpio.pl program [ arg ... ]\n" unless @args >= 1;
 
-    $/ = "\r\n" if is_network_service();
-    
     pipe(my $from_smtpd, my $to_proxy) or die "pipe: $!";
-    $to_proxy->autoflush(1);
     pipe(my $from_proxy, my $to_smtpd) or die "pipe: $!";
-    $to_smtpd->autoflush(1);
 
     my $from_client = \*STDIN;
-    $from_client->autoflush(1);
     my $to_client = \*STDOUT;
-    $to_client->autoflush(1);
 
     if (my $pid = fork()) {
         setup_smtpd($from_proxy, $to_smtpd, $from_smtpd, $to_proxy);
