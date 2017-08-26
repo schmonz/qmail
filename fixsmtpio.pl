@@ -7,8 +7,7 @@ use POSIX qw(_exit);
 
 sub send_request {
     my ($to_smtpd, $verb, $arg) = @_;
-    print $to_smtpd "$verb $arg$/";
-    $to_smtpd->flush();
+    syswrite($to_smtpd,"$verb $arg$/");
 }
 
 sub receive_response {
@@ -39,8 +38,7 @@ sub munge_response {
 
 sub send_response {
     my ($to_client, $response) = @_;
-    print $to_client "$response$/";
-    $to_client->flush();
+    syswrite($to_client, "$response$/");
 }
 
 sub setup_smtpd {
@@ -78,25 +76,54 @@ sub setup_proxy {
 
 sub do_proxy_stuff {
     my ($from_client, $to_smtpd, $from_smtpd, $to_client) = @_;
-    my $response;
 
-    send_response($to_client, munge_response('banner', '', receive_response($from_smtpd)));
+    my $artificially_large_buffer = 300;
 
-    while (my $request = <$from_client>) {
-        chomp $request;
-        my $response;
+    my $timeout = 3.14159;
+    my $rin;
+    vec($rin,fileno($from_client),1) = 1;
+    vec($rin,fileno($from_smtpd),1) = 1;
 
-        my ($verb, $arg) = split(/ /, $request, 2);
-        $arg ||= '';
-        if (my $sub = handle_internally($verb, $arg)) {
-            $response = $sub->($verb, $arg);
-        } else {
-            send_request($to_smtpd, $verb, $arg);
-            $response = receive_response($from_smtpd);
+    my ($verb, $arg) = ('banner', '');
+	for (;;) {
+		my $nfound = select(my $rout = $rin,undef,undef,$timeout);
+		next unless $nfound;
+
+        if (vec($rout,fileno($from_client),1) == 1) {
+            my $bytesread = sysread($from_client, my $partial_request, $artificially_large_buffer);
+            if ($bytesread == -1) {
+                die "sysread from_client: $!\n";
+            }
+            if ($bytesread == 0) {
+                #print $to_client "client sent EOF\r\n";
+                last;
+            }
+            chomp($partial_request);
+            #print $to_client "received from client: $bytes\r\n";
+            ($verb, $arg) = split(/ /, $partial_request, 2);
+            $arg ||= '';
+            if (my $sub = handle_internally($verb, $arg)) {
+                send_response($to_client, munge_response($verb, $arg, $sub->($verb, $arg)));
+            } else {
+                send_request($to_smtpd, $verb, $arg);
+            }
         }
 
-        send_response($to_client, munge_response($verb, $arg, $response));
-    }
+        if (vec($rout,fileno($from_smtpd),1) == 1) {
+            my $bytesread = sysread($from_smtpd, my $partial_response, $artificially_large_buffer);
+            if ($bytesread == -1) {
+                die "sysread from_smtpd $!\n";
+            }
+            if ($bytesread == 0) {
+                #print $to_client "smtpd sent EOF\r\n";
+                last;
+            }
+            chomp($partial_response);
+            #print $to_client "received from smtpd: $partial_response\r\n";
+            send_response($to_client, munge_response($verb, $arg, $partial_response));
+            ($verb, $arg) = ('','');
+        }
+	}
 }
 
 sub teardown_proxy_and_never_return {
@@ -141,9 +168,10 @@ main(@ARGV);
 
 __DATA__
 
-We'll deadlock if we're expecting the wrong number of lines from the server
-- use 4-arg select() with sysread(), instead of $line = <$fd>
-- and therefore must use syswrite() as well
+Set read buffer to 1 byte to force me to parse responses before acting
+Then set read buffer to whatever qmail does
+Then understand the "timeout" param to select() and set it to something
+Then try being the parent instead of the child
 
 We don't understand multiline responses (such as from EHLO)
 - maybe the above will help receive them
