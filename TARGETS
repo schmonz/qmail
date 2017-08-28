@@ -386,8 +386,8 @@ man
 setup
 check
 base64.o
-qmail-smtpup
-qmail-smtpup.o
+qmail-authup
+qmail-authup.o
 qmail-fixsmtpio
 qmail-fixsmtpio.o
 checkpassword-rejectroot

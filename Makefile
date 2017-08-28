@@ -1086,6 +1086,20 @@ compile qbiff.c readwrite.h stralloc.h gen_alloc.h substdio.h subfd.h \
 substdio.h open.h byte.h str.h headerbody.h hfield.h env.h exit.h
 	./compile qbiff.c
 
+qmail-authup: \
+load qmail-authup.o base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
+fs.a socket.lib
+	./load qmail-authup base64.o commands.o control.o timeoutread.o timeoutwrite.o \
+	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
+	substdio.a error.a str.a fs.a  `cat socket.lib`
+
+qmail-authup.o: \
+compile qmail-authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
+substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
+readwrite.h timeoutread.h timeoutwrite.h base64.h case.h
+	./compile qmail-authup.c
+
 qmail-clean: \
 load qmail-clean.o fmtqfn.o now.o getln.a sig.a stralloc.a alloc.a \
 substdio.a error.a str.a fs.a auto_qmail.o auto_split.o
@@ -1575,20 +1589,6 @@ error.h ipme.h ip.h ipalloc.h ip.h gen_alloc.h ip.h qmail.h \
 substdio.h str.h fmt.h scan.h byte.h case.h env.h now.h datetime.h \
 exit.h rcpthosts.h timeoutread.h timeoutwrite.h commands.h
 	./compile qmail-smtpd.c
-
-qmail-smtpup: \
-load qmail-smtpup.o base64.o commands.o timeoutread.o timeoutwrite.o now.o \
-case.a env.a fd.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
-fs.a socket.lib
-	./load qmail-smtpup base64.o commands.o timeoutread.o timeoutwrite.o \
-	now.o case.a env.a fd.a sig.a wait.a stralloc.a alloc.a \
-	substdio.a error.a str.a fs.a  `cat socket.lib`
-
-qmail-smtpup.o: \
-compile qmail-smtpup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
-substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
-readwrite.h timeoutread.h timeoutwrite.h base64.h case.h
-	./compile qmail-smtpup.c
 
 qmail-start: \
 load qmail-start.o prot.o fd.a auto_uids.o
