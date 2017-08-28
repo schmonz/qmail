@@ -1,0 +1,132 @@
+.TH qmail-authup 8
+.SH NAME
+qmail-authup \- read an SMTP or POP3 username and password
+.SH SYNOPSIS
+.B qmail-authup
+.I protocol
+.I subprogram
+.SH DESCRIPTION
+.B qmail-authup
+reads an SMTP or POP3 username and password from the network.
+It then runs
+.IR subprogram .
+
+.B qmail-authup
+is most commonly invoked from
+.B tcpserver
+as
+
+.EX
+   qmail-reup qmail-authup smtp \\
+      checkpassword checkpassword-rejectroot \\
+      env RELAYCLIENT="" qmail-fixsmtpio \\
+      qmail-smtpd
+.EE
+
+or
+
+.EX
+   qmail-authup pop3 \\
+      checkpassword checkpassword-rejectroot \\
+      qmail-pop3d
+.EE
+
+as root, so that
+.B checkpassword
+can run
+.B qmail-smtpd
+or
+.B qmail-pop3d
+under the UID of the authenticated user.
+
+.B qmail-authup
+expects descriptor 0 to read from the network
+and descriptor 1 to write to the network.
+It reads a username and password from descriptor 0
+in SMTP's AUTH LOGIN or AUTH PLAIN styles
+or in POP3's USER-PASS style.
+It invokes
+.IR subprogram ,
+with the same descriptors 0 and 1;
+descriptor 2 writing to the network;
+and descriptor 3 reading the username, a 0 byte, the password,
+another 0 byte,
+an empty third datum,
+and a final 0 byte.
+.B qmail-authup
+then waits for
+.I subprogram
+to finish.
+It prints an error message if
+.I subprogram
+crashes or exits nonzero.
+
+.B qmail-authup
+should be used only within
+a secure network.
+Otherwise an eavesdropper can steal passwords.
+A future version of
+.B qmail-authup
+may include support for SMTP
+.B STARTTLS
+and POP3
+.BR STLS .
+In the meantime, have
+.B tcpserver
+listen only on 127.0.0.1
+and export the service to the network via
+.B stunnel
+(as an unprivileged user).
+For example, if listening on port 26, use
+.B stunnel.conf
+settings similar to these:
+
+   setuid = stunnel
+   [submission]
+   accept = submission
+   connect = localhost:26
+   protocol = smtp
+.SH "ENVIRONMENT VARIABLES"
+Child processes can inspect
+.B SMTPUSER
+or
+.B POP3USER
+for the name of the authenticated user.
+.SH "CONTROL FILES"
+.TP 5
+.I smtpgreeting / pop3greeting
+SMTP and POP3 greeting messages.
+Default:
+.IR me ,
+if that is supplied;
+otherwise
+.B qmail-authup
+will refuse to run.
+The first word of the greeting
+should be the current host's name.
+.TP 5
+.I timeoutsmtpd / timeoutpop3d
+Number of seconds
+.B qmail-authup
+will wait for each new buffer of data from the remote SMTP or POP3 client.
+Default: 1200.
+.SH "COMPATIBILITY"
+While
+.B CRAM-MD5
+is available in most SMTP AUTH patches, and
+.B APOP
+is available in
+.BR qmail-popup ,
+neither is currently supported by
+.BR qmail-authup .
+If you need them, please share your use case with the author.
+.SH "AUTHOR"
+.B Amitai Schleier <schmonz-web-authutils@schmonz.com>
+.SH "SEE ALSO"
+qmail-reup(8),
+checkpassword-rejectroot(8),
+qmail-fixsmtpio(8),
+stunnel(8),
+qmail-smtpd(8),
+qmail-pop3d(8),
+qmail-popup(8).
