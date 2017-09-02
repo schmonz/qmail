@@ -17,30 +17,22 @@
 #include "case.h"
 #include "env.h"
 #include "control.h"
+#include "error.h"
+
+int timeout = 1200;
 
 void die() { _exit(1); }
-
-int saferead(fd,buf,len) int fd; char *buf; int len;
-{
-  int r;
-  r = timeoutread(1200,fd,buf,len);
-  if (r <= 0) die();
-  return r;
-}
 
 int safewrite(fd,buf,len) int fd; char *buf; int len;
 {
   int r;
-  r = timeoutwrite(1200,fd,buf,len);
+  r = timeoutwrite(timeout,fd,buf,len);
   if (r <= 0) die();
   return r;
 }
 
 char ssoutbuf[128];
 substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
-
-char ssinbuf[128];
-substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
 
 void puts(char *s) { substdio_puts(&ssout,s); }
 void flush() { substdio_flush(&ssout); }
@@ -62,6 +54,8 @@ void die_usage() { puts("usage: qmail-authup <pop3|smtp> subprogram\n"); flush()
 void pop3_die_control() { pop3_err("qmail-authup unable to read controls"); die(); }
 void smtp_die_control() { smtp_err("421 qmail-authup unable to read controls (#4.3.0)"); die(); }
 
+void pop3_die_alarm() { pop3_err("qmail-authup timeout"); die(); }
+void smtp_die_alarm() { smtp_err("451 qmail-authup timeout (#4.4.2)"); die(); }
 void pop3_die_nomem() { pop3_err("qmail-authup out of memory"); die(); }
 void smtp_die_nomem() { smtp_err("451 qmail-authup out of memory (#4.3.0)"); die(); }
 void pop3_die_pipe() { pop3_err("qmail-authup unable to open pipe"); die(); }
@@ -83,6 +77,18 @@ void pop3_err_wantuser() { pop3_err("qmail-authup USER first"); }
 void smtp_die_noauth() { smtp_err("504 qmail-authup auth type unimplemented (#5.5.1)"); die(); }
 void smtp_die_input() { smtp_err("501 qmail-authup malformed auth input (#5.5.4)"); die(); }
 void smtp_die_authabrt() { smtp_err("501 qmail-authup auth exchange cancelled (#5.0.0)"); die(); }
+
+int saferead(fd,buf,len) int fd; char *buf; int len;
+{
+  int r;
+  r = timeoutread(timeout,fd,buf,len);
+  if (r == -1) if (errno == error_timeout) smtp_die_alarm();
+  if (r <= 0) die();
+  return r;
+}
+
+char ssinbuf[128];
+substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
 
 stralloc hostname = {0};
 stralloc username = {0};
@@ -360,22 +366,34 @@ struct commands smtpcommands[] = {
 };
 
 void dopop3() {
-  if (control_init() == -1) pop3_die_control();
+  if (control_init() == -1)
+    pop3_die_control();
   if (control_rldef(&hostname,"control/pop3greeting",1,(char *) 0) != 1)
     pop3_die_control();
-  if (!stralloc_0(&hostname)) smtp_die_nomem();
+  if (!stralloc_0(&hostname))
+    pop3_die_nomem();
+  if (control_readint(&timeout,"control/timeoutpop3d") == -1)
+    pop3_die_control();
+
   pop3_greet();
   commands(&ssin,pop3commands);
+
   die();
 }
 
 void dosmtp() {
-  if (control_init() == -1) smtp_die_control();
+  if (control_init() == -1)
+    smtp_die_control();
   if (control_rldef(&hostname,"control/smtpgreeting",1,(char *) 0) != 1)
     smtp_die_control();
-  if (!stralloc_0(&hostname)) smtp_die_nomem();
+  if (!stralloc_0(&hostname))
+    smtp_die_nomem();
+  if (control_readint(&timeout,"control/timeoutsmtpd") == -1)
+    smtp_die_control();
+
   smtp_greet();
   commands(&ssin,smtpcommands);
+
   die();
 }
 

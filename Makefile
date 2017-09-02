@@ -1097,7 +1097,8 @@ fs.a socket.lib
 qmail-authup.o: \
 compile qmail-authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
-readwrite.h timeoutread.h timeoutwrite.h base64.h case.h
+readwrite.h timeoutread.h timeoutwrite.h base64.h case.h env.h control.h \
+error.h
 	./compile qmail-authup.c
 
 qmail-clean: \
