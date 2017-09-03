@@ -170,10 +170,7 @@ sub saferead {
 
     my $num_bytes = sysread($file_descriptor, $read_buffer, $read_size);
 
-    # XXX as child, seems ok
-    # XXX as parent, close() / waitpid() / other cleanup before exit
     die "sysread: $!\n" if $num_bytes == -1;
-    die "\n" if $num_bytes == 0; # EOF
 
     return $read_buffer;
 }
@@ -268,7 +265,9 @@ sub do_proxy_stuff {
         next unless something_can_be_read_from();
 
         if (can_read_more($from_client)) {
-            $request .= saferead($from_client);
+            my $morebytes = saferead($from_client);
+            last if (0 == length $morebytes);
+            $request .= $morebytes;
             if (is_entire_line($request)) {
                 handle_request($from_client, $to_server, $to_client, $request, \$verb, \$arg, \$want_data, \$in_data);
                 $request = '';
@@ -276,7 +275,9 @@ sub do_proxy_stuff {
         }
 
         if (can_read_more($from_server)) {
-            $response .= saferead($from_server);
+            my $morebytes = saferead($from_server);
+            last if (0 == length $morebytes);
+            $response .= $morebytes;
             if (is_entire_response($response)) {
                 handle_response($to_client, $response, \$banner_sent, \$verb, \$arg, \$want_data, \$in_data);
                 $response = '';
@@ -290,7 +291,8 @@ sub teardown_proxy_and_never_return {
     my ($from_server, $to_server) = @_;
     close($from_server);
     close($to_server);
-    _exit(77);
+    waitpid(-1, 0); 
+    _exit(0);
 }
 
 sub is_network_service {
@@ -309,12 +311,12 @@ sub main {
     my $to_client = \*STDOUT;
 
     if (my $pid = fork()) {
-        setup_server($from_proxy, $to_server, $from_server, $to_proxy);
-        exec_server_and_never_return(@args);
-    } elsif (defined $pid) {
         setup_proxy($from_proxy, $to_proxy);
         do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
         teardown_proxy_and_never_return($from_server, $to_server);
+    } elsif (defined $pid) {
+        setup_server($from_proxy, $to_server, $from_server, $to_proxy);
+        exec_server_and_never_return(@args);
     } else {
         die "fork: $!"
     }
@@ -323,14 +325,6 @@ sub main {
 main(@ARGV);
 
 __DATA__
-
-When fixsmtpio makes itself server's child, and server times out
-- fixsmtpio quits (this is good)
-- server exits nonzero, so authup says "authorization failed" (bad)
-
-So maybe fixsmtpio needs to make itself server's parent
-- waitpid(server)
-- _exit(0) unconditionally, until proven otherwise
 
 Do it more like C:
 - no chomp()
