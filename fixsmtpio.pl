@@ -143,9 +143,11 @@ sub setup_proxy {
 
 my $rin;
 sub intend_to_be_reading {
-    my ($file_descriptor) = @_;
+    my @file_descriptors = @_;
 
-    vec($rin, fileno($file_descriptor), 1) = 1;
+    for my $fd (@file_descriptors) {
+        vec($rin, fileno($fd), 1) = 1;
+    }
 }
 
 my $rout;
@@ -156,8 +158,7 @@ sub can_read_more {
 }
 
 sub something_can_be_read_from {
-    my $timeout = 3.14159;
-    my $nfound = select($rout = $rin,undef,undef,$timeout);
+    my $nfound = select($rout = $rin, undef, undef, 1200);
 
     return $nfound;
 }
@@ -165,7 +166,7 @@ sub something_can_be_read_from {
 sub saferead {
     my ($file_descriptor) = @_;
     my $read_buffer;
-    my $read_size = 1;
+    my $read_size = 128;
 
     my $num_bytes = sysread($file_descriptor, $read_buffer, $read_size);
 
@@ -255,8 +256,7 @@ sub handle_response {
 sub do_proxy_stuff {
     my ($from_client, $to_server, $from_server, $to_client) = @_;
 
-    intend_to_be_reading($from_client);
-    intend_to_be_reading($from_server);
+    intend_to_be_reading($from_client, $from_server);
 
     my ($verb, $arg) = ('', '');
     my ($request, $response) = ('', '');
@@ -324,9 +324,13 @@ main(@ARGV);
 
 __DATA__
 
-Then set read size to whatever qmail does
-Then understand the "timeout" param to select() and set it to something
-Then try being the parent instead of the child
+When fixsmtpio makes itself server's child, and server times out
+- fixsmtpio quits (this is good)
+- server exits nonzero, so authup says "authorization failed" (bad)
+
+So maybe fixsmtpio needs to make itself server's parent
+- waitpid(server)
+- _exit(0) unconditionally, until proven otherwise
 
 Do it more like C:
 - no chomp()
@@ -335,14 +339,6 @@ Do it more like C:
 The rules are hardcoded
 - put them in a config file
 - parse it and load the rules
-
-When fixsmtpio makes itself server's child, and server times out
-- fixsmtpio quits (this is good)
-- server exits nonzero, so authup says "authorization failed" (bad)
-
-So maybe fixsmtpio needs to make itself server's parent
-- waitpid(server)
-- _exit(0) unconditionally, until proven otherwise
 
 If server sometimes needs to communicate an error to qmail-authup...
 - have fixsmtpio exit a unique nonzero from observing SMTP code and message
