@@ -138,27 +138,27 @@ sub setup_proxy {
     my ($from_proxy, $to_proxy) = @_;
     close($from_proxy);
     close($to_proxy);
-    $/ = "\r\n" if is_network_service();
+    $/ = "\r\n";
 }
 
-my $rin;
-sub intend_to_be_reading {
-    my @file_descriptors = @_;
+my $want_to_read_bits;
+sub want_to_read {
+    my (@file_descriptors) = @_;
 
-    for my $fd (@file_descriptors) {
-        vec($rin, fileno($fd), 1) = 1;
+    for my $file_descriptor (@file_descriptors) {
+        vec($want_to_read_bits, fileno($file_descriptor), 1) = 1;
     }
 }
 
-my $rout;
-sub can_read_more {
+my $can_read_bits;
+sub can_read {
     my ($file_descriptor) = @_;
 
-    return 1 == vec($rout, fileno($file_descriptor), 1);
+    return 1 == vec($can_read_bits, fileno($file_descriptor), 1);
 }
 
-sub something_can_be_read_from {
-    my $nfound = select($rout = $rin, undef, undef, 1200);
+sub can_read_something {
+    my $nfound = select($can_read_bits = $want_to_read_bits, undef, undef, 1200);
 
     return $nfound;
 }
@@ -253,7 +253,7 @@ sub handle_response {
 sub do_proxy_stuff {
     my ($from_client, $to_server, $from_server, $to_client) = @_;
 
-    intend_to_be_reading($from_client, $from_server);
+    want_to_read($from_client, $from_server);
 
     my ($verb, $arg) = ('', '');
     my ($request, $response) = ('', '');
@@ -262,9 +262,9 @@ sub do_proxy_stuff {
     my $in_data = 0;
 
 	for (;;) {
-        next unless something_can_be_read_from();
+        next unless can_read_something();
 
-        if (can_read_more($from_client)) {
+        if (can_read($from_client)) {
             my $morebytes = saferead($from_client);
             last if (0 == length $morebytes);
             $request .= $morebytes;
@@ -274,7 +274,7 @@ sub do_proxy_stuff {
             }
         }
 
-        if (can_read_more($from_server)) {
+        if (can_read($from_server)) {
             my $morebytes = saferead($from_server);
             last if (0 == length $morebytes);
             $response .= $morebytes;
@@ -289,14 +289,12 @@ sub do_proxy_stuff {
 
 sub teardown_proxy_and_exit {
     my ($from_server, $to_server) = @_;
+
     close($from_server);
     close($to_server);
     waitpid(-1, 0); 
-    _exit(0);
-}
 
-sub is_network_service {
-    return defined $ENV{TCPREMOTEIP};
+    _exit(0);
 }
 
 sub be_parent {
@@ -304,6 +302,7 @@ sub be_parent {
 
     setup_proxy($from_proxy, $to_proxy);
     do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
+
     teardown_proxy_and_exit($from_server, $to_server);
 }
 
@@ -311,6 +310,7 @@ sub be_child {
     my ($from_proxy, $to_proxy, $from_server, $to_server, @args) = @_;
 
     setup_server($from_proxy, $to_server, $from_server, $to_proxy);
+
     exec_server_and_never_return(@args);
 }
 
