@@ -287,7 +287,7 @@ sub do_proxy_stuff {
 	}
 }
 
-sub teardown_proxy_and_never_return {
+sub teardown_proxy_and_exit {
     my ($from_server, $to_server) = @_;
     close($from_server);
     close($to_server);
@@ -304,7 +304,7 @@ sub be_parent {
 
     setup_proxy($from_proxy, $to_proxy);
     do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
-    teardown_proxy_and_never_return($from_server, $to_server);
+    teardown_proxy_and_exit($from_server, $to_server);
 }
 
 sub be_child {
