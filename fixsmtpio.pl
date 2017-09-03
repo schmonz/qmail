@@ -6,13 +6,13 @@ use strict;
 use POSIX qw(_exit);
 
 sub send_request {
-    my ($to_smtpd, $verb, $arg) = @_;
-    syswrite($to_smtpd,"$verb $arg$/");
+    my ($to_server, $verb, $arg) = @_;
+    syswrite($to_server,"$verb $arg$/");
 }
 
 sub receive_response {
-    my ($from_smtpd) = @_;
-    chomp(my $response = <$from_smtpd>);
+    my ($from_server) = @_;
+    chomp(my $response = <$from_server>);
     return $response;
 }
 
@@ -43,15 +43,15 @@ sub send_response {
     syswrite($to_client, "$response$/");
 }
 
-sub setup_smtpd {
-    my ($from_proxy, $to_smtpd, $from_smtpd, $to_proxy) = @_;
-    close($from_smtpd);
-    close($to_smtpd);
+sub setup_server {
+    my ($from_proxy, $to_server, $from_server, $to_proxy) = @_;
+    close($from_server);
+    close($to_server);
     open(STDIN, '<&=', $from_proxy);
     open(STDOUT, '>>&=', $to_proxy);
 }
 
-sub exec_smtpd_and_never_return {
+sub exec_server_and_never_return {
     my (@argv) = @_;
     exec @argv;
 }
@@ -130,20 +130,20 @@ sub parse_request {
 }
 
 sub dispatch_request {
-    my ($verb, $arg, $to_smtpd, $to_client) = @_;
+    my ($verb, $arg, $to_server, $to_client) = @_;
 
     if (my $sub = handle_internally($verb, $arg)) {
         send_response($to_client, munge_response($verb, $arg, $sub->($verb, $arg)));
     } else {
-        send_request($to_smtpd, $verb, $arg);
+        send_request($to_server, $verb, $arg);
     }
 }
 
 sub do_proxy_stuff {
-    my ($from_client, $to_smtpd, $from_smtpd, $to_client) = @_;
+    my ($from_client, $to_server, $from_server, $to_client) = @_;
 
     intend_to_be_reading($from_client);
-    intend_to_be_reading($from_smtpd);
+    intend_to_be_reading($from_server);
 
     my ($verb, $arg) = ('', '');
     my ($request, $response) = ('', '');
@@ -159,12 +159,12 @@ sub do_proxy_stuff {
             if ("\n" eq $partial_request) {
                 ($verb, $arg) = parse_request($request);
                 $request = '';
-                dispatch_request($verb, $arg, $to_smtpd, $to_client);
+                dispatch_request($verb, $arg, $to_server, $to_client);
             }
         }
 
-        if (can_read_more($from_smtpd)) {
-            my $partial_response = saferead($from_smtpd);
+        if (can_read_more($from_server)) {
+            my $partial_response = saferead($from_server);
 
             $response .= $partial_response;
             # XXX incorrect! could be multiple lines
@@ -182,9 +182,9 @@ sub do_proxy_stuff {
 }
 
 sub teardown_proxy_and_never_return {
-    my ($from_smtpd, $to_smtpd) = @_;
-    close($from_smtpd);
-    close($to_smtpd);
+    my ($from_server, $to_server) = @_;
+    close($from_server);
+    close($to_server);
     _exit(77);
 }
 
@@ -201,19 +201,19 @@ sub main {
     }
     die "usage: fixsmtpio.pl program [ arg ... ]\n" unless @args >= 1;
 
-    pipe(my $from_smtpd, my $to_proxy) or die "pipe: $!";
-    pipe(my $from_proxy, my $to_smtpd) or die "pipe: $!";
+    pipe(my $from_server, my $to_proxy) or die "pipe: $!";
+    pipe(my $from_proxy, my $to_server) or die "pipe: $!";
 
     my $from_client = \*STDIN;
     my $to_client = \*STDOUT;
 
     if (my $pid = fork()) {
-        setup_smtpd($from_proxy, $to_smtpd, $from_smtpd, $to_proxy);
-        exec_smtpd_and_never_return(@args);
+        setup_server($from_proxy, $to_server, $from_server, $to_proxy);
+        exec_server_and_never_return(@args);
     } elsif (defined $pid) {
         setup_proxy($from_proxy, $to_proxy);
-        do_proxy_stuff($from_client, $to_smtpd, $from_smtpd, $to_client);
-        teardown_proxy_and_never_return($from_smtpd, $to_smtpd);
+        do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
+        teardown_proxy_and_never_return($from_server, $to_server);
     } else {
         die "fork: $!"
     }
@@ -239,16 +239,16 @@ The rules are hardcoded
 - put them in a config file
 - parse it and load the rules
 
-When fixsmtpio makes itself smtpd's child, and smtpd times out
+When fixsmtpio makes itself server's child, and server times out
 - fixsmtpio quits (this is good)
-- smtpd exits nonzero, so smtpup says "authorization failed" (bad)
+- server exits nonzero, so authup says "authorization failed" (bad)
 
-So maybe fixsmtpio needs to make itself smtpd's parent
-- waitpid(smtpd)
+So maybe fixsmtpio needs to make itself server's parent
+- waitpid(server)
 - _exit(0) unconditionally, until proven otherwise
 
-If smtpd sometimes needs to communicate an error to qmail-smtpup...
+If server sometimes needs to communicate an error to qmail-authup...
 - have fixsmtpio exit a unique nonzero from observing SMTP code and message
-- have smtpup understand all these nonzero exit codes
+- have authup understand all these nonzero exit codes
 
-# sudo tcpserver 0 26 ./qmail-smtpup me.local checkpassword-pam -s sshd /Users/schmonz/Documents/trees/qmail/fixsmtpio.pl qmail-smtpd
+# sudo tcpserver 0 26 ./qmail-authup me.local checkpassword-pam -s sshd /Users/schmonz/Documents/trees/qmail/fixsmtpio.pl qmail-smtpd
