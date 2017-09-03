@@ -16,26 +16,79 @@ sub receive_response {
     return $response;
 }
 
+sub munge_banner {
+    my ($response) = @_;
+
+    $response = qq{235 ok go ahead $< (#2.0.0)};
+    if (defined $ENV{SMTPUSER}) {
+        $response =~ s/ok go/ok, $ENV{SMTPUSER}, go/;
+    }
+
+    return $response;
+}
+
+sub munge_help {
+    my ($response) = @_;
+
+    $response = q{214 fixsmtpio.pl home page: https://schmonz.com/qmail/authutils}
+        . $/ . $response;
+
+    return $response;
+}
+
+sub munge_test {
+    my ($response) = @_;
+
+    $response .= q{ and also it's mungeable};
+
+    return $response;
+}
+
+sub munge_ehlo {
+    my ($response) = @_;
+
+    my @lines = split(/\r\n/, $response);
+    @lines = grep { ! /^250.AUTH / } @lines;
+    @lines = grep { ! /^250.STARTTLS/ } @lines;
+    $response = join("\r\n", @lines);
+
+    return $response;
+}
+
+sub change_every_line_fourth_char_to_dash {
+    my ($multiline) = @_;
+    $multiline =~ s/^(.{3})./$1-/msg;
+    return $multiline;
+}
+
+sub change_last_line_fourth_char_to_space {
+    my ($multiline) = @_;
+    $multiline =~ s/(.{3})-(.+)$/$1 $2/;
+    return $multiline;
+}
+
+sub reformat_multiline_response {
+    my ($response) = @_;
+
+    # XXX maybe fix up line breaks? or just keep them correct all along
+
+    $response = change_every_line_fourth_char_to_dash($response);
+    $response = change_last_line_fourth_char_to_space($response);
+
+    return $response;
+}
+
 sub munge_response {
     my ($verb, $arg, $response) = @_;
 
     chomp($response);
 
-    if ('banner' eq $verb) {;
-        $response = qq{235 ok go ahead $< (#2.0.0)};
-        if (defined $ENV{SMTPUSER}) {
-            $response =~ s/ok go/ok, $ENV{SMTPUSER}, go/;
-        }
-    }
+    $response = munge_banner($response) if 'banner' eq $verb;
+    $response = munge_help($response) if 'help' eq $verb;
+    $response = munge_test($response) if 'test' eq $verb;
+    $response = munge_ehlo($response) if 'ehlo' eq $verb;
 
-    if ('help' eq $verb) {
-        $response = q{214-fixsmtpio.pl home page: https://schmonz.com/qmail/authutils} . $/ . $response;
-    }
-
-    $response .= q{ and also it's mungeable}
-        if 'test' eq $verb;
-
-    return $response;
+    return reformat_multiline_response($response);
 }
 
 sub send_response {
@@ -124,6 +177,7 @@ sub parse_request {
 
     chomp($request);
     my ($verb, $arg) = split(/ /, $request, 2);
+    $verb = lc($verb);
     $arg ||= '';
 
     return ($verb, $arg);
@@ -137,6 +191,22 @@ sub dispatch_request {
     } else {
         send_request($to_server, $verb, $arg);
     }
+}
+
+sub is_entire_request {
+    my ($request) = @_;
+    return substr($request, -1, 1) eq "\n";
+}
+
+sub could_be_final_line {
+    my ($line) = @_;
+    return length($line) >= 4 && substr($line, 3, 1) eq " ";
+}
+
+sub is_entire_response {
+    my ($response) = @_;
+    my @lines = split(/\r\n/, $response);
+    return could_be_final_line($lines[-1]) && substr($response, -1, 1) eq "\n";
 }
 
 sub do_proxy_stuff {
@@ -153,10 +223,8 @@ sub do_proxy_stuff {
         next unless something_can_be_read_from();
 
         if (can_read_more($from_client)) {
-            my $partial_request = saferead($from_client);
-
-            $request .= $partial_request;
-            if ("\n" eq $partial_request) {
+            $request .= saferead($from_client);
+            if (is_entire_request($request)) {
                 ($verb, $arg) = parse_request($request);
                 $request = '';
                 dispatch_request($verb, $arg, $to_server, $to_client);
@@ -164,11 +232,8 @@ sub do_proxy_stuff {
         }
 
         if (can_read_more($from_server)) {
-            my $partial_response = saferead($from_server);
-
-            $response .= $partial_response;
-            # XXX incorrect! could be multiple lines
-            if ("\n" eq $partial_response) {
+            $response .= saferead($from_server);
+            if (is_entire_response($response)) {
                 if (! $banner_sent) {
                     ($verb, $arg) = ('banner', '');
                     $banner_sent = 1;
@@ -226,10 +291,6 @@ __DATA__
 Then set read size to whatever qmail does
 Then understand the "timeout" param to select() and set it to something
 Then try being the parent instead of the child
-
-We don't understand multiline responses (such as from EHLO)
-- maybe the above will help receive them
-- then we have to parse, and munge according to the rules
 
 We don't understand multiline requests (such as after DATA)
 - are there any others besides DATA?
