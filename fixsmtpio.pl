@@ -299,6 +299,21 @@ sub is_network_service {
     return defined $ENV{TCPREMOTEIP};
 }
 
+sub be_parent {
+    my ($from_client, $to_client, $from_proxy, $to_proxy, $from_server, $to_server) = @_;
+
+    setup_proxy($from_proxy, $to_proxy);
+    do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
+    teardown_proxy_and_never_return($from_server, $to_server);
+}
+
+sub be_child {
+    my ($from_proxy, $to_proxy, $from_server, $to_server, @args) = @_;
+
+    setup_server($from_proxy, $to_server, $from_server, $to_proxy);
+    exec_server_and_never_return(@args);
+}
+
 sub main {
     my (@args) = @_;
 
@@ -311,12 +326,9 @@ sub main {
     my $to_client = \*STDOUT;
 
     if (my $pid = fork()) {
-        setup_proxy($from_proxy, $to_proxy);
-        do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
-        teardown_proxy_and_never_return($from_server, $to_server);
+        be_parent($from_client, $to_client, $from_proxy, $to_proxy, $from_server, $to_server);
     } elsif (defined $pid) {
-        setup_server($from_proxy, $to_server, $from_server, $to_proxy);
-        exec_server_and_never_return(@args);
+        be_child($from_proxy, $to_proxy, $from_server, $to_server, @args);
     } else {
         die "fork: $!"
     }
