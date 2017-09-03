@@ -10,19 +10,22 @@ sub send_request {
     syswrite($to_server,"$verb $arg$/");
 }
 
-sub receive_response {
-    my ($from_server) = @_;
-    chomp(my $response = <$from_server>);
-    return $response;
+sub send_data {
+    my ($to_server, $data) = @_;
+    syswrite($to_server, $data);
+}
+
+sub accepted_data {
+    my ($response) = @_;
+    return $response =~ /^354 /;
 }
 
 sub munge_banner {
     my ($response) = @_;
 
-    $response = qq{235 ok go ahead $< (#2.0.0)};
-    if (defined $ENV{SMTPUSER}) {
-        $response =~ s/ok go/ok, $ENV{SMTPUSER}, go/;
-    }
+    $response = q{235 ok};
+    $response .= qq{, $ENV{SMTPUSER},} if defined $ENV{SMTPUSER};
+    $response .= qq{ go ahead $< (#2.0.0)};
 
     return $response;
 }
@@ -30,8 +33,10 @@ sub munge_banner {
 sub munge_help {
     my ($response) = @_;
 
-    $response = q{214 fixsmtpio.pl home page: https://schmonz.com/qmail/authutils}
-        . $/ . $response;
+    $response = q{214 fixsmtpio.pl home page: }
+        . q{https://schmonz.com/qmail/authutils}
+        . $/
+        . $response;
 
     return $response;
 }
@@ -193,9 +198,14 @@ sub dispatch_request {
     }
 }
 
-sub is_entire_request {
-    my ($request) = @_;
-    return substr($request, -1, 1) eq "\n";
+sub is_entire_line {
+    my ($line) = @_;
+    return substr($line, -1, 1) eq "\n";
+}
+
+sub is_last_line_of_data {
+    my ($line) = @_;
+    return $line =~ /^\.\r$/;
 }
 
 sub could_be_final_line {
@@ -218,16 +228,28 @@ sub do_proxy_stuff {
     my ($verb, $arg) = ('', '');
     my ($request, $response) = ('', '');
     my $banner_sent = 0;
+    my $want_data = 0;
+    my $in_data = 0;
 
 	for (;;) {
         next unless something_can_be_read_from();
 
         if (can_read_more($from_client)) {
             $request .= saferead($from_client);
-            if (is_entire_request($request)) {
-                ($verb, $arg) = parse_request($request);
+            if (is_entire_line($request)) {
+                if ($in_data) {
+                    send_data($to_server, $request);
+                    if (is_last_line_of_data($request)) {
+                        $in_data = 0;
+                    }
+                } else {
+                    ($verb, $arg) = parse_request($request);
+                    if ($verb eq 'data') {
+                        $want_data = 1;
+                    }
+                    dispatch_request($verb, $arg, $to_server, $to_client);
+                }
                 $request = '';
-                dispatch_request($verb, $arg, $to_server, $to_client);
             }
         }
 
@@ -237,6 +259,11 @@ sub do_proxy_stuff {
                 if (! $banner_sent) {
                     ($verb, $arg) = ('banner', '');
                     $banner_sent = 1;
+                } elsif ($want_data) {
+                    $want_data = 0;
+                    if (accepted_data($response)) {
+                        $in_data = 1;
+                    }
                 }
                 send_response($to_client, munge_response($verb, $arg, $response));
                 $response = '';
@@ -260,10 +287,6 @@ sub is_network_service {
 sub main {
     my (@args) = @_;
 
-    if ($< == 0) {
-        warn "fixsmtpio.pl refuses to run as root\n";
-        exit(1);
-    }
     die "usage: fixsmtpio.pl program [ arg ... ]\n" unless @args >= 1;
 
     pipe(my $from_server, my $to_proxy) or die "pipe: $!";
@@ -291,10 +314,6 @@ __DATA__
 Then set read size to whatever qmail does
 Then understand the "timeout" param to select() and set it to something
 Then try being the parent instead of the child
-
-We don't understand multiline requests (such as after DATA)
-- are there any others besides DATA?
-- must know when it ends
 
 Do it more like C:
 - no chomp()
