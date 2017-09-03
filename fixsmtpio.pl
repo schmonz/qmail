@@ -219,6 +219,39 @@ sub is_entire_response {
     return could_be_final_line($lines[-1]) && substr($response, -1, 1) eq "\n";
 }
 
+sub handle_request {
+    my ($from_client, $to_server, $to_client, $request, $verb_ref, $arg_ref, $want_data_ref, $in_data_ref) = @_;
+
+    if (${$in_data_ref}) {
+        send_data($to_server, $request);
+        if (is_last_line_of_data($request)) {
+            ${$in_data_ref} = 0;
+        }
+    } else {
+        (${$verb_ref}, ${$arg_ref}) = parse_request($request);
+        if (${$verb_ref} eq 'data') {
+            ${$want_data_ref} = 1;
+        }
+        dispatch_request(${$verb_ref}, ${$arg_ref}, $to_server, $to_client);
+    }
+}
+
+sub handle_response {
+    my ($to_client, $response, $banner_sent_ref, $verb_ref, $arg_ref, $want_data_ref, $in_data_ref) = @_;
+
+    if (! ${$banner_sent_ref}) {
+        (${$verb_ref}, ${$arg_ref}) = ('banner', '');
+        ${$banner_sent_ref} = 1;
+    } elsif (${$want_data_ref}) {
+        ${$want_data_ref} = 0;
+        if (accepted_data($response)) {
+            ${$in_data_ref} = 1;
+        }
+    }
+
+    send_response($to_client, munge_response(${$verb_ref}, ${$arg_ref}, $response));
+}
+
 sub do_proxy_stuff {
     my ($from_client, $to_server, $from_server, $to_client) = @_;
 
@@ -237,18 +270,7 @@ sub do_proxy_stuff {
         if (can_read_more($from_client)) {
             $request .= saferead($from_client);
             if (is_entire_line($request)) {
-                if ($in_data) {
-                    send_data($to_server, $request);
-                    if (is_last_line_of_data($request)) {
-                        $in_data = 0;
-                    }
-                } else {
-                    ($verb, $arg) = parse_request($request);
-                    if ($verb eq 'data') {
-                        $want_data = 1;
-                    }
-                    dispatch_request($verb, $arg, $to_server, $to_client);
-                }
+                handle_request($from_client, $to_server, $to_client, $request, \$verb, \$arg, \$want_data, \$in_data);
                 $request = '';
             }
         }
@@ -256,16 +278,7 @@ sub do_proxy_stuff {
         if (can_read_more($from_server)) {
             $response .= saferead($from_server);
             if (is_entire_response($response)) {
-                if (! $banner_sent) {
-                    ($verb, $arg) = ('banner', '');
-                    $banner_sent = 1;
-                } elsif ($want_data) {
-                    $want_data = 0;
-                    if (accepted_data($response)) {
-                        $in_data = 1;
-                    }
-                }
-                send_response($to_client, munge_response($verb, $arg, $response));
+                handle_response($to_client, $response, \$banner_sent, \$verb, \$arg, \$want_data, \$in_data);
                 $response = '';
                 ($verb, $arg) = ('','');
             }
