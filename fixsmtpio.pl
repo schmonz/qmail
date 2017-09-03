@@ -19,6 +19,8 @@ sub receive_response {
 sub munge_response {
     my ($verb, $arg, $response) = @_;
 
+    chomp($response);
+
     if ('banner' eq $verb) {;
         $response = qq{235 ok go ahead $< (#2.0.0)};
         if (defined $ENV{SMTPUSER}) {
@@ -59,10 +61,17 @@ sub smtp_test {
     return "250 fixsmtpio.pl test ok: $arg";
 }
 
+sub smtp_unimplemented {
+    my ($verb, $arg) = @_;
+    return "502 unimplemented (#5.5.1)";
+}
+
 sub handle_internally {
     my ($verb, $arg) = @_;
 
     return \&smtp_test if 'test' eq $verb;
+    return \&smtp_unimplemented if 'auth' eq $verb;
+    return \&smtp_unimplemented if 'starttls' eq $verb;
 
     return 0;
 }
@@ -74,59 +83,96 @@ sub setup_proxy {
     $/ = "\r\n" if is_network_service();
 }
 
+my $rin;
+sub intend_to_be_reading {
+    my ($file_descriptor) = @_;
+
+    vec($rin, fileno($file_descriptor), 1) = 1;
+}
+
+my $rout;
+sub can_read_more {
+    my ($file_descriptor) = @_;
+
+    return 1 == vec($rout, fileno($file_descriptor), 1);
+}
+
+sub something_can_be_read_from {
+    my $timeout = 3.14159;
+    my $nfound = select($rout = $rin,undef,undef,$timeout);
+
+    return $nfound;
+}
+
+sub saferead {
+    my ($file_descriptor) = @_;
+    my $read_buffer;
+    my $read_size = 1;
+
+    my $num_bytes = sysread($file_descriptor, $read_buffer, $read_size);
+
+    # XXX as child, seems ok
+    # XXX as parent, close() / waitpid() / other cleanup before exit
+    die "sysread: $!\n" if $num_bytes == -1;
+    die "\n" if $num_bytes == 0; # EOF
+
+    return $read_buffer;
+}
+
+sub parse_request {
+    my ($request) = @_;
+
+    chomp($request);
+    my ($verb, $arg) = split(/ /, $request, 2);
+    $arg ||= '';
+
+    return ($verb, $arg);
+}
+
+sub dispatch_request {
+    my ($verb, $arg, $to_smtpd, $to_client) = @_;
+
+    if (my $sub = handle_internally($verb, $arg)) {
+        send_response($to_client, munge_response($verb, $arg, $sub->($verb, $arg)));
+    } else {
+        send_request($to_smtpd, $verb, $arg);
+    }
+}
+
 sub do_proxy_stuff {
     my ($from_client, $to_smtpd, $from_smtpd, $to_client) = @_;
 
-    my $artificially_small_buffer = 1;
+    intend_to_be_reading($from_client);
+    intend_to_be_reading($from_smtpd);
 
-    my $timeout = 3.14159;
-    my $rin;
-    vec($rin,fileno($from_client),1) = 1;
-    vec($rin,fileno($from_smtpd),1) = 1;
-
-    my ($verb, $arg) = ('banner', '');
+    my ($verb, $arg) = ('', '');
     my ($request, $response) = ('', '');
-	for (;;) {
-		my $nfound = select(my $rout = $rin,undef,undef,$timeout);
-		next unless $nfound;
+    my $banner_sent = 0;
 
-        if (vec($rout,fileno($from_client),1) == 1) {
-            my $bytesread = sysread($from_client, my $partial_request, $artificially_small_buffer);
-            if ($bytesread == -1) {
-                die "sysread from_client: $!\n";
-            }
-            if ($bytesread == 0) {
-                # client sent EOF;
-                last;
-            }
+	for (;;) {
+        next unless something_can_be_read_from();
+
+        if (can_read_more($from_client)) {
+            my $partial_request = saferead($from_client);
+
             $request .= $partial_request;
             if ("\n" eq $partial_request) {
-                chomp($request);
-                ($verb, $arg) = split(/ /, $request, 2);
-                $arg ||= '';
-                if (my $sub = handle_internally($verb, $arg)) {
-                    send_response($to_client, munge_response($verb, $arg, $sub->($verb, $arg)));
-                } else {
-                    send_request($to_smtpd, $verb, $arg);
-                }
-
+                ($verb, $arg) = parse_request($request);
                 $request = '';
+                dispatch_request($verb, $arg, $to_smtpd, $to_client);
             }
         }
 
-        if (vec($rout,fileno($from_smtpd),1) == 1) {
-            my $bytesread = sysread($from_smtpd, my $partial_response, $artificially_small_buffer);
-            if ($bytesread == -1) {
-                die "sysread from_smtpd $!\n";
-            }
-            if ($bytesread == 0) {
-                # smtpd sent EOF;
-                last;
-            }
+        if (can_read_more($from_smtpd)) {
+            my $partial_response = saferead($from_smtpd);
+
             $response .= $partial_response;
             # XXX incorrect! could be multiple lines
             if ("\n" eq $partial_response) {
-                chomp($response);
+                if (! $banner_sent) {
+                    ($verb, $arg) = ('banner', '');
+                    $banner_sent = 1;
+                }
                 send_response($to_client, munge_response($verb, $arg, $response));
                 $response = '';
                 ($verb, $arg) = ('','');
@@ -177,7 +223,7 @@ main(@ARGV);
 
 __DATA__
 
-Then set read buffer to whatever qmail does
+Then set read size to whatever qmail does
 Then understand the "timeout" param to select() and set it to something
 Then try being the parent instead of the child
 
