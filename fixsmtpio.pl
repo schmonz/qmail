@@ -296,6 +296,10 @@ We don't understand multiline requests (such as after DATA)
 - are there any others besides DATA?
 - must know when it ends
 
+Do it more like C:
+- no chomp()
+- loop over characters looking for \n (and deal with \r being around)
+
 The rules are hardcoded
 - put them in a config file
 - parse it and load the rules
