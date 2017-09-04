@@ -234,7 +234,7 @@ sub handle_request {
 }
 
 sub handle_response {
-    my ($to_client, $response, $verb_ref, $arg_ref, $want_data_ref, $in_data_ref) = @_;
+    my ($to_client, $response, $verb, $arg, $want_data_ref, $in_data_ref) = @_;
 
     if (${$want_data_ref}) {
         ${$want_data_ref} = 0;
@@ -243,7 +243,7 @@ sub handle_response {
         }
     }
 
-    send_response($to_client, munge_response(${$verb_ref}, ${$arg_ref}, $response));
+    send_response($to_client, munge_response($verb, $arg, $response));
 }
 
 sub do_proxy_stuff {
@@ -287,7 +287,7 @@ sub do_proxy_stuff {
             last if (0 == length $morebytes);
             $response .= $morebytes;
             if (is_entire_response($response)) {
-                handle_response($to_client, $response, \$verb, \$arg, \$want_data, \$in_data);
+                handle_response($to_client, $response, $verb, $arg, \$want_data, \$in_data);
                 $response = '';
                 ($verb, $arg) = ('','');
             }
