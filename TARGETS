@@ -392,3 +392,5 @@ qmail-fixsmtpio
 qmail-fixsmtpio.o
 checkpassword-rejectroot
 checkpassword-rejectroot.o
+qmail-reup
+qmail-reup.o

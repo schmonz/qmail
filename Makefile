@@ -1495,6 +1495,14 @@ gen_alloc.h gen_allocdefs.h str.h now.h datetime.h exit.h constmap.h \
 tcpto.h readwrite.h timeoutconn.h timeoutread.h timeoutwrite.h
 	./compile qmail-remote.c
 
+qmail-reup: \
+load qmail-reup.o sig.a
+	./load qmail-reup sig.a
+
+qmail-reup.o: \
+compile qmail-reup.c sig.h
+	./compile qmail-reup.c
+
 qmail-rspawn: \
 load qmail-rspawn.o spawn.o tcpto_clean.o now.o coe.o sig.a open.a \
 seek.a lock.a wait.a fd.a stralloc.a alloc.a substdio.a error.a str.a \
