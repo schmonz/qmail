@@ -5,13 +5,13 @@
 
 void die() { _exit(1); }
 
-char ssoutbuf[128];
-substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
+char sserrbuf[128];
+substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void out(char *s) { substdio_puts(&ssout,s); }
-void flush() { substdio_flush(&ssout); }
+void err(char *s) { substdio_puts(&sserr,s); }
+void flush() { substdio_flush(&sserr); }
 
-void die_usage() { out("usage: qmail-reup subprogram\n"); flush(); die(); }
+void die_usage() { err("usage: qmail-reup subprogram\n"); flush(); die(); }
 
 char **childargs;
 
@@ -32,24 +32,28 @@ int run_args(void) {
   if (wait_crashed(wstat)) die();
   exitcode = wait_exitcode(wstat);
   if (exitcode == 0) {
-    out("exiting zero\n");
-    flush();
+    err("exiting zero\n");
   } else {
-    out("exiting nonzero\n");
-    flush();
+    err("exiting nonzero\n");
   }
+  flush();
 
   return exitcode;
 }
 
 int main(int argc,char **argv) {
+  int exitcode;
+
   sig_alarmcatch(die);
   sig_pipeignore();
  
   childargs = argv + 1;
   if (!*childargs) die_usage();
 
-  if (run_args() != 0)
-    _exit(run_args());
-  die();
+  for (int i = 0; i < 3; i++) {
+    if (0 == (exitcode = run_args()))
+      _exit(exitcode);
+  }
+
+  _exit(exitcode);
 }
