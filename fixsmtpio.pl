@@ -246,12 +246,11 @@ sub handle_response {
     send_response($to_client, munge_response($verb, $arg, $response));
 }
 
-sub do_proxy_stuff {
-    my ($from_client, $to_server, $from_server, $to_client) = @_;
+sub handle_banner {
+    my ($from_server, $to_client) = @_;
 
     my $response = '';
 
-    want_to_read($from_server);
     for (;;) {
         next unless can_read_something();
         next unless can_read($from_server);
@@ -261,10 +260,17 @@ sub do_proxy_stuff {
         $response .= $morebytes;
         last if is_entire_response($response);
     }
-    send_response($to_client, munge_banner($response));
-    $response = '';
 
-    my ($request, $verb, $arg) = ('', '', '');
+    send_response($to_client, munge_banner($response));
+}
+
+sub do_proxy_stuff {
+    my ($from_client, $to_server, $from_server, $to_client) = @_;
+
+    want_to_read($from_server);
+    handle_banner($from_server, $to_client);
+
+    my ($request, $verb, $arg, $response) = ('', '', '', '');
     my $want_data = 0;
     my $in_data = 0;
 
@@ -345,6 +351,9 @@ sub main {
 main(@ARGV);
 
 __DATA__
+
+# XXX put "banner" back as a pseudo-verb, but better
+# XXX with a more realistic "request" to read and process
 
 Do it more like C:
 - no chomp()
