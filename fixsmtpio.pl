@@ -261,7 +261,7 @@ sub do_proxy_stuff {
     my $want_data = 0;
     my $in_data = 0;
 
-	for (;;) {
+    for (;;) {
         next unless can_read_something();
 
         if (can_read($from_client)) {
@@ -284,7 +284,7 @@ sub do_proxy_stuff {
                 ($verb, $arg) = ('','');
             }
         }
-	}
+    }
 }
 
 sub teardown_proxy_and_exit {
