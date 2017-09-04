@@ -170,7 +170,7 @@ sub saferead {
 
     my $num_bytes = sysread($file_descriptor, $read_buffer, $read_size);
 
-    die "sysread: $!\n" if $num_bytes == -1;
+    die "sysread: $!\n" if $num_bytes == -1 && ! $!{EINTR};
 
     return $read_buffer;
 }
