@@ -88,6 +88,7 @@ sub munge_response {
 
     chomp($response);
 
+    $response = munge_banner($response) if 'banner' eq $verb;
     $response = munge_help($response) if 'help' eq $verb;
     $response = munge_test($response) if 'test' eq $verb;
     $response = munge_ehlo($response) if 'ehlo' eq $verb;
@@ -246,35 +247,16 @@ sub handle_response {
     send_response($to_client, munge_response($verb, $arg, $response));
 }
 
-sub handle_banner {
-    my ($from_server, $to_client) = @_;
-
-    my $response = '';
-
-    for (;;) {
-        next unless can_read_something();
-        next unless can_read($from_server);
-
-        my $morebytes = saferead($from_server);
-        last if 0 == length $morebytes;
-        $response .= $morebytes;
-        last if is_entire_response($response);
-    }
-
-    send_response($to_client, munge_banner($response));
-}
-
 sub do_proxy_stuff {
     my ($from_client, $to_server, $from_server, $to_client) = @_;
-
-    want_to_read($from_server);
-    handle_banner($from_server, $to_client);
 
     my ($request, $verb, $arg, $response) = ('', '', '', '');
     my $want_data = 0;
     my $in_data = 0;
 
-    want_to_read($from_client);
+    handle_request($from_client, $to_server, $to_client, 'banner', \$verb, \$arg, \$want_data, \$in_data);
+
+    want_to_read($from_client, $from_server);
     for (;;) {
         next unless can_read_something();
 
@@ -351,9 +333,6 @@ sub main {
 main(@ARGV);
 
 __DATA__
-
-# XXX put "banner" back as a pseudo-verb, but better
-# XXX with a more realistic "request" to read and process
 
 Do it more like C:
 - no chomp()
