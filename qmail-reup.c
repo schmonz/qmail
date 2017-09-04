@@ -38,7 +38,8 @@ int run_args(void) {
     out("exiting nonzero\n");
     flush();
   }
-  _exit(exitcode);
+
+  return exitcode;
 }
 
 int main(int argc,char **argv) {
@@ -48,6 +49,7 @@ int main(int argc,char **argv) {
   childargs = argv + 1;
   if (!*childargs) die_usage();
 
-  run_args();
+  if (run_args() != 0)
+    _exit(run_args());
   die();
 }
