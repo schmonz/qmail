@@ -42,6 +42,7 @@ int run_args(void) {
 }
 
 int main(int argc,char **argv) {
+  int sleepytime;
   int exitcode;
 
   sig_alarmcatch(die);
@@ -50,9 +51,12 @@ int main(int argc,char **argv) {
   childargs = argv + 1;
   if (!*childargs) die_usage();
 
+  sleepytime = 0;
   for (int i = 0; i < 3; i++) {
+    sleep(sleepytime);
     if (0 == (exitcode = run_args()))
       _exit(exitcode);
+    sleepytime = 5;
   }
 
   _exit(exitcode);
