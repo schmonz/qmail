@@ -1496,11 +1496,11 @@ tcpto.h readwrite.h timeoutconn.h timeoutread.h timeoutwrite.h
 	./compile qmail-remote.c
 
 qmail-reup: \
-load qmail-reup.o sig.a
-	./load qmail-reup sig.a
+load qmail-reup.o sig.a wait.a error.a substdio.a str.a
+	./load qmail-reup sig.a wait.a error.a substdio.a str.a
 
 qmail-reup.o: \
-compile qmail-reup.c sig.h
+compile qmail-reup.c readwrite.h sig.h substdio.h wait.h
 	./compile qmail-reup.c
 
 qmail-rspawn: \
