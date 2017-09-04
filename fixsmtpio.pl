@@ -206,7 +206,7 @@ sub is_last_line_of_data {
     return $line =~ /^\.\r$/;
 }
 
-sub could_be_final_line {
+sub could_be_final_response_line {
     my ($line) = @_;
     return length($line) >= 4 && substr($line, 3, 1) eq " ";
 }
@@ -214,7 +214,7 @@ sub could_be_final_line {
 sub is_entire_response {
     my ($response) = @_;
     my @lines = split(/\r\n/, $response);
-    return could_be_final_line($lines[-1]) && substr($response, -1, 1) eq "\n";
+    return could_be_final_response_line($lines[-1]) && substr($response, -1, 1) eq "\n";
 }
 
 sub handle_request {
