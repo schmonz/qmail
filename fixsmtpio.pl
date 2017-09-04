@@ -88,7 +88,6 @@ sub munge_response {
 
     chomp($response);
 
-    $response = munge_banner($response) if 'banner' eq $verb;
     $response = munge_help($response) if 'help' eq $verb;
     $response = munge_test($response) if 'test' eq $verb;
     $response = munge_ehlo($response) if 'ehlo' eq $verb;
@@ -214,7 +213,7 @@ sub could_be_final_response_line {
 sub is_entire_response {
     my ($response) = @_;
     my @lines = split(/\r\n/, $response);
-    return could_be_final_response_line($lines[-1]) && substr($response, -1, 1) eq "\n";
+    return could_be_final_response_line($lines[-1]) && is_entire_line($response);
 }
 
 sub handle_request {
@@ -235,12 +234,9 @@ sub handle_request {
 }
 
 sub handle_response {
-    my ($to_client, $response, $banner_sent_ref, $verb_ref, $arg_ref, $want_data_ref, $in_data_ref) = @_;
+    my ($to_client, $response, $verb_ref, $arg_ref, $want_data_ref, $in_data_ref) = @_;
 
-    if (! ${$banner_sent_ref}) {
-        (${$verb_ref}, ${$arg_ref}) = ('banner', '');
-        ${$banner_sent_ref} = 1;
-    } elsif (${$want_data_ref}) {
+    if (${$want_data_ref}) {
         ${$want_data_ref} = 0;
         if (accepted_data($response)) {
             ${$in_data_ref} = 1;
@@ -253,14 +249,26 @@ sub handle_response {
 sub do_proxy_stuff {
     my ($from_client, $to_server, $from_server, $to_client) = @_;
 
-    want_to_read($from_client, $from_server);
+    my $response = '';
 
-    my ($verb, $arg) = ('', '');
-    my ($request, $response) = ('', '');
-    my $banner_sent = 0;
+    want_to_read($from_server);
+    for (;;) {
+        next unless can_read_something();
+        next unless can_read($from_server);
+
+        my $morebytes = saferead($from_server);
+        last if 0 == length $morebytes;
+        $response .= $morebytes;
+        last if is_entire_response($response);
+    }
+    send_response($to_client, munge_banner($response));
+    $response = '';
+
+    my ($request, $verb, $arg) = ('', '', '');
     my $want_data = 0;
     my $in_data = 0;
 
+    want_to_read($from_client);
     for (;;) {
         next unless can_read_something();
 
@@ -279,7 +287,7 @@ sub do_proxy_stuff {
             last if (0 == length $morebytes);
             $response .= $morebytes;
             if (is_entire_response($response)) {
-                handle_response($to_client, $response, \$banner_sent, \$verb, \$arg, \$want_data, \$in_data);
+                handle_response($to_client, $response, \$verb, \$arg, \$want_data, \$in_data);
                 $response = '';
                 ($verb, $arg) = ('','');
             }
