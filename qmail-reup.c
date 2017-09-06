@@ -1,5 +1,7 @@
+#include "getln.h"
 #include "readwrite.h"
 #include "sig.h"
+#include "stralloc.h"
 #include "substdio.h"
 #include "wait.h"
 
@@ -8,41 +10,95 @@ void die() { _exit(1); }
 char sserrbuf[128];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void err(char *s) { substdio_puts(&sserr,s); }
-void flush() { substdio_flush(&sserr); }
+void errflush(char *s) {
+  substdio_puts(&sserr,s);
+  substdio_flush(&sserr);
+}
 
-void die_usage() { err("usage: qmail-reup subprogram\n"); flush(); die(); }
+void die_usage() { errflush("usage: qmail-reup subprogram\n"); die(); }
+void die_pipe() { errflush("qmail-reup unable to open pipe\n"); die(); }
+void die_fork() { errflush("qmail-reup unable to fork\n"); die(); }
+void die_read() { errflush("qmail-reup unable to read from pipe\n"); die(); }
+void die_nomem() { errflush("qmail-reup out of memory\n"); die(); }
+
+char ssoutbuf[128];
+substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
+char ssinbuf[128];
+substdio ssin = SUBSTDIO_FDBUF(read,0,ssinbuf,sizeof ssinbuf);
 
 char **childargs;
 
+int read_line(stralloc *into) {
+  int match;
+
+  if (getln(&ssin,into,&match,'\n') == -1) die_read();
+
+  if (match == 0) return 0; // final partial line
+
+  if (!stralloc_0(into)) die_nomem();
+
+  return 1;
+}
+
+void putsflush(char *s) {
+  substdio_puts(&ssout,s);
+  substdio_flush(&ssout);
+}
+
 int run_args(void) {
+  static int runs = 0;
+  int exitcode;
   int child;
   int wstat;
-  int exitcode;
+  int pi[2];
+
+  if (pipe(pi) == -1) die_pipe();
 
   switch (child = fork()) {
     case -1:
-      die();
+      die_fork();
       break;
     case 0:
+      close(pi[0]);
+      if (fd_move(1,pi[1]) == -1) die_pipe();
       execvp(*childargs,childargs);
       die();
   }
+  close(pi[1]);
+  if (fd_move(0,pi[0]) == -1) die_pipe();
+
+  stralloc current_line = {0};
+  stralloc next_line = {0};
+  stralloc_copys(&current_line,"");
+  stralloc_0(&current_line);
+
+  // XXX what if lines-to-hide >= lines-before-EOF?
+  // like if there's one line and we want to skip one line
+  for (int lineno = 0; read_line(&next_line); lineno++) {
+    if (lineno > 1 || runs == 0) putsflush(current_line.s);
+    if (!stralloc_copy(&current_line,&next_line)) die_nomem();
+  }
+
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
+
   exitcode = wait_exitcode(wstat);
   if (exitcode == 0) {
-    err("exiting zero\n");
+    errflush("exiting zero\n");
   } else {
-    err("exiting nonzero\n");
+    errflush("exiting nonzero\n");
+    sleep(5);
   }
-  flush();
+  putsflush(current_line.s);
+  close(pi[0]);
+  close(1);
+
+  runs++;
 
   return exitcode;
 }
 
 int main(int argc,char **argv) {
-  int sleepytime;
   int exitcode;
 
   sig_alarmcatch(die);
@@ -51,12 +107,9 @@ int main(int argc,char **argv) {
   childargs = argv + 1;
   if (!*childargs) die_usage();
 
-  sleepytime = 0;
   for (int i = 0; i < 3; i++) {
-    sleep(sleepytime);
     if (0 == (exitcode = run_args()))
       _exit(exitcode);
-    sleepytime = 5;
   }
 
   _exit(exitcode);
