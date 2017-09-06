@@ -97,8 +97,8 @@ substdio ssup;
 char upbuf[128];
 
 void pop3_okay(arg) char *arg; { puts("+OK \r\n"); flush(); }
-void pop3_quit(arg) char *arg; { pop3_okay(0); die(); }
-void smtp_quit() { puts("221 "); smtp_err(hostname.s); die(); }
+void pop3_quit(arg) char *arg; { pop3_okay(0); _exit(0); }
+void smtp_quit() { puts("221 "); smtp_err(hostname.s); _exit(0); }
 
 /* XXX POP3 only */
 char unique[FMT_ULONG + FMT_ULONG + 3];
