@@ -45,7 +45,14 @@ void putsflush(char *s) {
   substdio_flush(&ssout);
 }
 
-int run_args(void) {
+void filter_output(int runs) {
+  stralloc line = {0};
+  for (int lineno = 0; read_line(&line); lineno++) {
+    if (lineno > 0 || runs == 0) putsflush(line.s);
+  }
+}
+
+int run_args() {
   static int runs = 0;
   int exitcode;
   int child;
@@ -66,18 +73,9 @@ int run_args(void) {
   }
   close(pi[1]);
   if (fd_move(0,pi[0]) == -1) die_pipe();
-
-  stralloc current_line = {0};
-  stralloc next_line = {0};
-  stralloc_copys(&current_line,"");
-  stralloc_0(&current_line);
-
   // XXX what if lines-to-hide >= lines-before-EOF?
   // like if there's one line and we want to skip one line
-  for (int lineno = 0; read_line(&next_line); lineno++) {
-    if (lineno > 1 || runs == 0) putsflush(current_line.s);
-    if (!stralloc_copy(&current_line,&next_line)) die_nomem();
-  }
+  filter_output(runs++);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
@@ -87,13 +85,9 @@ int run_args(void) {
     errflush("exiting zero\n");
   } else {
     errflush("exiting nonzero\n");
-    sleep(5);
   }
-  putsflush(current_line.s);
   close(pi[0]);
   close(1);
-
-  runs++;
 
   return exitcode;
 }
