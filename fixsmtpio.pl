@@ -5,6 +5,8 @@ use strict;
 
 use POSIX qw(_exit);
 
+my $exitcode = 0;
+
 sub send_request {
     my ($to_server, $verb, $arg) = @_;
     syswrite($to_server,"$verb $arg$/");
@@ -20,12 +22,26 @@ sub accepted_data {
     return $response =~ /^354 /;
 }
 
+sub munge_timeout {
+    my ($response) = @_;
+
+    $exitcode = 16;
+
+    return $response;
+}
+
 sub munge_banner {
     my ($response) = @_;
 
-    $response = q{235 ok};
-    $response .= qq{, $ENV{SMTPUSER},} if defined $ENV{SMTPUSER};
-    $response .= qq{ go ahead $< (#2.0.0)};
+    if ($response =~ /^4[0-9]{2} /) {
+        $exitcode = 14;
+    } elsif ($response =~ /^5[0-9]{2} /) {
+        $exitcode = 15;
+    } else {
+        $response = q{235 ok};
+        $response .= qq{, $ENV{SMTPUSER},} if defined $ENV{SMTPUSER};
+        $response .= qq{ go ahead $< (#2.0.0)};
+    }
 
     return $response;
 }
@@ -88,6 +104,7 @@ sub munge_response {
 
     chomp($response);
 
+    $response = munge_timeout($response) if '' eq $verb;
     $response = munge_banner($response) if 'banner' eq $verb;
     $response = munge_help($response) if 'help' eq $verb;
     $response = munge_test($response) if 'test' eq $verb;
@@ -290,7 +307,7 @@ sub teardown_proxy_and_exit {
     close($to_server);
     waitpid(-1, 0); 
 
-    _exit(0);
+    _exit($exitcode);
 }
 
 sub be_parent {
