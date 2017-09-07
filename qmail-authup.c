@@ -371,6 +371,17 @@ struct commands smtpcommands[] = {
 , { 0, smtp_err_authoriz, 0 }
 };
 
+int should_greet() {
+  char *x;
+  int r;
+
+  x = env_get("REUP");
+  if (!x) return 1;
+  if (!scan_ulong(x,&r)) return 1;
+  if (r > 1) return 0;
+  return 1;
+}
+
 void dopop3() {
   if (chdir(auto_qmail) == -1)
     pop3_die_control();
@@ -383,7 +394,8 @@ void dopop3() {
   if (control_readint(&timeout,"control/timeoutpop3d") == -1)
     pop3_die_control();
 
-  pop3_greet();
+  if (should_greet())
+    pop3_greet();
   commands(&ssin,pop3commands);
 
   die();
@@ -401,7 +413,8 @@ void dosmtp() {
   if (control_readint(&timeout,"control/timeoutsmtpd") == -1)
     smtp_die_control();
 
-  smtp_greet();
+  if (should_greet())
+    smtp_greet();
   commands(&ssin,smtpcommands);
 
   die();
