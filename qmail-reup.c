@@ -5,6 +5,8 @@
 #include "substdio.h"
 #include "wait.h"
 
+char **childargs;
+
 void die() { _exit(1); }
 
 char sserrbuf[128];
@@ -23,41 +25,62 @@ void die_nomem() { errflush("qmail-reup out of memory\n"); die(); }
 
 char ssoutbuf[128];
 substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
-char ssinbuf[128];
-substdio ssin = SUBSTDIO_FDBUF(read,0,ssinbuf,sizeof ssinbuf);
-
-char **childargs;
-
-int read_line(stralloc *into) {
-  int match;
-
-  if (getln(&ssin,into,&match,'\n') == -1) die_read();
-
-  if (match == 0) return 0; // final partial line
-
-  if (!stralloc_0(into)) die_nomem();
-
-  return 1;
-}
 
 void putsflush(char *s) {
   substdio_puts(&ssout,s);
   substdio_flush(&ssout);
 }
 
-void filter_output(int runs) {
-  stralloc line = {0};
-  for (int lineno = 0; read_line(&line); lineno++) {
-    if (lineno > 0 || runs == 0) putsflush(line.s);
-  }
+char ssinbuf[128];
+substdio ssin = SUBSTDIO_FDBUF(read,0,ssinbuf,sizeof ssinbuf);
+
+int read_line(stralloc *into) {
+  int match;
+  if (getln(&ssin,into,&match,'\n') == -1) die_read();
+  if (!stralloc_0(into)) die_nomem();
+  if (match == 0) return 0; // XXX allow partial final line?
+
+  return 1;
 }
 
-int run_args() {
-  static int runs = 0;
-  int exitcode;
+void filter_output(int attempt) {
+  stralloc line = {0};
+  for (int lineno = 0; read_line(&line); lineno++) {
+    if (lineno > 0 || attempt == 0) putsflush(line.s);
+  }
+
+  /*
+   * XXX is "hide first line on subsequent attempts" the right idea?
+   * what if the contents of the first line are other than expected?
+   * what if the total output is one line?
+   */
+}
+
+void write_stdout_to(int fd) {
+  if (fd_move(1,fd) == -1) die_pipe();
+}
+
+void read_stdin_from(int fd) {
+  if (fd_move(0,fd) == -1) die_pipe();
+}
+
+int get_unused_fd() {
+  return 7;
+}
+
+void save_original_stdin(int temp_fd) {
+  if (fd_copy(temp_fd,0) == -1) die_pipe();
+}
+
+void restore_original_stdin(int temp_fd) {
+  if (fd_move(0,temp_fd) == -1) die_pipe();
+}
+
+int try(int attempt) {
   int child;
   int wstat;
   int pi[2];
+  int temp_fd;
 
   if (pipe(pi) == -1) die_pipe();
 
@@ -67,43 +90,45 @@ int run_args() {
       break;
     case 0:
       close(pi[0]);
-      if (fd_move(1,pi[1]) == -1) die_pipe();
+      write_stdout_to(pi[1]);
       execvp(*childargs,childargs);
       die();
   }
   close(pi[1]);
-  if (fd_move(0,pi[0]) == -1) die_pipe();
-  // XXX what if lines-to-hide >= lines-before-EOF?
-  // like if there's one line and we want to skip one line
-  filter_output(runs++);
+
+  temp_fd = get_unused_fd();
+  save_original_stdin(temp_fd);
+  read_stdin_from(pi[0]);
+  filter_output(attempt);
+  restore_original_stdin(temp_fd);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
 
-  exitcode = wait_exitcode(wstat);
-  if (exitcode == 0) {
-    errflush("exiting zero\n");
-  } else {
-    errflush("exiting nonzero\n");
-  }
-  close(pi[0]);
-  close(1);
+  return wait_exitcode(wstat);
+}
 
-  return exitcode;
+int stop_trying(int exitcode) {
+  switch (exitcode) {
+    case 0:
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 int main(int argc,char **argv) {
   int exitcode;
 
-  sig_alarmcatch(die);
-  sig_pipeignore();
- 
   childargs = argv + 1;
   if (!*childargs) die_usage();
 
+  sig_alarmcatch(die);
+  sig_pipeignore();
+
   for (int i = 0; i < 3; i++) {
-    if (0 == (exitcode = run_args()))
-      _exit(exitcode);
+    exitcode = try(i);
+    if (stop_trying(exitcode)) _exit(exitcode);
   }
 
   _exit(exitcode);
