@@ -1,3 +1,4 @@
+#include "auto_qmail.h"
 #include "commands.h"
 #include "fd.h"
 #include "sig.h"
@@ -371,6 +372,8 @@ struct commands smtpcommands[] = {
 };
 
 void dopop3() {
+  if (chdir(auto_qmail) == -1)
+    pop3_die_control();
   if (control_init() == -1)
     pop3_die_control();
   if (control_rldef(&hostname,"control/pop3greeting",1,(char *) 0) != 1)
@@ -387,6 +390,8 @@ void dopop3() {
 }
 
 void dosmtp() {
+  if (chdir(auto_qmail) == -1)
+    smtp_die_control();
   if (control_init() == -1)
     smtp_die_control();
   if (control_rldef(&hostname,"control/smtpgreeting",1,(char *) 0) != 1)

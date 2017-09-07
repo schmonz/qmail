@@ -1087,10 +1087,10 @@ substdio.h open.h byte.h str.h headerbody.h hfield.h env.h exit.h
 	./compile qbiff.c
 
 qmail-authup: \
-load qmail-authup.o base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+load qmail-authup.o auto_qmail.o base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
 case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
 fs.a socket.lib
-	./load qmail-authup base64.o commands.o control.o timeoutread.o timeoutwrite.o \
+	./load qmail-authup auto_qmail.o base64.o commands.o control.o timeoutread.o timeoutwrite.o \
 	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 	substdio.a error.a str.a fs.a  `cat socket.lib`
 
@@ -1098,7 +1098,7 @@ qmail-authup.o: \
 compile qmail-authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
 readwrite.h timeoutread.h timeoutwrite.h base64.h case.h env.h control.h \
-error.h
+error.h auto_qmail.h
 	./compile qmail-authup.c
 
 qmail-clean: \
