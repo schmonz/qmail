@@ -22,6 +22,7 @@
 int timeout = 1200;
 
 void die() { _exit(1); }
+void die_noretry() { _exit(17); }
 
 int safewrite(fd,buf,len) int fd; char *buf; int len;
 {
@@ -55,7 +56,7 @@ void pop3_die_control() { pop3_err("qmail-authup unable to read controls"); die(
 void smtp_die_control() { smtp_err("421 qmail-authup unable to read controls (#4.3.0)"); die(); }
 
 void pop3_die_alarm() { pop3_err("qmail-authup timeout"); die(); }
-void smtp_die_alarm() { smtp_err("451 qmail-authup timeout (#4.4.2)"); die(); }
+void smtp_die_alarm() { smtp_err("451 qmail-authup timeout (#4.4.2)"); die_noretry(); }
 void pop3_die_nomem() { pop3_err("qmail-authup out of memory"); die(); }
 void smtp_die_nomem() { smtp_err("451 qmail-authup out of memory (#4.3.0)"); die(); }
 void pop3_die_pipe() { pop3_err("qmail-authup unable to open pipe"); die(); }
@@ -199,6 +200,10 @@ void smtp_putenv(void) {
   if (!env_put2("SMTPUSER",user.s)) smtp_die_nomem();
 }
 
+int is_checkpassword_failure(int exitcode) {
+  return (exitcode == 1 || exitcode == 2 || exitcode == 111);
+}
+
 /* doanddie(char *user, unsigned int userlen, char *pass) */
 void smtp_doanddie(void) {
   int child;
@@ -232,8 +237,8 @@ void smtp_doanddie(void) {
   byte_zero(upbuf,sizeof upbuf);
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) smtp_die_childcrashed();
-  if (wait_exitcode(wstat)) smtp_die_badauth();
-  die();
+  if (is_checkpassword_failure(wait_exitcode(wstat))) smtp_die_badauth();
+  die_noretry();
 }
 
 void smtp_greet()
