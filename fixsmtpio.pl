@@ -197,8 +197,9 @@ sub parse_request {
 
     chomp($request);
     my ($verb, $arg) = split(/ /, $request, 2);
+    $verb ||= '';
+    $arg  ||= '';
     $verb = lc($verb);
-    $arg ||= '';
 
     return ($verb, $arg);
 }
