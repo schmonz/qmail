@@ -111,6 +111,7 @@ int try(int attempt) {
 int stop_trying(int exitcode) {
   switch (exitcode) {
     case 0:
+    case 17:
       return 1;
     default:
       return 0;
