@@ -1098,7 +1098,7 @@ qmail-authup.o: \
 compile qmail-authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
 readwrite.h timeoutread.h timeoutwrite.h base64.h case.h env.h control.h \
-error.h auto_qmail.h
+error.h scan.h auto_qmail.h
 	./compile qmail-authup.c
 
 qmail-clean: \

@@ -10,6 +10,7 @@
 #include "byte.h"
 #include "now.h"
 #include "fmt.h"
+#include "scan.h"
 #include "exit.h"
 #include "readwrite.h"
 #include "timeoutread.h"
@@ -25,8 +26,7 @@ int timeout = 1200;
 void die() { _exit(1); }
 void die_noretry() { _exit(17); }
 
-int safewrite(fd,buf,len) int fd; char *buf; int len;
-{
+int safewrite(int fd,char *buf,int len) {
   int r;
   r = timeoutwrite(timeout,fd,buf,len);
   if (r <= 0) die();
@@ -109,8 +109,7 @@ void smtp_err_authoriz() { smtp_err("530 qmail-authup authentication required (#
 void pop3_err_syntax() { pop3_err("qmail-authup syntax error"); }
 void pop3_err_wantuser() { pop3_err("qmail-authup USER first"); }
 
-int saferead(fd,buf,len) int fd; char *buf; int len;
-{
+int saferead(int fd,char *buf,int len) {
   int r;
   r = timeoutread(timeout,fd,buf,len);
   if (r == -1) if (errno == error_timeout) authup_die("alarm");
@@ -127,8 +126,8 @@ char **childargs;
 substdio ssup;
 char upbuf[128];
 
-void pop3_okay(arg) char *arg; { puts("+OK \r\n"); flush(); }
-void pop3_quit(arg) char *arg; { pop3_okay(0); _exit(0); }
+void pop3_okay() { puts("+OK \r\n"); flush(); }
+void pop3_quit() { pop3_okay(); _exit(0); }
 void smtp_quit() { puts("221 "); smtp_err(hostname.s); _exit(0); }
 
 /* XXX POP3 only */
@@ -136,11 +135,8 @@ char unique[FMT_ULONG + FMT_ULONG + 3];
 int seenuser = 0;
 
 // XXX merge these two doanddie()s
-void pop3_doanddie(user,userlen,pass)
-char *user;
-unsigned int userlen; /* including 0 byte */
-char *pass;
-{
+// userlen includes 0 byte
+void pop3_doanddie(char *user,unsigned int userlen,char *pass) {
   int child;
   int wstat;
   int pi[2];
@@ -175,8 +171,7 @@ char *pass;
   die();
 }
 
-void pop3_greet()
-{
+void pop3_greet() {
   char *s;
   s = unique;
   s += fmt_uint(s,getpid());
@@ -191,24 +186,21 @@ void pop3_greet()
   flush();
 }
 
-void pop3_user(arg) char *arg;
-{
+void pop3_user(char *arg) {
   if (!*arg) { pop3_err_syntax(); return; }
-  pop3_okay(0);
+  pop3_okay();
   seenuser = 1;
   if (!stralloc_copys(&username,arg)) authup_die("nomem");
   if (!stralloc_0(&username)) authup_die("nomem");
 }
 
-void pop3_pass(arg) char *arg;
-{
+void pop3_pass(char *arg) {
   if (!seenuser) { pop3_err_wantuser(); return; }
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_doanddie(username.s,username.len,arg);
 }
 
-void pop3_apop(arg) char *arg;
-{
+void pop3_apop(char *arg) {
   char *space;
   space = arg + str_chr(arg,' ');
   if (!*space) { pop3_err_syntax(); return; }
@@ -222,11 +214,11 @@ static stralloc user = {0};
 static stralloc pass = {0};
 static stralloc resp = {0};
 
-void pop3_putenv(void) {
+void pop3_putenv() {
   if (!env_put2("POP3USER",user.s)) authup_die("nomem");
 }
 
-void smtp_putenv(void) {
+void smtp_putenv() {
   if (!env_put2("SMTPUSER",user.s)) authup_die("nomem");
 }
 
@@ -235,7 +227,7 @@ int is_checkpassword_failure(int exitcode) {
 }
 
 /* doanddie(char *user, unsigned int userlen, char *pass) */
-void smtp_doanddie(void) {
+void smtp_doanddie() {
   int child;
   int wstat;
   int pi[2];
@@ -271,22 +263,19 @@ void smtp_doanddie(void) {
   die_noretry();
 }
 
-void smtp_greet()
-{
+void smtp_greet() {
   puts("220 ");
   puts(hostname.s);
   puts(" ESMTP\r\n");
   flush();
 }
 
-void smtp_helo(arg) char *arg;
-{
+void smtp_helo(char *arg) {
   puts("250 ");
   smtp_err(hostname.s);
 }
 
-void smtp_ehlo(arg) char *arg;
-{
+void smtp_ehlo(char *arg) {
   puts("250-");
   puts(hostname.s);
   puts("\r\n250-AUTH LOGIN PLAIN");
@@ -294,8 +283,7 @@ void smtp_ehlo(arg) char *arg;
   smtp_err("\r\n250-PIPELINING\r\n250 8BITMIME");
 }
 
-void smtp_authgetl(void)
-{
+void smtp_authgetl() {
   int i;
 
   if (!stralloc_copys(&authin,"")) authup_die("nomem");
@@ -313,8 +301,7 @@ void smtp_authgetl(void)
   if (authin.len == 0) authup_die("input");
 }
 
-void auth_login(arg) char *arg;
-{
+void auth_login(char *arg) {
   int r;
 
   if (*arg) {
@@ -339,8 +326,7 @@ void auth_login(arg) char *arg;
   smtp_doanddie();
 }
 
-void auth_plain(arg) char *arg;
-{
+void auth_plain(char *arg) {
   int r, id = 0;
 
   if (*arg) {
@@ -365,8 +351,7 @@ void auth_plain(arg) char *arg;
   smtp_doanddie();
 }
 
-void smtp_auth(arg) char *arg;
-{
+void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
@@ -439,7 +424,7 @@ int control_readtimeout(char *p) {
   return control_readint(&timeout,file.s);
 }
 
-void doprotocol(char *p, void *errorfn, void *greetfn, struct commands *c) {
+void doprotocol(char *p,void *errorfn,void *greetfn,struct commands *c) {
   protocol_error = errorfn;
   void (*greetingfn)() = greetfn;
 
