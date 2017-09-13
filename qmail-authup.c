@@ -20,6 +20,8 @@
 #include "control.h"
 #include "error.h"
 
+static char *protocol;
+
 int timeout = 1200;
 
 void die() { _exit(1); }
@@ -52,14 +54,47 @@ void smtp_err(char *s) {
   flush();
 }
 
+struct authup_error {
+  char *name;
+  char *message;
+  char *smtpcode;
+  char *smtperror;
+};
+
+struct authup_error e[] = {
+  { "control", "unable to read controls",      "421", "(#4.3.0)" }
+, { "nomem",   "out of memory",                "451", "(#4.3.0)" }
+, { 0,         "unknown or unspecified error", "421", "(#4.3.0)" }
+};
+
+void pop3_error(struct authup_error ae) {
+    puts("-ERR");
+    puts(" qmail-authup ");
+    puts(ae.message);
+}
+
+void smtp_error(struct authup_error ae) {
+    puts(ae.smtpcode);
+    puts(" qmail-authup ");
+    puts(ae.message);
+    puts(" ");
+    puts(ae.smtperror);
+}
+
+void authup_die(const char *name) {
+  int i;
+  for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
+  if (case_equals("pop3",protocol)) pop3_error(e[i]);
+  if (case_equals("smtp",protocol)) smtp_error(e[i]);
+  puts("\r\n");
+  flush();
+  die();
+}
+
 void die_usage() { puts("usage: qmail-authup <pop3|smtp> subprogram\n"); flush(); die(); }
-void pop3_die_control() { pop3_err("qmail-authup unable to read controls"); die(); }
-void smtp_die_control() { smtp_err("421 qmail-authup unable to read controls (#4.3.0)"); die(); }
 
 void pop3_die_alarm() { pop3_err("qmail-authup timeout"); die(); }
 void smtp_die_alarm() { smtp_err("451 qmail-authup timeout (#4.4.2)"); die_noretry(); }
-void pop3_die_nomem() { pop3_err("qmail-authup out of memory"); die(); }
-void smtp_die_nomem() { smtp_err("451 qmail-authup out of memory (#4.3.0)"); die(); }
 void pop3_die_pipe() { pop3_err("qmail-authup unable to open pipe"); die(); }
 void smtp_die_pipe() { smtp_err("454 qmail-authup unable to open pipe (#4.3.0)"); die(); }
 void pop3_die_write() { pop3_err("qmail-authup unable to write pipe"); die(); }
@@ -167,8 +202,8 @@ void pop3_user(arg) char *arg;
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay(0);
   seenuser = 1;
-  if (!stralloc_copys(&username,arg)) pop3_die_nomem(); 
-  if (!stralloc_0(&username)) pop3_die_nomem(); 
+  if (!stralloc_copys(&username,arg)) authup_die("nomem");
+  if (!stralloc_0(&username)) authup_die("nomem");
 }
 
 void pop3_pass(arg) char *arg;
@@ -194,11 +229,11 @@ static stralloc pass = {0};
 static stralloc resp = {0};
 
 void pop3_putenv(void) {
-  if (!env_put2("POP3USER",user.s)) pop3_die_nomem();
+  if (!env_put2("POP3USER",user.s)) authup_die("nomem");
 }
 
 void smtp_putenv(void) {
-  if (!env_put2("SMTPUSER",user.s)) smtp_die_nomem();
+  if (!env_put2("SMTPUSER",user.s)) authup_die("nomem");
 }
 
 int is_checkpassword_failure(int exitcode) {
@@ -269,9 +304,9 @@ void smtp_authgetl(void)
 {
   int i;
 
-  if (!stralloc_copys(&authin,"")) smtp_die_nomem();
+  if (!stralloc_copys(&authin,"")) authup_die("nomem");
   for (;;) {
-    if (!stralloc_readyplus(&authin,1)) smtp_die_nomem(); /* XXX */
+    if (!stralloc_readyplus(&authin,1)) authup_die("nomem"); /* XXX */
     i = substdio_get(&ssin,authin.s + authin.len,1);
     if (i != 1) die();
     if (authin.s[authin.len] == '\n') break;
@@ -296,17 +331,17 @@ void auth_login(arg) char *arg;
     smtp_authgetl();
     if ((r = b64decode(authin.s,authin.len,&user)) == 1) smtp_die_input();
   }
-  if (r == -1) smtp_die_nomem();
+  if (r == -1) authup_die("nomem");
 
   smtp_err("334 UGFzc3dvcmQ6"); /* Password: */
 
   smtp_authgetl();
   if ((r = b64decode(authin.s,authin.len,&pass)) == 1) smtp_die_input();
-  if (r == -1) smtp_die_nomem();
+  if (r == -1) authup_die("nomem");
 
   if (!user.len || !pass.len) smtp_die_input();
-  if (!stralloc_0(&user)) smtp_die_nomem();
-  if (!stralloc_0(&pass)) smtp_die_nomem();
+  if (!stralloc_0(&user)) authup_die("nomem");
+  if (!stralloc_0(&pass)) authup_die("nomem");
   smtp_doanddie();
 }
 
@@ -322,17 +357,17 @@ void auth_plain(arg) char *arg;
     smtp_authgetl();
     if ((r = b64decode(authin.s,authin.len,&resp)) == 1) smtp_die_input();
   }
-  if (r == -1 || !stralloc_0(&resp)) smtp_die_nomem();
+  if (r == -1 || !stralloc_0(&resp)) authup_die("nomem");
   while (resp.s[id]) id++; /* ignore authorize-id */
 
   if (resp.len > id + 1)
-    if (!stralloc_copys(&user,resp.s + id + 1)) smtp_die_nomem();
+    if (!stralloc_copys(&user,resp.s + id + 1)) authup_die("nomem");
   if (resp.len > id + user.len + 2)
-    if (!stralloc_copys(&pass,resp.s + id + user.len + 2)) smtp_die_nomem();
+    if (!stralloc_copys(&pass,resp.s + id + user.len + 2)) authup_die("nomem");
 
   if (!user.len || !pass.len) smtp_die_input();
-  if (!stralloc_0(&user)) smtp_die_nomem();
-  if (!stralloc_0(&pass)) smtp_die_nomem();
+  if (!stralloc_0(&user)) authup_die("nomem");
+  if (!stralloc_0(&pass)) authup_die("nomem");
   smtp_doanddie();
 }
 
@@ -383,16 +418,17 @@ int should_greet() {
 }
 
 void dopop3() {
+  protocol = "pop3";
   if (chdir(auto_qmail) == -1)
-    pop3_die_control();
+    authup_die("control");
   if (control_init() == -1)
-    pop3_die_control();
+    authup_die("control");
   if (control_rldef(&hostname,"control/pop3greeting",1,(char *) 0) != 1)
-    pop3_die_control();
+    authup_die("control");
   if (!stralloc_0(&hostname))
-    pop3_die_nomem();
+    authup_die("nomem");
   if (control_readint(&timeout,"control/timeoutpop3d") == -1)
-    pop3_die_control();
+    authup_die("control");
 
   if (should_greet())
     pop3_greet();
@@ -402,16 +438,17 @@ void dopop3() {
 }
 
 void dosmtp() {
+  protocol = "smtp";
   if (chdir(auto_qmail) == -1)
-    smtp_die_control();
+    authup_die("control");
   if (control_init() == -1)
-    smtp_die_control();
+    authup_die("control");
   if (control_rldef(&hostname,"control/smtpgreeting",1,(char *) 0) != 1)
-    smtp_die_control();
+    authup_die("control");
   if (!stralloc_0(&hostname))
-    smtp_die_nomem();
+    authup_die("nomem");
   if (control_readint(&timeout,"control/timeoutsmtpd") == -1)
-    smtp_die_control();
+    authup_die("control");
 
   if (should_greet())
     smtp_greet();
