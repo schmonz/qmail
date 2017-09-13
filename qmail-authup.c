@@ -411,42 +411,44 @@ int should_greet() {
   return 1;
 }
 
-void dopop3() {
-  protocol_error = pop3_auth_error;
-  if (chdir(auto_qmail) == -1)
-    authup_die("control");
-  if (control_init() == -1)
-    authup_die("control");
-  if (control_rldef(&hostname,"control/pop3greeting",1,(char *) 0) != 1)
-    authup_die("control");
-  if (!stralloc_0(&hostname))
-    authup_die("nomem");
-  if (control_readint(&timeout,"control/timeoutpop3d") == -1)
-    authup_die("control");
+int control_readgreeting(char *p) {
+  stralloc file = {0};
+  int retval;
 
-  if (should_greet())
-    pop3_greet();
-  commands(&ssin,pop3commands);
+  if (!stralloc_copys(&file,"control/")) authup_die("nomem");
+  if (!stralloc_cats(&file,p)) authup_die("nomem");
+  if (!stralloc_cats(&file,"greeting")) authup_die("nomem");
+  if (!stralloc_0(&file)) authup_die("nomem");
 
-  die();
+  retval = control_rldef(&hostname,file.s,1,(char *) 0);
+  if (retval != 1) retval = -1;
+
+  if (!stralloc_0(&hostname)) authup_die("nomem");
+
+  return retval;
 }
 
-void dosmtp() {
-  protocol_error = smtp_auth_error;
-  if (chdir(auto_qmail) == -1)
-    authup_die("control");
-  if (control_init() == -1)
-    authup_die("control");
-  if (control_rldef(&hostname,"control/smtpgreeting",1,(char *) 0) != 1)
-    authup_die("control");
-  if (!stralloc_0(&hostname))
-    authup_die("nomem");
-  if (control_readint(&timeout,"control/timeoutsmtpd") == -1)
-    authup_die("control");
+int control_readtimeout(char *p) {
+  stralloc file = {0};
 
-  if (should_greet())
-    smtp_greet();
-  commands(&ssin,smtpcommands);
+  if (!stralloc_copys(&file,"control/timeout")) authup_die("nomem");
+  if (!stralloc_cats(&file,p)) authup_die("nomem");
+  if (!stralloc_cats(&file,"d")) authup_die("nomem");
+  if (!stralloc_0(&file)) authup_die("nomem");
+
+  return control_readint(&timeout,file.s);
+}
+
+void doprotocol(char *p, void *errorfn, void *greetfn, struct commands *c) {
+  protocol_error = errorfn;
+  void (*greetingfn)() = greetfn;
+
+  if (chdir(auto_qmail) == -1) authup_die("control");
+  if (control_init() == -1) authup_die("control");
+  if (control_readgreeting(p) == -1) authup_die("control");
+  if (control_readtimeout(p) == -1) authup_die("control");
+  if (should_greet()) greetingfn();
+  commands(&ssin,c);
 
   die();
 }
@@ -463,7 +465,9 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  if (case_equals("pop3",protocol)) dopop3();
-  if (case_equals("smtp",protocol)) dosmtp();
+  if (case_equals("pop3",protocol))
+    doprotocol("pop3",pop3_auth_error,pop3_greet,&pop3commands);
+  if (case_equals("smtp",protocol))
+    doprotocol("smtp",smtp_auth_error,smtp_greet,&smtpcommands);
   die_usage();
 }
