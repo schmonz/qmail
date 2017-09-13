@@ -20,7 +20,7 @@
 #include "control.h"
 #include "error.h"
 
-static char *protocol;
+void (*protocol_error)();
 
 int timeout = 1200;
 
@@ -84,8 +84,7 @@ void smtp_error(struct authup_error ae) {
 void authup_die(const char *name) {
   int i;
   for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
-  if (case_equals("pop3",protocol)) pop3_error(e[i]);
-  if (case_equals("smtp",protocol)) smtp_error(e[i]);
+  protocol_error(e[i]);
   puts("\r\n");
   flush();
   die();
@@ -418,7 +417,7 @@ int should_greet() {
 }
 
 void dopop3() {
-  protocol = "pop3";
+  protocol_error = pop3_error;
   if (chdir(auto_qmail) == -1)
     authup_die("control");
   if (control_init() == -1)
@@ -438,7 +437,7 @@ void dopop3() {
 }
 
 void dosmtp() {
-  protocol = "smtp";
+  protocol_error = smtp_error;
   if (chdir(auto_qmail) == -1)
     authup_die("control");
   if (control_init() == -1)
