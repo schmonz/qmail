@@ -59,12 +59,14 @@ struct authup_error {
   char *message;
   char *smtpcode;
   char *smtperror;
+  void (*die)();
 };
 
 struct authup_error e[] = {
-  { "control", "unable to read controls",      "421", "(#4.3.0)" }
-, { "nomem",   "out of memory",                "451", "(#4.3.0)" }
-, { 0,         "unknown or unspecified error", "421", "(#4.3.0)" }
+  { "control", "unable to read controls",      "421", "(#4.3.0)", die         }
+, { "nomem",   "out of memory",                "451", "(#4.3.0)", die         }
+, { "alarm",   "timeout",                      "451", "(#4.4.2)", die_noretry }
+, { 0,         "unknown or unspecified error", "421", "(#4.3.0)", die         }
 };
 
 void pop3_error(struct authup_error ae) {
@@ -87,13 +89,11 @@ void authup_die(const char *name) {
   protocol_error(e[i]);
   puts("\r\n");
   flush();
-  die();
+  e[i].die();
 }
 
 void die_usage() { puts("usage: qmail-authup <pop3|smtp> subprogram\n"); flush(); die(); }
 
-void pop3_die_alarm() { pop3_err("qmail-authup timeout"); die(); }
-void smtp_die_alarm() { smtp_err("451 qmail-authup timeout (#4.4.2)"); die_noretry(); }
 void pop3_die_pipe() { pop3_err("qmail-authup unable to open pipe"); die(); }
 void smtp_die_pipe() { smtp_err("454 qmail-authup unable to open pipe (#4.3.0)"); die(); }
 void pop3_die_write() { pop3_err("qmail-authup unable to write pipe"); die(); }
@@ -118,7 +118,7 @@ int saferead(fd,buf,len) int fd; char *buf; int len;
 {
   int r;
   r = timeoutread(timeout,fd,buf,len);
-  if (r == -1) if (errno == error_timeout) smtp_die_alarm();
+  if (r == -1) if (errno == error_timeout) authup_die("alarm");
   if (r <= 0) die();
   return r;
 }
