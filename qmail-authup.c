@@ -63,10 +63,10 @@ struct authup_error {
 };
 
 struct authup_error e[] = {
-  { "control", "unable to read controls",      "421", "(#4.3.0)", die         }
-, { "nomem",   "out of memory",                "451", "(#4.3.0)", die         }
-, { "alarm",   "timeout",                      "451", "(#4.4.2)", die_noretry }
-, { 0,         "unknown or unspecified error", "421", "(#4.3.0)", die         }
+  { "control", "unable to read controls",      "421", "4.3.0", die         }
+, { "nomem",   "out of memory",                "451", "4.3.0", die         }
+, { "alarm",   "timeout",                      "451", "4.4.2", die_noretry }
+, { 0,         "unknown or unspecified error", "421", "4.3.0", die         }
 };
 
 void pop3_error(struct authup_error ae) {
@@ -79,8 +79,9 @@ void smtp_error(struct authup_error ae) {
     puts(ae.smtpcode);
     puts(" qmail-authup ");
     puts(ae.message);
-    puts(" ");
+    puts(" (#");
     puts(ae.smtperror);
+    puts(")");
 }
 
 void authup_die(const char *name) {
