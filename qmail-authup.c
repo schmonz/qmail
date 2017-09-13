@@ -20,8 +20,6 @@
 #include "control.h"
 #include "error.h"
 
-void (*protocol_error)();
-
 int timeout = 1200;
 
 void die() { _exit(1); }
@@ -91,6 +89,8 @@ void smtp_auth_error(struct authup_error ae) {
     puts(ae.smtperror);
     puts(")");
 }
+
+void (*protocol_error)();
 
 void authup_die(const char *name) {
   int i;
@@ -466,8 +466,8 @@ int main(int argc,char **argv) {
   if (!*childargs) die_usage();
 
   if (case_equals("pop3",protocol))
-    doprotocol("pop3",pop3_auth_error,pop3_greet,&pop3commands);
+    doprotocol("pop3",pop3_auth_error,pop3_greet,pop3commands);
   if (case_equals("smtp",protocol))
-    doprotocol("smtp",smtp_auth_error,smtp_greet,&smtpcommands);
+    doprotocol("smtp",smtp_auth_error,smtp_greet,smtpcommands);
   die_usage();
 }
