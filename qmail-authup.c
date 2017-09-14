@@ -413,8 +413,8 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  int i;
-  for (i = 0;p[i].name;++i) if (case_equals(p[i].name,protocol)) break;
-  if (p[i].name == '\0') die_usage();
-  doprotocol(p[i]);
+  for (int i = 0; p[i].name; ++i)
+    if (case_equals(p[i].name,protocol))
+      doprotocol(p[i]);
+  die_usage();
 }
