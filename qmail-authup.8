@@ -52,7 +52,7 @@ with the same descriptors 0 and 1;
 descriptor 2 writing to the network;
 and descriptor 3 reading the username, a 0 byte, the password,
 another 0 byte,
-an empty third datum,
+a protocol-specific timestamp,
 and a final 0 byte.
 .B qmail-authup
 then waits for
@@ -88,9 +88,8 @@ settings similar to these:
    connect = localhost:26
    protocol = smtp
 .SH "ENVIRONMENT VARIABLES"
-Child processes can inspect
-.B AUTHUSER
-for the name of the authenticated user.
+Child processes can see the authenticated user in
+.BR AUTHUSER .
 .SH "CONTROL FILES"
 .TP 5
 .I smtpgreeting / pop3greeting
