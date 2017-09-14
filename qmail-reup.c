@@ -1,6 +1,8 @@
 #include "env.h"
 #include "fmt.h"
 #include "readwrite.h"
+#include "scan.h"
+#include "sgetopt.h"
 #include "str.h"
 #include "substdio.h"
 #include "wait.h"
@@ -12,14 +14,15 @@ substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 void errflush(char *s) {
   substdio_puts(&sserr,s);
+  substdio_puts(&sserr,"\n");
   substdio_flush(&sserr);
 }
 
-void die_usage() { errflush("usage: qmail-reup subprogram\n"); die(); }
-void die_fork() { errflush("qmail-reup unable to fork\n"); die(); }
-void die_nomem() { errflush("qmail-reup out of memory\n"); die(); }
+void die_usage() { errflush("usage: qmail-reup [ -s seconds ] [ -t tries ] subprogram"); die(); }
+void die_fork()  { errflush("qmail-reup unable to fork"); die(); }
+void die_nomem() { errflush("qmail-reup out of memory"); die(); }
 
-int try(int attempt, char **childargs) {
+int try(int attempt,char **childargs) {
   int child;
   int wstat;
   char reup[FMT_ULONG];
@@ -41,6 +44,12 @@ int try(int attempt, char **childargs) {
   return wait_exitcode(wstat);
 }
 
+int keep_trying(int attempt,int max) {
+  if (max == 0) return 1;
+  if (attempt <= max) return 1;
+  return 0;
+}
+
 int stop_trying(int exitcode) {
   switch (exitcode) {
     case 0:
@@ -53,14 +62,34 @@ int stop_trying(int exitcode) {
 
 int main(int argc,char **argv) {
   int exitcode;
-  char **childargs;
+  int opt;
+  int seconds;
+  int tries;
 
-  childargs = argv + 1;
-  if (!*childargs) die_usage();
+  seconds = 0;
+  tries = 0;
+  while ((opt = getopt(argc,argv,"s:t:")) != opteof) {
+    switch (opt) {
+      case 's':
+        if (!scan_ulong(optarg,&seconds)) die_usage();
+        break;
+      case 't':
+        if (!scan_ulong(optarg,&tries)) die_usage();
+        break;
+      case '?':
+      default:
+        die_usage();
+    }
+  }
+  argc -= optind;
+  argv += optind;
 
-  for (int i = 1; i <= 3; i++) {
-    exitcode = try(i, childargs);
+  if (!*argv) die_usage();
+
+  for (int i = 1; keep_trying(i,tries); i++) {
+    exitcode = try(i,argv);
     if (stop_trying(exitcode)) _exit(exitcode);
+    sleep(seconds);
   }
 
   _exit(exitcode);
