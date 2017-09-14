@@ -47,22 +47,26 @@ struct authup_error {
   char *message;
   char *smtpcode;
   char *smtperror;
+  int sleep;
   void (*die)();
 };
 
 struct authup_error e[] = {
-  { "control", "unable to read controls",      "421", "4.3.0", die         }
-, { "nomem",   "out of memory",                "451", "4.3.0", die         }
-, { "alarm",   "timeout",                      "451", "4.4.2", die_noretry }
-, { "pipe",    "unable to open pipe",          "454", "4.3.0", die         }
-, { "write",   "unable to write pipe",         "454", "4.3.0", die         }
-, { "fork",    "unable to fork",               "454", "4.3.0", die         }
-, { "child",   "aack, child crashed",          "454", "4.3.0", die         }
-, { "badauth", "authorization failed",         "535", "5.7.0", die         }
-, { "noauth",  "auth type unimplemented",      "504", "5.5.1", die         }
-, { "input",   "malformed auth input",         "501", "5.5.4", die         }
-, { "authabrt","auth exchange cancelled",      "501", "5.0.0", die         }
-, { 0,         "unknown or unspecified error", "421", "4.3.0", die         }
+  { "control", "unable to read controls",      "421", "4.3.0", 0, die_noretry }
+, { "nomem",   "out of memory",                "451", "4.3.0", 0, die_noretry }
+, { "alarm",   "timeout",                      "451", "4.4.2", 0, die_noretry }
+, { "pipe",    "unable to open pipe",          "454", "4.3.0", 0, die_noretry }
+, { "read",    "unable to read pipe",          "454", "4.3.0", 0, die_noretry }
+, { "write",   "unable to write pipe",         "454", "4.3.0", 0, die_noretry }
+, { "fork",    "unable to fork",               "454", "4.3.0", 0, die_noretry }
+, { "wait",    "unable to wait for child",     "454", "4.3.0", 0, die_noretry }
+, { "crash",   "aack, child crashed",          "454", "4.3.0", 0, die_noretry }
+, { "badauth", "authorization failed",         "535", "5.7.0", 5, die         }
+, { "noauth",  "auth type unimplemented",      "504", "5.5.1", 5, die         }
+, { "input",   "malformed auth input",         "501", "5.5.4", 5, die         }
+, { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
+, { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
+, { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
 };
 
 void pop3_auth_error(struct authup_error ae) {
@@ -85,6 +89,7 @@ void (*protocol_error)();
 void authup_die(const char *name) {
   int i;
   for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
+  sleep(e[i].sleep);
   protocol_error(e[i]);
   puts("\r\n");
   flush();
@@ -103,7 +108,7 @@ int saferead(int fd,char *buf,int len) {
   int r;
   r = timeoutread(timeout,fd,buf,len);
   if (r == -1) if (errno == error_timeout) authup_die("alarm");
-  if (r <= 0) die();
+  if (r <= 0) authup_die("read");
   return r;
 }
 
@@ -164,11 +169,11 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   close(pi[1]);
   byte_zero(upbuf,sizeof upbuf);
 
-  if (wait_pid(&wstat,child) == -1) die();
-  if (wait_crashed(wstat)) authup_die("child");
+  if (wait_pid(&wstat,child) == -1) authup_die("wait");
+  if (wait_crashed(wstat)) authup_die("crash");
   if (is_checkpassword_failure(wait_exitcode(wstat))) authup_die("badauth");
 
-  die_noretry();
+  authup_die("protocol");
 }
 
 static char unique[FMT_ULONG + FMT_ULONG + 3];
@@ -242,7 +247,7 @@ void smtp_authgetl() {
   for (;;) {
     if (!stralloc_readyplus(&authin,1)) authup_die("nomem"); /* XXX */
     i = substdio_get(&ssin,authin.s + authin.len,1);
-    if (i != 1) die();
+    if (i != 1) authup_die("read");
     if (authin.s[authin.len] == '\n') break;
     ++authin.len;
   }
@@ -398,7 +403,7 @@ void doprotocol(struct protocol p) {
   if (control_readtimeout(p.name) == -1) authup_die("control");
   if (should_greet()) p.greet();
   commands(&ssin,p.c);
-  die();
+  authup_die("protocol");
 }
 
 int main(int argc,char **argv) {
