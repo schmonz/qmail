@@ -34,9 +34,9 @@ sub munge_banner {
     my ($response) = @_;
 
     if ($response =~ /^4[0-9]{2} /) {
-        $exitcode = 14;
+        $exitcode = 12;
     } elsif ($response =~ /^5[0-9]{2} /) {
-        $exitcode = 15;
+        $exitcode = 12;
     } else {
         $response = q{235 ok};
         $response .= qq{, $ENV{AUTHUSER},} if defined $ENV{AUTHUSER};
