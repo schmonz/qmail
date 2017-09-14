@@ -248,6 +248,7 @@ void smtp_authgetl() {
   int i;
 
   if (!stralloc_copys(&authin,"")) authup_die("nomem");
+
   for (;;) {
     if (!stralloc_readyplus(&authin,1)) authup_die("nomem"); /* XXX */
     i = substdio_get(&ssin,authin.s + authin.len,1);
@@ -258,6 +259,7 @@ void smtp_authgetl() {
 
   if (authin.len > 0) if (authin.s[authin.len - 1] == '\r') --authin.len;
   authin.s[authin.len] = 0;
+
   if (*authin.s == '*' && *(authin.s + 1) == 0) authup_die("authabrt");
   if (authin.len == 0) authup_die("input");
 }
