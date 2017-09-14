@@ -44,7 +44,7 @@ int try(int attempt, char **childargs) {
 int stop_trying(int exitcode) {
   switch (exitcode) {
     case 0:
-    case 17:
+    case 12:
       return 1;
     default:
       return 0;

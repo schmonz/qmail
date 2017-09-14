@@ -24,7 +24,7 @@
 static int timeout = 1200;
 
 void die() { _exit(1); }
-void die_noretry() { _exit(17); }
+void die_noretry() { _exit(12); }
 
 int safewrite(int fd,char *buf,int len) {
   int r;
