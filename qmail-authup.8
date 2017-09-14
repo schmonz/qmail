@@ -17,17 +17,18 @@ is most commonly invoked from
 as
 
 .EX
-   qmail-reup qmail-authup smtp \\
+  qmail-reup \\
+    qmail-authup smtp \\
       checkpassword checkpassword-rejectroot \\
-      env RELAYCLIENT="" qmail-fixsmtpio \\
-      qmail-smtpd
+        qmail-fixsmtpio \\
+          env RELAYCLIENT="" qmail-smtpd
 .EE
 
 or
 
 .EX
-   qmail-authup pop3 \\
-      checkpassword checkpassword-rejectroot \\
+  qmail-authup pop3 \\
+    checkpassword checkpassword-rejectroot \\
       qmail-pop3d
 .EE
 
