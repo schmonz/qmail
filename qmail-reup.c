@@ -18,7 +18,7 @@ void errflush(char *s) {
   substdio_flush(&sserr);
 }
 
-void die_usage() { errflush("usage: qmail-reup [ -s seconds ] [ -t tries ] subprogram"); die(); }
+void die_usage() { errflush("usage: qmail-reup [ -t tries ] subprogram"); die(); }
 void die_fork()  { errflush("qmail-reup unable to fork"); die(); }
 void die_nomem() { errflush("qmail-reup out of memory"); die(); }
 
@@ -63,20 +63,14 @@ int stop_trying(int exitcode) {
 int main(int argc,char **argv) {
   int exitcode;
   int opt;
-  int seconds;
   int tries;
 
-  seconds = 0;
   tries = 0;
-  while ((opt = getopt(argc,argv,"s:t:")) != opteof) {
+  while ((opt = getopt(argc,argv,"t:")) != opteof) {
     switch (opt) {
-      case 's':
-        if (!scan_ulong(optarg,&seconds)) die_usage();
-        break;
       case 't':
         if (!scan_ulong(optarg,&tries)) die_usage();
         break;
-      case '?':
       default:
         die_usage();
     }
@@ -89,7 +83,6 @@ int main(int argc,char **argv) {
   for (int i = 1; keep_trying(i,tries); i++) {
     exitcode = try(i,argv);
     if (stop_trying(exitcode)) _exit(exitcode);
-    sleep(seconds);
   }
 
   _exit(exitcode);
