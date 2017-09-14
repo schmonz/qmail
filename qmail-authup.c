@@ -66,18 +66,18 @@ struct authup_error e[] = {
 };
 
 void pop3_auth_error(struct authup_error ae) {
-    puts("-ERR");
-    puts(" qmail-authup ");
-    puts(ae.message);
+  puts("-ERR");
+  puts(" qmail-authup ");
+  puts(ae.message);
 }
 
 void smtp_auth_error(struct authup_error ae) {
-    puts(ae.smtpcode);
-    puts(" qmail-authup ");
-    puts(ae.message);
-    puts(" (#");
-    puts(ae.smtperror);
-    puts(")");
+  puts(ae.smtpcode);
+  puts(" qmail-authup ");
+  puts(ae.message);
+  puts(" (#");
+  puts(ae.smtperror);
+  puts(")");
 }
 
 void (*protocol_error)();
