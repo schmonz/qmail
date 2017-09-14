@@ -39,7 +39,7 @@ sub munge_banner {
         $exitcode = 15;
     } else {
         $response = q{235 ok};
-        $response .= qq{, $ENV{SMTPUSER},} if defined $ENV{SMTPUSER};
+        $response .= qq{, $ENV{AUTHUSER},} if defined $ENV{AUTHUSER};
         $response .= qq{ go ahead $< (#2.0.0)};
     }
 
