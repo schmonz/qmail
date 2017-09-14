@@ -345,16 +345,18 @@ struct commands smtpcommands[] = {
 , { 0, smtp_err_authoriz, 0 }
 };
 
-int should_greet() {
-  char *x;
-  int r;
+struct protocol {
+  char *name;
+  void (*error)();
+  void (*greet)();
+  struct commands *c;
+};
 
-  x = env_get("REUP");
-  if (!x) return 1;
-  if (!scan_ulong(x,&r)) return 1;
-  if (r > 1) return 0;
-  return 1;
-}
+struct protocol p[] = {
+  { "pop3", pop3_auth_error, pop3_greet, pop3commands }
+, { "smtp", smtp_auth_error, smtp_greet, smtpcommands }
+, { 0,      die_usage,       die_usage,  0            }
+};
 
 int control_readgreeting(char *p) {
   stralloc file = {0};
@@ -384,16 +386,26 @@ int control_readtimeout(char *p) {
   return control_readint(&timeout,file.s);
 }
 
-void doprotocol(char *p,void (*error)(),void (*greet)(),struct commands *c) {
-  protocol_error = error;
+int should_greet() {
+  char *x;
+  int r;
+
+  x = env_get("REUP");
+  if (!x) return 1;
+  if (!scan_ulong(x,&r)) return 1;
+  if (r > 1) return 0;
+  return 1;
+}
+
+void doprotocol(struct protocol p) {
+  protocol_error = p.error;
 
   if (chdir(auto_qmail) == -1) authup_die("control");
   if (control_init() == -1) authup_die("control");
-  if (control_readgreeting(p) == -1) authup_die("control");
-  if (control_readtimeout(p) == -1) authup_die("control");
-  if (should_greet()) greet();
-  commands(&ssin,c);
-
+  if (control_readgreeting(p.name) == -1) authup_die("control");
+  if (control_readtimeout(p.name) == -1) authup_die("control");
+  if (should_greet()) p.greet();
+  commands(&ssin,p.c);
   die();
 }
 
@@ -409,9 +421,8 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  if (case_equals("pop3",protocol))
-    doprotocol("pop3",pop3_auth_error,pop3_greet,pop3commands);
-  if (case_equals("smtp",protocol))
-    doprotocol("smtp",smtp_auth_error,smtp_greet,smtpcommands);
-  die_usage();
+  int i;
+  for (i = 0;p[i].name;++i) if (case_equals(p[i].name,protocol)) break;
+  if (p[i].name == '\0') die_usage();
+  doprotocol(p[i]);
 }
