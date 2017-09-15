@@ -14,6 +14,8 @@ It then runs
 .B qmail-authup
 is most commonly invoked from
 .B tcpserver
+or
+.B sslserver
 as
 
 .EX
@@ -52,7 +54,7 @@ with the same descriptors 0 and 1;
 descriptor 2 writing to the network;
 and descriptor 3 reading the username, a 0 byte, the password,
 another 0 byte,
-a protocol-specific timestamp,
+a protocol-specific datum such as a timestamp or challenge,
 and a final 0 byte.
 .B qmail-authup
 then waits for
@@ -66,30 +68,20 @@ crashes or exits nonzero.
 should be used only within
 a secure network.
 Otherwise an eavesdropper can steal passwords.
-A future version of
-.B qmail-authup
-may include support for SMTP
-.B STARTTLS
-and POP3
-.BR STLS .
-In the meantime, have
-.B tcpserver
-listen only on 127.0.0.1
-and export the service to the network via
-.B stunnel
-(as an unprivileged user).
-For example, if listening on port 26, use
-.B stunnel.conf
-settings similar to these:
-
-   setuid = stunnel
-   [submission]
-   accept = submission
-   connect = localhost:26
-   protocol = smtp
 .SH "ENVIRONMENT VARIABLES"
 Child processes can see the authenticated user in
 .BR AUTHUSER .
+
+If supported by
+.B qmail-smtpd
+or
+.BR ofmipd ,
+setting
+.B QMAILQUEUE
+will designate a
+.B qmail-queue
+wrapper.
+It will run as the authenticated user.
 .SH "CONTROL FILES"
 .TP 5
 .I smtpgreeting / pop3greeting
@@ -125,6 +117,8 @@ qmail-reup(8),
 checkpassword-rejectroot(8),
 qmail-fixsmtpio(8),
 stunnel(8),
+qmail-qfilter-ofmipd-queue(8),
+pymsgauth-tag(1),
 qmail-smtpd(8),
 qmail-pop3d(8),
 qmail-popup(8).
