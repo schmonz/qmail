@@ -30,7 +30,7 @@ sub munge_timeout {
     return $response;
 }
 
-sub munge_banner {
+sub munge_greeting {
     my ($response) = @_;
 
     if ($response =~ /^4[0-9]{2} /) {
@@ -105,7 +105,7 @@ sub munge_response {
     chomp($response);
 
     $response = munge_timeout($response) if '' eq $verb;
-    $response = munge_banner($response) if 'banner' eq $verb;
+    $response = munge_greeting($response) if 'greeting' eq $verb;
     $response = munge_help($response) if 'help' eq $verb;
     $response = munge_test($response) if 'test' eq $verb;
     $response = munge_ehlo($response) if 'ehlo' eq $verb;
@@ -272,7 +272,7 @@ sub do_proxy_stuff {
     my $want_data = 0;
     my $in_data = 0;
 
-    handle_request($from_client, $to_server, $to_client, 'banner', \$verb, \$arg, \$want_data, \$in_data);
+    handle_request($from_client, $to_server, $to_client, 'greeting', \$verb, \$arg, \$want_data, \$in_data);
 
     want_to_read($from_client, $from_server);
     for (;;) {
