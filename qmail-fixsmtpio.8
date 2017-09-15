@@ -1,0 +1,96 @@
+.TH qmail-fixsmtpio 8
+.SH NAME
+qmail-fixsmtpio \- filter SMTP daemon I/O and exit status
+.SH SYNOPSIS
+.B qmail-fixsmtpio
+.I prog
+.SH DESCRIPTION
+.B qmail-fixsmtpio
+is an SMTP proxy.
+It wraps a daemon (typically
+.B ofmipd
+or
+.BR qmail-smtpd )
+that expects descriptor 0 to read from the network
+and descriptor 1 to write to the network, but
+might not expect to be run under something like
+.BR qmail-authup .
+
+.B qmail-fixsmtpio
+is most commonly used with
+.B qmail-authup
+to accept message submissions from authenticated users,
+but can also be used for public-facing SMTP service.
+
+By default,
+.B qmail-fixsmtpio
+does not intercept any requests or modify any responses.
+.SH "EXIT CODES"
+On most any failure,
+.B ofmipd
+and
+.B qmail-smtpd
+exit 1, which is the same code
+.B checkpassword
+uses for incorrect passwords.
+.B qmail-fixsmtpio
+almost always exits 0 instead, to avoid confusing
+.BR qmail-authup .
+Exceptions:
+.TP
+.B 14
+.I prog
+sent a greeting starting with 4xx.
+.TP
+.B 15
+.I prog
+sent a greeting starting with 5xx.
+.TP
+.B 16
+.I prog
+timed out.
+
+.SH "ENVIRONMENT VARIABLES"
+Typical filter rules apply iff
+.B AUTHUSER
+is set.
+.B AUTHUSER
+is set by
+.BR qmail-authup .
+
+.SH "CONTROL FILES"
+.TP 5
+.I fixsmtpio
+Filter rules.
+Default: none.
+Format:
+
+.I [env-var]:verb:output-line-glob:[replacement-output]
+.SH "EXAMPLES"
+.EX
+ # always replace HELP response with link to authutils
+ :help:*:214 authutils home page: https://schmonz.com/qmail/authutils
+
+ # if we've already authenticated, replace the SMTP greeting
+ AUTHUSER:greet:*:235 ok, go ahead (#2.0.0)
+
+ # and the QUIT message
+ AUTHUSER:quit:*:221 qmail-authup
+
+ # and don't advertise STARTTLS or AUTH
+ AUTHUSER:ehlo:250?STARTTLS:
+ AUTHUSER:ehlo:250?AUTH*:
+
+ # and if asked, respond "500 unrecognised (#5.5.2)"
+ AUTHUSER:starttls::
+ AUTHUSER:auth::
+.EE
+
+.SH "AUTHOR"
+.B Amitai Schleier <schmonz-web-authutils@schmonz.com>
+.SH "SEE ALSO"
+qmail-authup(8),
+checkpassword(8),
+checkpassword-rejectroot(8),
+qmail-smtpd(8),
+ofmipd(8).
