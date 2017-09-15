@@ -1134,14 +1134,6 @@ qmail-control.9 conf-break conf-spawn
 	| sed s}SPAWN}"`head -1 conf-spawn`"}g \
 	> qmail-control.5
 
-qmail-fixsmtpio: \
-load qmail-fixsmtpio.o case.a stralloc.a alloc.a substdio.a error.a str.a
-	./load qmail-fixsmtpio case.a stralloc.a alloc.a substdio.a error.a str.a
-
-qmail-fixsmtpio.o: \
-compile qmail-fixsmtpio.c readwrite.h substdio.h exit.h commands.h \
-	./compile qmail-fixsmtpio.c
-
 qmail-getpw: \
 load qmail-getpw.o case.a substdio.a error.a str.a fs.a auto_break.o \
 auto_usera.o
