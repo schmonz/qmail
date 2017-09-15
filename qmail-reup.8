@@ -6,7 +6,7 @@ qmail-reup \- run a program repeatedly
 [
 .B \-t \fItries
 ]
-.I subprogram
+.I prog
 .SH DESCRIPTION
 .B qmail-reup
 is most commonly used to invoke
@@ -15,18 +15,18 @@ so that a user isn't disconnected immediately on the first authentication failur
 
 .B qmail-reup
 prints an error message if
-.I subprogram
+.I prog
 crashes or can't be started.
 .SH "EXIT CODES"
 .B qmail-reup
 stops retrying as soon as
 
 -
-.I subprogram
+.I prog
 exits 0 (success), or
 
 -
-.I subprogram
+.I prog
 exits 12 (permanent failure), or
 
 -
@@ -35,7 +35,7 @@ reaches its retry limit.
 
 .B qmail-reup
 then exits with the same code as
-.IR subprogram .
+.IR prog .
 .SH "ENVIRONMENT VARIABLES"
 Child processes can see how many tries have been made in
 .BR REUP .
@@ -43,7 +43,7 @@ Child processes can see how many tries have been made in
 .TP
 .B \-t \fItries
 Run
-.B subprogram
+.B prog
 no more than
 .I tries
 times.

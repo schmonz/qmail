@@ -4,12 +4,12 @@ qmail-authup \- read an SMTP or POP3 username and password
 .SH SYNOPSIS
 .B qmail-authup
 .I protocol
-.I subprogram
+.I prog
 .SH DESCRIPTION
 .B qmail-authup
 reads an SMTP or POP3 username and password from the network.
 It then runs
-.IR subprogram .
+.IR prog .
 
 .B qmail-authup
 is most commonly invoked from
@@ -47,7 +47,7 @@ It reads a username and password from descriptor 0
 in SMTP's AUTH LOGIN or AUTH PLAIN styles
 or in POP3's USER-PASS style.
 It invokes
-.IR subprogram ,
+.IR prog ,
 with the same descriptors 0 and 1;
 descriptor 2 writing to the network;
 and descriptor 3 reading the username, a 0 byte, the password,
@@ -56,10 +56,10 @@ a protocol-specific timestamp,
 and a final 0 byte.
 .B qmail-authup
 then waits for
-.I subprogram
+.I prog
 to finish.
 It prints an error message if
-.I subprogram
+.I prog
 crashes or exits nonzero.
 
 .B qmail-authup
