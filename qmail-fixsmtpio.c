@@ -11,10 +11,18 @@ void die() { _exit(1); }
 char sserrbuf[128];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void errflush(char *s) {
-  substdio_puts(&sserr,s);
-  substdio_flush(&sserr);
+char ssoutbuf[128];
+substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
+
+char ssinbuf[128];
+substdio ssin = SUBSTDIO_FDBUF(read,0,ssinbuf,sizeof ssinbuf);
+
+void putsflush(char *s,substdio *to) {
+  substdio_puts(to,s);
+  substdio_flush(to);
 }
+
+void errflush(char *s) { putsflush(s,&sserr); }
 
 void die_usage() { errflush("usage: qmail-fixsmtpio prog\n"); die(); }
 void die_pipe()  { errflush("qmail-fixsmtpio: unable to open pipe\n"); die(); }
@@ -23,30 +31,20 @@ void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
 void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
 void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
 
-char ssinbuf[128];
-substdio ssin = SUBSTDIO_FDBUF(read,0,ssinbuf,sizeof ssinbuf);
-
-int read_line(stralloc *into) {
+int read_line(stralloc *into,substdio *from) {
   int match;
-  if (getln(&ssin,into,&match,'\n') == -1) die_read();
+  if (getln(from,into,&match,'\n') == -1) die_read();
   if (!stralloc_0(into)) die_nomem();
   if (match == 0) return 0; // XXX allow partial final line?
 
   return 1;
 }
 
-char ssoutbuf[128];
-substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
-
-void putsflush(char *s) {
-  substdio_puts(&ssout,s);
-  substdio_flush(&ssout);
-}
-
-void log_output() {
+void log_output(substdio *from,substdio *to) {
   stralloc line = {0};
-  while (read_line(&line)) {
-    putsflush(line.s);
+  while (read_line(&line,from)) {
+    putsflush(line.s,to);
+    errflush("OUT: ");
 		errflush(line.s);
   }
 }
@@ -79,7 +77,7 @@ int run_child(char **childargs) {
   close(pi[1]);
 
   read_stdin_from(pi[0]);
-  log_output();
+  log_output(&ssin,&ssout);
 
   close(pi[0]);
 
