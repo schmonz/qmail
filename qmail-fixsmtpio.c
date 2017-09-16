@@ -60,26 +60,26 @@ void read_stdin_from(int fd) {
 int run_child(char **childargs) {
   int child;
   int wstat;
-  int pi[2];
+  int kidout[2];
 
-  if (pipe(pi) == -1) die_pipe();
+  if (pipe(kidout) == -1) die_pipe();
 
   switch (child = fork()) {
     case -1:
       die_fork();
       break;
     case 0:
-      close(pi[0]);
-      write_stdout_to(pi[1]);
+      close(kidout[0]);
+      write_stdout_to(kidout[1]);
       execvp(*childargs,childargs);
       die();
   }
-  close(pi[1]);
+  close(kidout[1]);
 
-  read_stdin_from(pi[0]);
+  read_stdin_from(kidout[0]);
   log_output(&ssin,&ssout);
 
-  close(pi[0]);
+  close(kidout[0]);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
