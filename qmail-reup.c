@@ -18,7 +18,7 @@ void errflush(char *s) {
   substdio_flush(&sserr);
 }
 
-void die_usage() { errflush("usage: qmail-reup [ -t tries ] subprogram"); die(); }
+void die_usage() { errflush("usage: qmail-reup [ -t tries ] prog"); die(); }
 void die_fork()  { errflush("qmail-reup unable to fork"); die(); }
 void die_nomem() { errflush("qmail-reup out of memory"); die(); }
 

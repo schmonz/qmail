@@ -96,7 +96,7 @@ void authup_die(const char *name) {
   e[i].die();
 }
 
-void die_usage() { puts("usage: qmail-authup <pop3|smtp> subprogram\n"); flush(); die(); }
+void die_usage() { puts("usage: qmail-authup <smtp|pop3> prog\n"); flush(); die(); }
 
 void smtp_err_authoriz() { smtp_out("530 qmail-authup authentication required (#5.7.1)"); }
 void pop3_err_authoriz() { pop3_err("qmail-authup authorization first"); }

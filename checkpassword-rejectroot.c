@@ -12,7 +12,7 @@ void err(char *s) {
 }
 
 void die() { _exit(1); }
-void die_usage() { err("usage: checkpassword-rejectroot subprogram"); die(); }
+void die_usage() { err("usage: checkpassword-rejectroot prog"); die(); }
 void die_root() { err("checkpassword-rejectroot: am root"); die(); }
 
 int main(int argc,char **argv) {
