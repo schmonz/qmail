@@ -49,11 +49,11 @@ void log_output(substdio *from,substdio *to) {
   }
 }
 
-void write_stdout_to(int fd) {
+void move_stdout_to(int fd) {
   if (fd_move(1,fd) == -1) die_pipe();
 }
 
-void read_stdin_from(int fd) {
+void move_stdin_to(int fd) {
   if (fd_move(0,fd) == -1) die_pipe();
 }
 
@@ -71,13 +71,13 @@ int run_child(char **childargs) {
       break;
     case 0:
       close(fromkid_toproxy[FROM]);
-      write_stdout_to(fromkid_toproxy[TO]);
+      move_stdout_to(fromkid_toproxy[TO]);
       execvp(*childargs,childargs);
       die();
   }
   close(fromkid_toproxy[TO]);
 
-  read_stdin_from(fromkid_toproxy[FROM]);
+  move_stdin_to(fromkid_toproxy[FROM]);
   log_output(&ssin,&ssout);
 
   close(fromkid_toproxy[FROM]);
