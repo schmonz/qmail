@@ -52,24 +52,24 @@ int run_child(char **childargs) {
   int child;
   int wstat;
   enum { FROM = 0, TO = 1 };
-  int fromkid_toproxy[2], from_kid, to_proxy;
-  int fromproxy_tokid[2], from_proxy, to_kid;
+  int fromserver_toproxy[2], from_server, to_proxy;
+  int fromproxy_toserver[2], from_proxy, to_server;
 
-  if (pipe(fromkid_toproxy) == -1) die_pipe();
-  from_kid   = fromkid_toproxy[FROM];
-  to_proxy   = fromkid_toproxy[TO];
-  if (pipe(fromproxy_tokid) == -1) die_pipe();
-  from_proxy = fromproxy_tokid[FROM];
-  to_kid     = fromproxy_tokid[TO];
+  if (pipe(fromserver_toproxy) == -1) die_pipe();
+  from_server = fromserver_toproxy[FROM];
+  to_proxy    = fromserver_toproxy[TO];
+  if (pipe(fromproxy_toserver) == -1) die_pipe();
+  from_proxy  = fromproxy_toserver[FROM];
+  to_server   = fromproxy_toserver[TO];
 
   switch (child = fork()) {
     case -1:
       die_fork();
       break;
     case 0:
-      close(from_kid);
+      close(from_server);
       switch_stdin(from_proxy);
-      close(to_kid);
+      close(to_server);
       switch_stdout(to_proxy);
       execvp(*childargs,childargs);
       die();
@@ -79,26 +79,26 @@ int run_child(char **childargs) {
 
   stralloc line = {0};
 
-  //requests: read stdin, write to_kid
-  char sstokidbuf[128];
-  substdio sstokid = SUBSTDIO_FDBUF(write,to_kid,sstokidbuf,sizeof sstokidbuf);
+  //requests: read stdin, write to_server
+  char sstoserverbuf[128];
+  substdio sstoserver = SUBSTDIO_FDBUF(write,to_server,sstoserverbuf,sizeof sstoserverbuf);
   while (read_line(&line,&ssin)) {
-    putsflush(line.s,&sstokid);
+    putsflush(line.s,&sstoserver);
     errflush("IN: ");
     errflush(line.s);
   }
 
-  //responses: read from_kid, write stdout
-  char ssfromkidbuf[128];
-  substdio ssfromkid = SUBSTDIO_FDBUF(read,from_kid,ssfromkidbuf,sizeof ssfromkidbuf);
-  while (read_line(&line,&ssfromkid)) {
+  //responses: read from_server, write stdout
+  char ssfromserverbuf[128];
+  substdio ssfromserver = SUBSTDIO_FDBUF(read,from_server,ssfromserverbuf,sizeof ssfromserverbuf);
+  while (read_line(&line,&ssfromserver)) {
     putsflush(line.s,&ssout);
     errflush("OUT: ");
     errflush(line.s);
   }
 
-  close(from_kid);
-  close(to_kid);
+  close(from_server);
+  close(to_server);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
