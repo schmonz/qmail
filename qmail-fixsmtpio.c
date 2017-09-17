@@ -60,26 +60,27 @@ void read_stdin_from(int fd) {
 int run_child(char **childargs) {
   int child;
   int wstat;
-  int kidout[2];
+  enum { FROM = 0, TO = 1 };
+  int fromkid_toproxy[2];
 
-  if (pipe(kidout) == -1) die_pipe();
+  if (pipe(fromkid_toproxy) == -1) die_pipe();
 
   switch (child = fork()) {
     case -1:
       die_fork();
       break;
     case 0:
-      close(kidout[0]);
-      write_stdout_to(kidout[1]);
+      close(fromkid_toproxy[FROM]);
+      write_stdout_to(fromkid_toproxy[TO]);
       execvp(*childargs,childargs);
       die();
   }
-  close(kidout[1]);
+  close(fromkid_toproxy[TO]);
 
-  read_stdin_from(kidout[0]);
+  read_stdin_from(fromkid_toproxy[FROM]);
   log_output(&ssin,&ssout);
 
-  close(kidout[0]);
+  close(fromkid_toproxy[FROM]);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
