@@ -61,26 +61,28 @@ int run_child(char **childargs) {
   int child;
   int wstat;
   enum { FROM = 0, TO = 1 };
-  int fromkid_toproxy[2];
+  int fromkid_toproxy[2], from_kid, to_proxy;
 
   if (pipe(fromkid_toproxy) == -1) die_pipe();
+  from_kid = fromkid_toproxy[FROM];
+  to_proxy = fromkid_toproxy[TO];
 
   switch (child = fork()) {
     case -1:
       die_fork();
       break;
     case 0:
-      close(fromkid_toproxy[FROM]);
-      move_stdout_to(fromkid_toproxy[TO]);
+      close(from_kid);
+      move_stdout_to(to_proxy);
       execvp(*childargs,childargs);
       die();
   }
-  close(fromkid_toproxy[TO]);
+  close(to_proxy);
 
-  move_stdin_to(fromkid_toproxy[FROM]);
+  move_stdin_to(from_kid);
   log_output(&ssin,&ssout);
 
-  close(fromkid_toproxy[FROM]);
+  close(from_kid);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
