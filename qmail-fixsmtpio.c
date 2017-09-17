@@ -24,7 +24,7 @@ void putsflush(char *s,substdio *to) {
 
 void errflush(char *s) { putsflush(s,&sserr); }
 
-void die_usage() { errflush("usage: qmail-fixsmtpio prog\n"); die(); }
+void die_usage() { errflush("usage: qmail-fixsmtpio prog [ arg ... ]\n"); die(); }
 void die_pipe()  { errflush("qmail-fixsmtpio: unable to open pipe\n"); die(); }
 void die_fork()  { errflush("qmail-fixsmtpio: unable to fork\n"); die(); }
 void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
@@ -55,29 +55,21 @@ void mypipe(int *from,int *to) {
   *to = pi[1];
 }
 
-int run_child(char **childargs) {
-  int child;
-  int wstat;
-  int from_proxy, to_server, from_server, to_proxy;
+void be_child(int from_proxy,int to_proxy,int from_server,int to_server,char **argv) {
+  close(from_server);
+  switch_stdin(from_proxy);
+  close(to_server);
+  switch_stdout(to_proxy);
+  execvp(*argv,argv);
+  die();
+}
 
-  mypipe(&from_proxy, &to_server);
-  mypipe(&from_server, &to_proxy);
-
-  switch (child = fork()) {
-    case -1:
-      die_fork();
-      break;
-    case 0:
-      close(from_server);
-      switch_stdin(from_proxy);
-      close(to_server);
-      switch_stdout(to_proxy);
-      execvp(*childargs,childargs);
-      die();
-  }
+void setup_proxy(int from_proxy,int to_proxy) {
   close(from_proxy);
   close(to_proxy);
+}
 
+void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
   stralloc line = {0};
 
   //requests: read stdin, write to_server
@@ -97,6 +89,10 @@ int run_child(char **childargs) {
     errflush("OUT: ");
     errflush(line.s);
   }
+}
+
+void teardown_proxy_and_exit(int child,int from_server,int to_server) {
+  int wstat;
 
   close(from_server);
   close(to_server);
@@ -104,11 +100,35 @@ int run_child(char **childargs) {
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
 
-  return wait_exitcode(wstat);
+  _exit(wait_exitcode(wstat));
+}
+
+void be_parent(int child,int from_client,int to_client,int from_proxy,int to_proxy,int from_server,int to_server) {
+
+  setup_proxy(from_proxy,to_proxy);
+  do_proxy_stuff(from_client,to_server,from_server,to_client);
+
+  teardown_proxy_and_exit(child,from_server,to_server);
 }
 
 int main(int argc,char **argv) {
-  argv += 1;
-  if (!*argv) die_usage();
-  _exit(run_child(argv));
+  int child;
+  int from_proxy,  to_proxy;
+  int from_server, to_server;
+  int from_client, to_client;
+
+  argv += 1; if (!*argv) die_usage();
+
+  mypipe(&from_server, &to_proxy);
+  mypipe(&from_proxy, &to_server);
+
+  from_client = 0;
+  to_client = 1;
+
+  if (child = fork())
+    be_parent(child,from_client,to_client,from_proxy,to_proxy,from_server,to_server);
+  else if (child == 0)
+    be_child(from_proxy,to_proxy,from_server,to_server,argv);
+  else
+    die_fork();
 }
