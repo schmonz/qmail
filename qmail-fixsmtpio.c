@@ -48,19 +48,20 @@ void switch_stdin(int fd) {
   if (fd_move(0,fd) == -1) die_pipe();
 }
 
+void mypipe(int *from,int *to) {
+  int pi[2];
+  if (pipe(pi) == -1) die_pipe();
+  *from = pi[0];
+  *to = pi[1];
+}
+
 int run_child(char **childargs) {
   int child;
   int wstat;
-  enum { FROM = 0, TO = 1 };
-  int fromserver_toproxy[2], from_server, to_proxy;
-  int fromproxy_toserver[2], from_proxy, to_server;
+  int from_proxy, to_server, from_server, to_proxy;
 
-  if (pipe(fromserver_toproxy) == -1) die_pipe();
-  from_server = fromserver_toproxy[FROM];
-  to_proxy    = fromserver_toproxy[TO];
-  if (pipe(fromproxy_toserver) == -1) die_pipe();
-  from_proxy  = fromproxy_toserver[FROM];
-  to_server   = fromproxy_toserver[TO];
+  mypipe(&from_proxy, &to_server);
+  mypipe(&from_server, &to_proxy);
 
   switch (child = fork()) {
     case -1:
