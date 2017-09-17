@@ -302,22 +302,22 @@ sub do_proxy_stuff {
 }
 
 sub teardown_proxy_and_exit {
-    my ($from_server, $to_server) = @_;
+    my ($child, $from_server, $to_server) = @_;
 
     close($from_server);
     close($to_server);
-    waitpid(-1, 0); 
+    waitpid($child, 0);
 
     _exit($exitcode);
 }
 
 sub be_parent {
-    my ($from_client, $to_client, $from_proxy, $to_proxy, $from_server, $to_server) = @_;
+    my ($child, $from_client, $to_client, $from_proxy, $to_proxy, $from_server, $to_server) = @_;
 
     setup_proxy($from_proxy, $to_proxy);
     do_proxy_stuff($from_client, $to_server, $from_server, $to_client);
 
-    teardown_proxy_and_exit($from_server, $to_server);
+    teardown_proxy_and_exit($child, $from_server, $to_server);
 }
 
 sub be_child {
@@ -339,9 +339,9 @@ sub main {
     my $from_client = \*STDIN;
     my $to_client = \*STDOUT;
 
-    if (my $pid = fork()) {
-        be_parent($from_client, $to_client, $from_proxy, $to_proxy, $from_server, $to_server);
-    } elsif (defined $pid) {
+    if (my $child = fork()) {
+        be_parent($child, $from_client, $to_client, $from_proxy, $to_proxy, $from_server, $to_server);
+    } elsif (defined $child) {
         be_child($from_proxy, $to_proxy, $from_server, $to_server, @args);
     } else {
         die "fork: $!"
