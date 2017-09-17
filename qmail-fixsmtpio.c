@@ -40,15 +40,6 @@ int read_line(stralloc *into,substdio *from) {
   return 1;
 }
 
-void log_output(substdio *from,substdio *to) {
-  stralloc line = {0};
-  while (read_line(&line,from)) {
-    putsflush(line.s,to);
-    errflush("OUT: ");
-		errflush(line.s);
-  }
-}
-
 void switch_stdout(int fd) {
   if (fd_move(1,fd) == -1) die_pipe();
 }
@@ -62,10 +53,14 @@ int run_child(char **childargs) {
   int wstat;
   enum { FROM = 0, TO = 1 };
   int fromkid_toproxy[2], from_kid, to_proxy;
+  int fromproxy_tokid[2], from_proxy, to_kid;
 
   if (pipe(fromkid_toproxy) == -1) die_pipe();
-  from_kid = fromkid_toproxy[FROM];
-  to_proxy = fromkid_toproxy[TO];
+  from_kid   = fromkid_toproxy[FROM];
+  to_proxy   = fromkid_toproxy[TO];
+  if (pipe(fromproxy_tokid) == -1) die_pipe();
+  from_proxy = fromproxy_tokid[FROM];
+  to_kid     = fromproxy_tokid[TO];
 
   switch (child = fork()) {
     case -1:
@@ -73,16 +68,37 @@ int run_child(char **childargs) {
       break;
     case 0:
       close(from_kid);
+      switch_stdin(from_proxy);
+      close(to_kid);
       switch_stdout(to_proxy);
       execvp(*childargs,childargs);
       die();
   }
+  close(from_proxy);
   close(to_proxy);
 
-  switch_stdin(from_kid);
-  log_output(&ssin,&ssout);
+  stralloc line = {0};
+
+  //requests: read stdin, write to_kid
+  char sstokidbuf[128];
+  substdio sstokid = SUBSTDIO_FDBUF(write,to_kid,sstokidbuf,sizeof sstokidbuf);
+  while (read_line(&line,&ssin)) {
+    putsflush(line.s,&sstokid);
+    errflush("IN: ");
+    errflush(line.s);
+  }
+
+  //responses: read from_kid, write stdout
+  char ssfromkidbuf[128];
+  substdio ssfromkid = SUBSTDIO_FDBUF(read,from_kid,ssfromkidbuf,sizeof ssfromkidbuf);
+  while (read_line(&line,&ssfromkid)) {
+    putsflush(line.s,&ssout);
+    errflush("OUT: ");
+    errflush(line.s);
+  }
 
   close(from_kid);
+  close(to_kid);
 
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
