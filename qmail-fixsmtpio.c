@@ -91,12 +91,20 @@ void logio(char *logprefix,stralloc *sa,substdio *to) {
   if (!stralloc_copys(sa,"")) die_nomem();
 }
 
+int safeappend(stralloc *sa,int fd,char *buf,int len) {
+  int r;
+  r = read(fd,buf,len);
+  if (r == -1) if (errno != error_intr) die_read();
+  if (r <= 0) die_read();
+  if (!stralloc_catb(sa,buf,r)) die_nomem();
+  return r;
+}
+
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
-  stralloc request = {0};
-  stralloc response = {0};
   fd_set fds;
   char buf[128];
-  int num_bytes_read;
+  stralloc request = {0};
+  stralloc response = {0};
 
   char sstoserverbuf[128];
   substdio sstoserver = SUBSTDIO_FDBUF(write,to_server,sstoserverbuf,sizeof sstoserverbuf);
@@ -106,26 +114,21 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
     want_to_read(from_client,&fds);
     want_to_read(from_server,&fds);
 
-    if (!can_read_something(from_client,from_server,&fds)) continue;
+    if (!can_read_something(from_client,from_server,&fds))
+      continue;
 
     if (can_read(from_client,&fds)) {
-      num_bytes_read = read(from_client,buf,sizeof buf);
-      if (num_bytes_read == -1 && errno != error_intr) die_read();
-      if (num_bytes_read == 0) break;
-      if (!stralloc_catb(&request,buf,num_bytes_read)) die_nomem();
-      if (is_entire_line(&request)) {
+      if (!safeappend(&request,from_client,buf,sizeof buf))
+        break;
+      if (is_entire_line(&request))
         logio("I: ",&request,&sstoserver);
-      }
     }
 
     if (can_read(from_server,&fds)) {
-      num_bytes_read = read(from_server,buf,sizeof buf);
-      if (num_bytes_read == -1 && errno != error_intr) die_read();
-      if (num_bytes_read == 0) break;
-      if (!stralloc_catb(&response,buf,num_bytes_read)) die_nomem();
-      if (is_entire_line(&response)) {
+      if (!safeappend(&response,from_server,buf,sizeof buf))
+        break;
+      if (is_entire_line(&response))
         logio("O: ",&response,&ssout);
-      }
     }
   }
 }
