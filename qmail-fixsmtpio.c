@@ -1,6 +1,8 @@
+#include "error.h"
 #include "fd.h"
 #include "getln.h"
 #include "readwrite.h"
+#include "select.h"
 #include "sig.h"
 #include "stralloc.h"
 #include "substdio.h"
@@ -13,9 +15,6 @@ substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 char ssoutbuf[128];
 substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
-
-char ssinbuf[128];
-substdio ssin = SUBSTDIO_FDBUF(read,0,ssinbuf,sizeof ssinbuf);
 
 void putsflush(char *s,substdio *to) {
   substdio_puts(to,s);
@@ -30,15 +29,6 @@ void die_fork()  { errflush("qmail-fixsmtpio: unable to fork\n"); die(); }
 void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
 void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
 void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
-
-int read_line(stralloc *into,substdio *from) {
-  int match;
-  if (getln(from,into,&match,'\n') == -1) die_read();
-  if (!stralloc_0(into)) die_nomem();
-  if (match == 0) return 0; // XXX allow partial final line?
-
-  return 1;
-}
 
 void switch_stdout(int fd) {
   if (fd_move(1,fd) == -1) die_pipe();
@@ -69,25 +59,71 @@ void setup_proxy(int from_proxy,int to_proxy) {
   close(to_proxy);
 }
 
-void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
-  stralloc line = {0};
+int is_entire_line(stralloc *sa) {
+  return sa->s[sa->len - 1] == '\n';
+}
 
-  //requests: read stdin, write to_server
+void want_to_read(int fd,fd_set *fds) {
+  FD_SET(fd,fds);
+}
+
+int can_read(int fd,fd_set *fds) {
+  return FD_ISSET(fd,fds);
+}
+
+int max(int a,int b) {
+  if (a > b) return a;
+  return b;
+}
+
+void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
+  stralloc request = {0};
+  stralloc response = {0};
+
   char sstoserverbuf[128];
   substdio sstoserver = SUBSTDIO_FDBUF(write,to_server,sstoserverbuf,sizeof sstoserverbuf);
-  while (read_line(&line,&ssin)) {
-    putsflush(line.s,&sstoserver);
-    errflush("IN: ");
-    errflush(line.s);
-  }
 
-  //responses: read from_server, write stdout
-  char ssfromserverbuf[128];
-  substdio ssfromserver = SUBSTDIO_FDBUF(read,from_server,ssfromserverbuf,sizeof ssfromserverbuf);
-  while (read_line(&line,&ssfromserver)) {
-    putsflush(line.s,&ssout);
-    errflush("OUT: ");
-    errflush(line.s);
+  for (;;) {
+    int ready;
+    fd_set fds;
+    FD_ZERO(&fds);
+    want_to_read(from_client,&fds);
+    want_to_read(from_server,&fds);
+
+    ready = select(1 + max(from_client,from_server), &fds, 0, 0, 0);
+    if (ready == 0) continue;
+    if (ready == -1 && errno != error_intr) break;
+
+    if (can_read(from_client,&fds)) {
+      char buf[128]; //XXX make it 1, to test this code
+      int num_bytes = read(from_client,buf,sizeof buf);
+      if (num_bytes == -1 && errno != error_intr) break;
+      if (num_bytes == 0) break;
+      if (!stralloc_copyb(&request,buf,num_bytes)) break;
+      if (is_entire_line(&request)) {
+        if (!stralloc_0(&request)) break;
+        putsflush(request.s,&sstoserver);
+        errflush("I: ");
+        errflush(request.s);
+        stralloc_copys(&request,""); // XXX can fail
+      }
+    }
+
+    if (can_read(from_server,&fds)) {
+      char buf[128];
+      // XXX can this just be a substdio that reads?
+      int num_bytes = read(from_server,buf,sizeof buf);
+      if (num_bytes == -1 && errno != error_intr) break;
+      if (num_bytes == 0) break;
+      if (!stralloc_copyb(&response,buf,num_bytes)) break;
+      if (is_entire_line(&response)) {
+        if (!stralloc_0(&response)) break;
+        putsflush(response.s,&ssout);
+        errflush("O: ");
+        errflush(response.s);
+        stralloc_copys(&response,""); // XXX can fail
+      }
+    }
   }
 }
 
@@ -125,7 +161,7 @@ int main(int argc,char **argv) {
   from_client = 0;
   to_client = 1;
 
-  if (child = fork())
+  if ((child = fork()))
     be_parent(child,from_client,to_client,from_proxy,to_proxy,from_server,to_server);
   else if (child == 0)
     be_child(from_proxy,to_proxy,from_server,to_server,argv);
