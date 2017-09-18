@@ -76,11 +76,25 @@ int max(int a,int b) {
   return b;
 }
 
+int can_read_something(int fd1,int fd2,fd_set *fds) {
+  int ready;
+  ready = select(1+max(fd1,fd2),fds,(fd_set *)0,(fd_set *)0,(struct timeval *) 0);
+  if (ready == -1 && errno != error_intr) die_read();
+  return ready;
+}
+
+void logio(char *logprefix,stralloc *sa,substdio *to) {
+  if (!stralloc_0(sa)) die_nomem();
+  putsflush(sa->s,to);
+  errflush(logprefix);
+  errflush(sa->s);
+  if (!stralloc_copys(sa,"")) die_nomem();
+}
+
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
   stralloc request = {0};
   stralloc response = {0};
   fd_set fds;
-  int ready;
   char buf[128];
   int num_bytes_read;
 
@@ -92,9 +106,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
     want_to_read(from_client,&fds);
     want_to_read(from_server,&fds);
 
-    ready = select(1 + max(from_client,from_server), &fds, 0, 0, 0);
-    if (ready == 0) continue;
-    if (ready == -1 && errno != error_intr) break;
+    if (!can_read_something(from_client,from_server,&fds)) continue;
 
     if (can_read(from_client,&fds)) {
       num_bytes_read = read(from_client,buf,sizeof buf);
@@ -102,11 +114,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
       if (num_bytes_read == 0) break;
       if (!stralloc_catb(&request,buf,num_bytes_read)) die_nomem();
       if (is_entire_line(&request)) {
-        if (!stralloc_0(&request)) die_nomem();
-        putsflush(request.s,&sstoserver);
-        errflush("I: ");
-        errflush(request.s);
-        if (!stralloc_copys(&request,"")) die_nomem();
+        logio("I: ",&request,&sstoserver);
       }
     }
 
@@ -116,11 +124,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
       if (num_bytes_read == 0) break;
       if (!stralloc_catb(&response,buf,num_bytes_read)) die_nomem();
       if (is_entire_line(&response)) {
-        if (!stralloc_0(&response)) die_nomem();
-        putsflush(response.s,&ssout);
-        errflush("O: ");
-        errflush(response.s);
-        if (!stralloc_copys(&response,"")) die_nomem();
+        logio("O: ",&response,&ssout);
       }
     }
   }
