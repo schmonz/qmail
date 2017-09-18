@@ -79,13 +79,15 @@ int max(int a,int b) {
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
   stralloc request = {0};
   stralloc response = {0};
+  fd_set fds;
+  int ready;
+  char buf[128];
+  int num_bytes_read;
 
   char sstoserverbuf[128];
   substdio sstoserver = SUBSTDIO_FDBUF(write,to_server,sstoserverbuf,sizeof sstoserverbuf);
 
   for (;;) {
-    int ready;
-    fd_set fds;
     FD_ZERO(&fds);
     want_to_read(from_client,&fds);
     want_to_read(from_server,&fds);
@@ -95,33 +97,30 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
     if (ready == -1 && errno != error_intr) break;
 
     if (can_read(from_client,&fds)) {
-      char buf[128]; //XXX make it 1, to test this code
-      int num_bytes = read(from_client,buf,sizeof buf);
-      if (num_bytes == -1 && errno != error_intr) break;
-      if (num_bytes == 0) break;
-      if (!stralloc_copyb(&request,buf,num_bytes)) break;
+      num_bytes_read = read(from_client,buf,sizeof buf);
+      if (num_bytes_read == -1 && errno != error_intr) die_read();
+      if (num_bytes_read == 0) break;
+      if (!stralloc_catb(&request,buf,num_bytes_read)) die_nomem();
       if (is_entire_line(&request)) {
-        if (!stralloc_0(&request)) break;
+        if (!stralloc_0(&request)) die_nomem();
         putsflush(request.s,&sstoserver);
         errflush("I: ");
         errflush(request.s);
-        stralloc_copys(&request,""); // XXX can fail
+        if (!stralloc_copys(&request,"")) die_nomem();
       }
     }
 
     if (can_read(from_server,&fds)) {
-      char buf[128];
-      // XXX can this just be a substdio that reads?
-      int num_bytes = read(from_server,buf,sizeof buf);
-      if (num_bytes == -1 && errno != error_intr) break;
-      if (num_bytes == 0) break;
-      if (!stralloc_copyb(&response,buf,num_bytes)) break;
+      num_bytes_read = read(from_server,buf,sizeof buf);
+      if (num_bytes_read == -1 && errno != error_intr) die_read();
+      if (num_bytes_read == 0) break;
+      if (!stralloc_catb(&response,buf,num_bytes_read)) die_nomem();
       if (is_entire_line(&response)) {
-        if (!stralloc_0(&response)) break;
+        if (!stralloc_0(&response)) die_nomem();
         putsflush(response.s,&ssout);
         errflush("O: ");
         errflush(response.s);
-        stralloc_copys(&response,""); // XXX can fail
+        if (!stralloc_copys(&response,"")) die_nomem();
       }
     }
   }

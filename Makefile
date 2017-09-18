@@ -1139,7 +1139,7 @@ load qmail-fixsmtpio.o substdio.a str.a error.a fd.a sig.a stralloc.a alloc.a ge
 	./load qmail-fixsmtpio substdio.a str.a error.a fd.a sig.a stralloc.a alloc.a getln.a wait.a
 
 qmail-fixsmtpio.o: \
-compile qmail-fixsmtpio.c fd.h getln.h readwrite.h sig.h stralloc.h substdio.h wait.h
+compile qmail-fixsmtpio.c error.h fd.h getln.h readwrite.h select.h sig.h stralloc.h substdio.h wait.h
 	./compile qmail-fixsmtpio.c
 
 qmail-getpw: \
