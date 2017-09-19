@@ -1,7 +1,9 @@
+#include "case.h"
 #include "error.h"
 #include "fd.h"
 #include "readwrite.h"
 #include "select.h"
+#include "str.h"
 #include "stralloc.h"
 #include "substdio.h"
 #include "wait.h"
@@ -81,31 +83,110 @@ int can_read_something(int fd1,int fd2,fd_set *fds) {
   return ready;
 }
 
-void logio(char *logprefix,stralloc *sa,substdio *to) {
-  if (!stralloc_0(sa)) die_nomem();
-  putsflush(sa->s,to);
-  errflush(logprefix);
-  errflush(sa->s);
-  if (!stralloc_copys(sa,"")) die_nomem();
-}
-
-int safeappend(stralloc *sa,int fd,char *buf,int len) {
+int saferead(int fd,char *buf,int len) {
   int r;
   r = read(fd,buf,len);
   if (r == -1) if (errno != error_intr) die_read();
-  if (r <= 0) die_read();
+  return r;
+}
+
+int safeappend(stralloc *sa,int fd,char *buf,int len) {
+  int r = saferead(fd,buf,len);
   if (!stralloc_catb(sa,buf,r)) die_nomem();
   return r;
+}
+
+void send_data(int to_server,stralloc data) {
+  if (write(to_server,data.s,data.len) == -1) die_write();
+}
+
+int is_last_line_of_data(stralloc r) {
+  return (r.len == 3 && r.s[0] == '.' && r.s[1] == '\r' && r.s[2] == '\n');
+}
+
+void parse_request(stralloc request,stralloc *verb,stralloc *arg) {
+  stralloc chomped = {0};
+  int first_space;
+
+  if (!stralloc_copyb(&chomped,request.s,request.len - 1)) die_nomem();
+  first_space = str_chr(chomped.s,' ');
+
+  if (first_space <= 0 || first_space >= chomped.len) {
+    if (!stralloc_copy(verb,&chomped)) die_nomem();
+    if (!stralloc_copys(arg,"")) die_nomem();
+  } else {
+    if (!stralloc_copyb(verb,chomped.s,first_space)) die_nomem();
+    if (!stralloc_copyb(arg,chomped.s + first_space + 1,chomped.len - first_space - 1)) die_nomem();
+  }
+  case_lowerb(verb->s,verb->len);
+}
+
+void send_request(int to_server,stralloc *verb,stralloc *arg) {
+  stralloc r = {0};
+  if (!stralloc_copyb(&r,verb->s,verb->len)) die_nomem();
+  if (arg->len) {
+    if (!stralloc_cats(&r," ")) die_nomem();
+    if (!stralloc_catb(&r,arg->s,arg->len)) die_nomem();
+  }
+  if (!stralloc_cats(&r,"\r\n")) die_nomem();
+  if (write(to_server,r.s,r.len) == -1) die_write();
+}
+
+void send_response(int to_client,stralloc *response) {
+  if (write(to_client,response->s,response->len) == -1) die_write();
+}
+
+stralloc *smtp_test(stralloc *verb,stralloc *arg) {
+  stralloc response = {0};
+  if (!stralloc_copys(&response,"250 qmail-fixsmtpio test ok: ")) die_nomem();
+  if (!stralloc_catb(&response,arg->s,arg->len)) die_nomem();
+  if (!stralloc_cats(&response,"\r\n")) die_nomem();
+  return &response;
+}
+
+stralloc *smtp_auth(stralloc *verb,stralloc *arg) {
+  stralloc response = {0};
+  if (!stralloc_copys(&response,"502 unimplemented (#5.5.1)")) die_nomem();
+  if (!stralloc_cats(&response,"\r\n")) die_nomem();
+  return &response;
+}
+
+void *handle_internally(stralloc *verb,stralloc *arg) {
+  if (!str_diffn("test",verb->s,verb->len)) return smtp_test;
+  if (!str_diffn("auth",verb->s,verb->len)) return smtp_auth;
+
+  return 0;
+}
+
+void dispatch_request(stralloc *verb,stralloc *arg,int to_server,int to_client) {
+  stralloc *(*internalfn)();
+  if ((internalfn = handle_internally(verb,arg))) {
+    send_response(to_client,internalfn(verb,arg));
+  } else {
+    send_request(to_server,verb,arg);
+  }
+}
+
+void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *want_data,int *in_data) {
+  if (*in_data) {
+    send_data(to_server,request);
+    if (is_last_line_of_data(request)) {
+      *in_data = 0;
+    }
+  } else {
+    parse_request(request,verb,arg);
+    if (!str_diff(verb->s,"data")) {
+      *want_data = 1;
+    }
+    dispatch_request(verb,arg,to_server,to_client);
+  }
 }
 
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
   fd_set fds;
   char buf[128];
-  stralloc request = {0};
-  stralloc response = {0};
-
-  char sstoserverbuf[128];
-  substdio sstoserver = SUBSTDIO_FDBUF(write,to_server,sstoserverbuf,sizeof sstoserverbuf);
+  stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
+  int want_data = 0, in_data = 0;
 
   for (;;) {
     FD_ZERO(&fds);
@@ -118,15 +199,22 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
     if (can_read(from_client,&fds)) {
       if (!safeappend(&request,from_client,buf,sizeof buf))
         break;
-      if (is_entire_line(&request))
-        logio("I: ",&request,&sstoserver);
+      if (is_entire_line(&request)) {
+        handle_request(from_client,to_server,to_client,request,&verb,&arg,&want_data,&in_data);
+        substdio_putsflush(&sserr,"I: ");
+        substdio_putflush(&sserr,request.s,request.len);
+        if (!stralloc_copys(&request,"")) die_nomem();
+      }
     }
 
     if (can_read(from_server,&fds)) {
       if (!safeappend(&response,from_server,buf,sizeof buf))
         break;
       if (is_entire_line(&response))
-        logio("O: ",&response,&ssout);
+        substdio_putflush(&ssout,response.s,response.len);
+        substdio_putsflush(&sserr,"O: ");
+        substdio_putflush(&sserr,response.s,response.len);
+        if (!stralloc_copys(&response,"")) die_nomem();
     }
   }
 }
@@ -144,7 +232,6 @@ void teardown_proxy_and_exit(int child,int from_server,int to_server) {
 }
 
 void be_parent(int child,int from_client,int to_client,int from_proxy,int to_proxy,int from_server,int to_server) {
-
   setup_proxy(from_proxy,to_proxy);
   do_proxy_stuff(from_client,to_server,from_server,to_client);
 
