@@ -132,34 +132,41 @@ void send_request(int to_server,stralloc *verb,stralloc *arg) {
   if (write(to_server,r.s,r.len) == -1) die_write();
 }
 
-void send_response(int to_client,stralloc *response) {
-  if (write(to_client,response->s,response->len) == -1) die_write();
+void send_response(int to_client,char *response) {
+  if (write(to_client,response,str_len(response)) == -1) die_write();
 }
 
-stralloc *smtp_test(stralloc *verb,stralloc *arg) {
+char *smtp_test(stralloc *verb,stralloc *arg) {
   stralloc response = {0};
   if (!stralloc_copys(&response,"250 qmail-fixsmtpio test ok: ")) die_nomem();
   if (!stralloc_catb(&response,arg->s,arg->len)) die_nomem();
   if (!stralloc_cats(&response,"\r\n")) die_nomem();
-  return &response;
+  if (!stralloc_0(&response)) die_nomem();
+  return response.s;
 }
 
-stralloc *smtp_auth(stralloc *verb,stralloc *arg) {
+char *smtp_auth(stralloc *verb,stralloc *arg) {
   stralloc response = {0};
   if (!stralloc_copys(&response,"502 unimplemented (#5.5.1)")) die_nomem();
   if (!stralloc_cats(&response,"\r\n")) die_nomem();
-  return &response;
+  if (!stralloc_0(&response)) die_nomem();
+  return response.s;
+}
+
+int verb_matches(char *s,stralloc *sa) {
+  if (!sa->len) return 0;
+  return !str_diffn(s,sa->s,sa->len);
 }
 
 void *handle_internally(stralloc *verb,stralloc *arg) {
-  if (!str_diffn("test",verb->s,verb->len)) return smtp_test;
-  if (!str_diffn("auth",verb->s,verb->len)) return smtp_auth;
+  if (verb_matches("test",verb)) return smtp_test;
+  if (verb_matches("auth",verb)) return smtp_auth;
 
   return 0;
 }
 
 void dispatch_request(stralloc *verb,stralloc *arg,int to_server,int to_client) {
-  stralloc *(*internalfn)();
+  char *(*internalfn)();
   if ((internalfn = handle_internally(verb,arg))) {
     send_response(to_client,internalfn(verb,arg));
   } else {
@@ -175,7 +182,7 @@ void handle_request(int from_client,int to_server,int to_client,stralloc request
     }
   } else {
     parse_request(request,verb,arg);
-    if (!str_diff(verb->s,"data")) {
+    if (verb_matches("data",verb)) {
       *want_data = 1;
     }
     dispatch_request(verb,arg,to_server,to_client);
