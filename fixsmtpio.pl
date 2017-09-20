@@ -175,7 +175,7 @@ sub can_read {
 }
 
 sub can_read_something {
-    my $nfound = select($can_read_bits = $want_to_read_bits, undef, undef, 1200);
+    my $nfound = select($can_read_bits = $want_to_read_bits, undef, undef, 0);
 
     return $nfound;
 }
