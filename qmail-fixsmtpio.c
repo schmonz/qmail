@@ -30,11 +30,11 @@ void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
 void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
 void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
 
-void switch_stdout(int fd) {
+void use_as_stdout(int fd) {
   if (fd_move(1,fd) == -1) die_pipe();
 }
 
-void switch_stdin(int fd) {
+void use_as_stdin(int fd) {
   if (fd_move(0,fd) == -1) die_pipe();
 }
 
@@ -47,9 +47,9 @@ void mypipe(int *from,int *to) {
 
 void be_child(int from_proxy,int to_proxy,int from_server,int to_server,char **argv) {
   close(from_server);
-  switch_stdin(from_proxy);
   close(to_server);
-  switch_stdout(to_proxy);
+  use_as_stdin(from_proxy);
+  use_as_stdout(to_proxy);
   execvp(*argv,argv);
   die();
 }
@@ -222,7 +222,7 @@ void teardown_proxy_and_exit(int child,int from_server,int to_server) {
   _exit(wait_exitcode(wstat));
 }
 
-void be_parent(int child,int from_client,int to_client,int from_proxy,int to_proxy,int from_server,int to_server) {
+void be_parent(int from_client,int to_client,int from_proxy,int to_proxy,int from_server,int to_server,int child) {
   setup_proxy(from_proxy,to_proxy);
   do_proxy_stuff(from_client,to_server,from_server,to_client);
 
@@ -244,7 +244,7 @@ int main(int argc,char **argv) {
   to_client = 1;
 
   if ((child = fork()))
-    be_parent(child,from_client,to_client,from_proxy,to_proxy,from_server,to_server);
+    be_parent(from_client,to_client,from_proxy,to_proxy,from_server,to_server,child);
   else if (child == 0)
     be_child(from_proxy,to_proxy,from_server,to_server,argv);
   else
