@@ -114,7 +114,6 @@ void parse_request(stralloc request,stralloc *verb,stralloc *arg) {
     if (!stralloc_copyb(verb,chomped.s,first_space)) die_nomem();
     if (!stralloc_copyb(arg,chomped.s + first_space + 1,chomped.len - first_space - 1)) die_nomem();
   }
-  case_lowerb(verb->s,verb->len);
 }
 
 void send_stralloc(int to,stralloc sa) {
@@ -144,7 +143,7 @@ char *smtp_auth(stralloc *verb,stralloc *arg) {
 
 int verb_matches(char *s,stralloc *sa) {
   if (!sa->len) return 0;
-  return !str_diffn(s,sa->s,sa->len);
+  return !case_diffb(s,sa->len,sa->s);
 }
 
 void *handle_internally(stralloc *verb,stralloc *arg) {
