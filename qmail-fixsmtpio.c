@@ -16,12 +16,7 @@ substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 char ssoutbuf[128];
 substdio ssout = SUBSTDIO_FDBUF(write,1,ssoutbuf,sizeof ssoutbuf);
 
-void putsflush(char *s,substdio *to) {
-  substdio_puts(to,s);
-  substdio_flush(to);
-}
-
-void errflush(char *s) { putsflush(s,&sserr); }
+void errflush(char *s) { substdio_putsflush(&sserr,s); }
 
 void die_usage() { errflush("usage: qmail-fixsmtpio prog [ arg ... ]\n"); die(); }
 void die_pipe()  { errflush("qmail-fixsmtpio: unable to open pipe\n"); die(); }
@@ -155,7 +150,13 @@ void *handle_internally(stralloc *verb,stralloc *arg) {
   return 0;
 }
 
-void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *want_data,int *in_data) {
+void send_keepalive(int to_server,int *in_keepalive) {
+  *in_keepalive = 1;
+  send_string(to_server,"NOOP\r\n");
+  substdio_putsflush(&sserr,"I: NOOP\r\n");
+}
+
+void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *in_keepalive,int *want_data,int *in_data) {
   char *(*internalfn)();
 
   if (*in_data) {
@@ -166,6 +167,7 @@ void handle_request(int from_client,int to_server,int to_client,stralloc request
   } else {
     parse_request(request,verb,arg);
     if ((internalfn = handle_internally(verb,arg))) {
+      send_keepalive(to_server,in_keepalive);
       send_string(to_client,internalfn(verb,arg));
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
@@ -177,7 +179,7 @@ void handle_request(int from_client,int to_server,int to_client,stralloc request
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
   char buf[128];
   stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
-  int want_data = 0, in_data = 0;
+  int in_keepalive = 0, want_data = 0, in_data = 0;
 
   for (;;) {
     FD_ZERO(&fds);
@@ -191,7 +193,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
       if (!safeappend(&request,from_client,buf,sizeof buf))
         break;
       if (is_entire_line(&request)) {
-        handle_request(from_client,to_server,to_client,request,&verb,&arg,&want_data,&in_data);
+        handle_request(from_client,to_server,to_client,request,&verb,&arg,&in_keepalive,&want_data,&in_data);
         substdio_putsflush(&sserr,"I: ");
         substdio_putflush(&sserr,request.s,request.len);
         if (!stralloc_copys(&request,"")) die_nomem();
@@ -201,11 +203,15 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
     if (can_read(from_server)) {
       if (!safeappend(&response,from_server,buf,sizeof buf))
         break;
-      if (is_entire_line(&response))
-        substdio_putflush(&ssout,response.s,response.len);
+      if (is_entire_line(&response)) {
+        if (in_keepalive)
+          in_keepalive = 0;
+        else
+          substdio_putflush(&ssout,response.s,response.len);
         substdio_putsflush(&sserr,"O: ");
         substdio_putflush(&sserr,response.s,response.len);
         if (!stralloc_copys(&response,"")) die_nomem();
+      }
     }
   }
 }
