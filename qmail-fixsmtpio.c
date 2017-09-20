@@ -96,10 +96,6 @@ int safeappend(stralloc *sa,int fd,char *buf,int len) {
   return r;
 }
 
-void send_data(int to_server,stralloc data) {
-  if (write(to_server,data.s,data.len) == -1) die_write();
-}
-
 int is_last_line_of_data(stralloc r) {
   return (r.len == 3 && r.s[0] == '.' && r.s[1] == '\r' && r.s[2] == '\n');
 }
@@ -121,19 +117,12 @@ void parse_request(stralloc request,stralloc *verb,stralloc *arg) {
   case_lowerb(verb->s,verb->len);
 }
 
-void send_request(int to_server,stralloc *verb,stralloc *arg) {
-  stralloc r = {0};
-  if (!stralloc_copyb(&r,verb->s,verb->len)) die_nomem();
-  if (arg->len) {
-    if (!stralloc_cats(&r," ")) die_nomem();
-    if (!stralloc_catb(&r,arg->s,arg->len)) die_nomem();
-  }
-  if (!stralloc_cats(&r,"\r\n")) die_nomem();
-  if (write(to_server,r.s,r.len) == -1) die_write();
+void send_stralloc(int to,stralloc sa) {
+  if (write(to,sa.s,sa.len) == -1) die_write();
 }
 
-void send_response(int to_client,char *response) {
-  if (write(to_client,response,str_len(response)) == -1) die_write();
+void send_string(int to,char *s) {
+  if (write(to,s,str_len(s)) == -1) die_write();
 }
 
 char *smtp_test(stralloc *verb,stralloc *arg) {
@@ -165,27 +154,22 @@ void *handle_internally(stralloc *verb,stralloc *arg) {
   return 0;
 }
 
-void dispatch_request(stralloc *verb,stralloc *arg,int to_server,int to_client) {
-  char *(*internalfn)();
-  if ((internalfn = handle_internally(verb,arg))) {
-    send_response(to_client,internalfn(verb,arg));
-  } else {
-    send_request(to_server,verb,arg);
-  }
-}
-
 void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *want_data,int *in_data) {
+  char *(*internalfn)();
+
   if (*in_data) {
-    send_data(to_server,request);
+    send_stralloc(to_server,request);
     if (is_last_line_of_data(request)) {
       *in_data = 0;
     }
   } else {
     parse_request(request,verb,arg);
-    if (verb_matches("data",verb)) {
-      *want_data = 1;
+    if ((internalfn = handle_internally(verb,arg))) {
+      send_string(to_client,internalfn(verb,arg));
+    } else {
+      if (verb_matches("data",verb)) *want_data = 1;
+      send_stralloc(to_server,request);
     }
-    dispatch_request(verb,arg,to_server,to_client);
   }
 }
 
