@@ -63,12 +63,14 @@ int is_entire_line(stralloc *sa) {
   return sa->s[sa->len - 1] == '\n';
 }
 
-void want_to_read(int fd,fd_set *fds) {
-  FD_SET(fd,fds);
+fd_set fds;
+
+void want_to_read(int fd) {
+  FD_SET(fd,&fds);
 }
 
-int can_read(int fd,fd_set *fds) {
-  return FD_ISSET(fd,fds);
+int can_read(int fd) {
+  return FD_ISSET(fd,&fds);
 }
 
 int max(int a,int b) {
@@ -76,9 +78,9 @@ int max(int a,int b) {
   return b;
 }
 
-int can_read_something(int fd1,int fd2,fd_set *fds) {
+int can_read_something(int fd1,int fd2) {
   int ready;
-  ready = select(1+max(fd1,fd2),fds,(fd_set *)0,(fd_set *)0,(struct timeval *) 0);
+  ready = select(1+max(fd1,fd2),&fds,(fd_set *)0,(fd_set *)0,(struct timeval *) 0);
   if (ready == -1 && errno != error_intr) die_read();
   return ready;
 }
@@ -173,20 +175,19 @@ void handle_request(int from_client,int to_server,int to_client,stralloc request
 }
 
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
-  fd_set fds;
   char buf[128];
   stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
   int want_data = 0, in_data = 0;
 
   for (;;) {
     FD_ZERO(&fds);
-    want_to_read(from_client,&fds);
-    want_to_read(from_server,&fds);
+    want_to_read(from_client);
+    want_to_read(from_server);
 
-    if (!can_read_something(from_client,from_server,&fds))
+    if (!can_read_something(from_client,from_server))
       continue;
 
-    if (can_read(from_client,&fds)) {
+    if (can_read(from_client)) {
       if (!safeappend(&request,from_client,buf,sizeof buf))
         break;
       if (is_entire_line(&request)) {
@@ -197,7 +198,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
       }
     }
 
-    if (can_read(from_server,&fds)) {
+    if (can_read(from_server)) {
       if (!safeappend(&response,from_server,buf,sizeof buf))
         break;
       if (is_entire_line(&response))
