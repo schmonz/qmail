@@ -230,17 +230,17 @@ void be_parent(int from_client,int to_client,int from_proxy,int to_proxy,int fro
 }
 
 int main(int argc,char **argv) {
+  int from_client;
+  int from_proxy, to_server;
+  int from_server, to_proxy;
+  int to_client;
   int child;
-  int from_proxy,  to_proxy;
-  int from_server, to_server;
-  int from_client, to_client;
 
   argv += 1; if (!*argv) die_usage();
 
-  mypipe(&from_server, &to_proxy);
-  mypipe(&from_proxy, &to_server);
-
   from_client = 0;
+  mypipe(&from_proxy, &to_server);
+  mypipe(&from_server, &to_proxy);
   to_client = 1;
 
   if ((child = fork()))
