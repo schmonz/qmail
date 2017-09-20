@@ -156,16 +156,7 @@ void *handle_internally(stralloc *verb,stralloc *arg) {
   return 0;
 }
 
-void send_keepalive(int to_server,int *in_keepalive) {
-  stralloc keepalive = {0};
-  if (!stralloc_copys(&keepalive,"NOOP\r\n")) die_nomem();
-  *in_keepalive = 1;
-  substdio_putsflush(&sserr,"got here 1\n");
-  write_to_server(to_server,keepalive);
-  substdio_putsflush(&sserr,"got here 2\n");
-}
-
-void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *in_keepalive,int *want_data,int *in_data) {
+void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *want_data,int *in_data) {
   char *(*internalfn)();
 
   if (*in_data) {
@@ -179,7 +170,6 @@ void handle_request(int from_client,int to_server,int to_client,stralloc request
       char *response = internalfn(verb,arg);
       if (!stralloc_0(&request)) die_nomem();
       logit('I',request.s);
-      //send_keepalive(to_server,in_keepalive);
       write_to_client(to_client,response);
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
@@ -188,10 +178,15 @@ void handle_request(int from_client,int to_server,int to_client,stralloc request
   }
 }
 
+void handle_response(int to_client,stralloc response) {
+  if (!stralloc_0(&response)) die_nomem();
+  write_to_client(to_client,response.s);
+}
+
 void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
   char buf[128];
   stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
-  int in_keepalive = 0, want_data = 0, in_data = 0;
+  int want_data = 0, in_data = 0;
 
   for (;;) {
     FD_ZERO(&fds);
@@ -205,7 +200,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
       if (!safeappend(&request,from_client,buf,sizeof buf))
         break;
       if (is_entire_line(&request)) {
-        handle_request(from_client,to_server,to_client,request,&verb,&arg,&in_keepalive,&want_data,&in_data);
+        handle_request(from_client,to_server,to_client,request,&verb,&arg,&want_data,&in_data);
         if (!stralloc_copys(&request,"")) die_nomem();
       }
     }
@@ -214,12 +209,7 @@ void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client)
       if (!safeappend(&response,from_server,buf,sizeof buf))
         break;
       if (is_entire_line(&response)) {
-        if (in_keepalive) {
-          in_keepalive = 0;
-        } else {
-          if (!stralloc_0(&response)) die_nomem();
-          write_to_client(to_client,response.s);
-        }
+        handle_response(to_client,response);
         if (!stralloc_copys(&response,"")) die_nomem();
       }
     }
