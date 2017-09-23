@@ -226,7 +226,17 @@ sub handle_internally { my ($request, $verb_ref, $arg_ref) = @_;
     return "";
 }
 
-sub handle_request { my ($from_client, $to_server, $to_client,
+sub send_keepalive { my ($server, $request) = @_;
+    write_to_server($server, "NOOP " . $request);
+}
+
+sub blocking_line_read { my ($fd) = @_;
+    my $line = <$fd>;
+    return $line;
+}
+
+sub handle_request { my ($from_client, $to_server,
+                         $from_server, $to_client,
                          $request, $verb_ref, $arg_ref,
                          $want_data_ref, $in_data_ref) = @_;
     my $internal_response;
@@ -243,6 +253,11 @@ sub handle_request { my ($from_client, $to_server, $to_client,
             logit('I', $request);
             write_to_client($to_client,
                 munge_response($internal_response, ${$verb_ref}, ${$arg_ref}));
+            (${$verb_ref}, ${$arg_ref}) = ('', '');
+
+            send_keepalive($to_server, $request);
+            $internal_response = blocking_line_read($from_server);
+            logit('O', $internal_response);
         } else {
             ${$want_data_ref} = 1 if (verb_matches('data', ${$verb_ref}));
             write_to_server($to_server, $request);
@@ -266,7 +281,7 @@ sub do_proxy_stuff { my ($from_client, $to_server,
     my ($request, $verb, $arg, $response) = ('', '', '', '');
     my ($want_data, $in_data) = (0, 0);
 
-    handle_request($from_client, $to_server, $to_client,
+    handle_request($from_client, $to_server, $from_server, $to_client,
         'greeting', \$verb, \$arg,
         \$want_data, \$in_data);
 
@@ -278,7 +293,8 @@ sub do_proxy_stuff { my ($from_client, $to_server,
         if (can_read($from_client)) {
             last unless safeappend(\$request, $from_client);
             if (is_entire_line($request)) {
-                handle_request($from_client, $to_server, $to_client,
+                handle_request($from_client, $to_server,
+                    $from_server, $to_client,
                     $request, \$verb, \$arg,
                     \$want_data, \$in_data);
                 $request = '';
