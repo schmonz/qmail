@@ -22,12 +22,12 @@ void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
 void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
 void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
 
-void use_as_stdout(int fd) {
-  if (fd_move(1,fd) == -1) die_pipe();
-}
-
 void use_as_stdin(int fd) {
   if (fd_move(0,fd) == -1) die_pipe();
+}
+
+void use_as_stdout(int fd) {
+  if (fd_move(1,fd) == -1) die_pipe();
 }
 
 void mypipe(int *from,int *to) {
@@ -37,13 +37,24 @@ void mypipe(int *from,int *to) {
   *to = pi[1];
 }
 
-void be_child(int from_proxy,int to_proxy,int from_server,int to_server,char **argv) {
+void setup_server(int from_proxy,int to_server,
+                  int from_server,int to_proxy) {
   close(from_server);
   close(to_server);
   use_as_stdin(from_proxy);
   use_as_stdout(to_proxy);
+}
+
+void exec_server_and_never_return(char **argv) {
   execvp(*argv,argv);
   die();
+}
+
+void be_child(int from_proxy,int to_proxy,
+              int from_server,int to_server,
+              char **argv) {
+  setup_server(from_proxy,to_server,from_server,to_proxy);
+  exec_server_and_never_return(argv);
 }
 
 void setup_proxy(int from_proxy,int to_proxy) {
@@ -85,7 +96,8 @@ int saferead(int fd,char *buf,int len) {
 }
 
 int safeappend(stralloc *sa,int fd,char *buf,int len) {
-  int r = saferead(fd,buf,len);
+  int r;
+  r = saferead(fd,buf,len);
   if (!stralloc_catb(sa,buf,r)) die_nomem();
   return r;
 }
@@ -136,7 +148,7 @@ char *smtp_test(stralloc *verb,stralloc *arg) {
   return response.s;
 }
 
-char *smtp_auth(stralloc *verb,stralloc *arg) {
+char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
   stralloc response = {0};
   if (!stralloc_copys(&response,"502 unimplemented (#5.5.1)")) die_nomem();
   if (!stralloc_cats(&response,"\r\n")) die_nomem();
@@ -151,13 +163,18 @@ int verb_matches(char *s,stralloc *sa) {
 
 void *handle_internally(stralloc *verb,stralloc *arg) {
   if (verb_matches("test",verb)) return smtp_test;
-  if (verb_matches("auth",verb)) return smtp_auth;
+  if (verb_matches("auth",verb)) return smtp_unimplemented;
+  if (verb_matches("starttls",verb)) return smtp_unimplemented;
 
   return 0;
 }
 
-void handle_request(int from_client,int to_server,int to_client,stralloc request,stralloc *verb,stralloc *arg,int *want_data,int *in_data) {
+void handle_request(int from_client,int to_server,int to_client,
+                    stralloc request,stralloc *verb,stralloc *arg,
+                    int *want_data,int *in_data) {
   char *(*internalfn)();
+
+  //XXX request = strip_last_eol(request) . "\r\n";
 
   if (*in_data) {
     write_to_server(to_server,request);
@@ -183,31 +200,34 @@ void handle_response(int to_client,stralloc response) {
   write_to_client(to_client,response.s);
 }
 
-void do_proxy_stuff(int from_client,int to_server,int from_server,int to_client) {
+void do_proxy_stuff(int from_client,int to_server,
+                    int from_server,int to_client) {
   char buf[128];
   stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
   int want_data = 0, in_data = 0;
+  
+  /* handle_request(from_client,to_server,to_client,
+      "greeting",&verb,&arg,
+      &want_data,&in_data); */
 
   for (;;) {
     FD_ZERO(&fds);
     want_to_read(from_client);
     want_to_read(from_server);
 
-    if (!can_read_something(from_client,from_server))
-      continue;
+    if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(&request,from_client,buf,sizeof buf))
-        break;
+      if (!safeappend(&request,from_client,buf,sizeof buf)) break;
       if (is_entire_line(&request)) {
-        handle_request(from_client,to_server,to_client,request,&verb,&arg,&want_data,&in_data);
+        handle_request(from_client,to_server,to_client,
+            request,&verb,&arg,&want_data,&in_data);
         if (!stralloc_copys(&request,"")) die_nomem();
       }
     }
 
     if (can_read(from_server)) {
-      if (!safeappend(&response,from_server,buf,sizeof buf))
-        break;
+      if (!safeappend(&response,from_server,buf,sizeof buf)) break;
       if (is_entire_line(&response)) {
         handle_response(to_client,response);
         if (!stralloc_copys(&response,"")) die_nomem();
@@ -228,7 +248,10 @@ void teardown_proxy_and_exit(int child,int from_server,int to_server) {
   _exit(wait_exitcode(wstat));
 }
 
-void be_parent(int from_client,int to_client,int from_proxy,int to_proxy,int from_server,int to_server,int child) {
+void be_parent(int from_client,int to_client,
+               int from_proxy,int to_proxy,
+               int from_server,int to_server,
+               int child) {
   setup_proxy(from_proxy,to_proxy);
   do_proxy_stuff(from_client,to_server,from_server,to_client);
 
@@ -250,9 +273,14 @@ int main(int argc,char **argv) {
   to_client = 1;
 
   if ((child = fork()))
-    be_parent(from_client,to_client,from_proxy,to_proxy,from_server,to_server,child);
+    be_parent(from_client,to_client,
+              from_proxy,to_proxy,
+              from_server,to_server,
+              child);
   else if (child == 0)
-    be_child(from_proxy,to_proxy,from_server,to_server,argv);
+    be_child(from_proxy,to_proxy,
+             from_server,to_server,
+             argv);
   else
     die_fork();
 }
