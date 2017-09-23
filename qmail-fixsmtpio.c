@@ -102,15 +102,15 @@ int safeappend(stralloc *sa,int fd,char *buf,int len) {
   return r;
 }
 
-int is_last_line_of_data(stralloc r) {
-  return (r.len == 3 && r.s[0] == '.' && r.s[1] == '\r' && r.s[2] == '\n');
+int is_last_line_of_data(stralloc *r) {
+  return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
 
-void parse_request(stralloc request,stralloc *verb,stralloc *arg) {
+void parse_request(stralloc *request,stralloc *verb,stralloc *arg) {
   stralloc chomped = {0};
   int first_space;
 
-  if (!stralloc_copyb(&chomped,request.s,request.len - 1)) die_nomem();
+  if (!stralloc_copyb(&chomped,request->s,request->len - 1)) die_nomem();
   first_space = str_chr(chomped.s,' ');
 
   if (first_space <= 0 || first_space >= chomped.len) {
@@ -133,10 +133,10 @@ void write_to_client(int client,char *s) {
   logit('O',s);
 }
 
-void write_to_server(int server,stralloc sa) {
-  if (write(server,sa.s,sa.len) == -1) die_write();
-  if (!stralloc_0(&sa)) die_nomem();
-  logit('I',sa.s);
+void write_to_server(int server,stralloc *sa) {
+  if (write(server,sa->s,sa->len) == -1) die_write();
+  if (!stralloc_0(sa)) die_nomem();
+  logit('I',sa->s);
 }
 
 char *smtp_test(stralloc *verb,stralloc *arg) {
@@ -161,7 +161,7 @@ int verb_matches(char *s,stralloc *sa) {
   return !case_diffb(s,sa->len,sa->s);
 }
 
-void *handle_internally(stralloc request,stralloc *verb,stralloc *arg) {
+void *handle_internally(stralloc *request,stralloc *verb,stralloc *arg) {
   parse_request(request,verb,arg);
 
   if (verb_matches("test",verb)) return smtp_test(verb,arg);
@@ -172,7 +172,7 @@ void *handle_internally(stralloc request,stralloc *verb,stralloc *arg) {
 }
 
 void handle_request(int from_client,int to_server,int to_client,
-                    stralloc request,stralloc *verb,stralloc *arg,
+                    stralloc *request,stralloc *verb,stralloc *arg,
                     int *want_data,int *in_data) {
   char *internal_response;
 
@@ -185,8 +185,8 @@ void handle_request(int from_client,int to_server,int to_client,
     }
   } else {
     if ((internal_response = handle_internally(request,verb,arg)) != '\0') {
-      if (!stralloc_0(&request)) die_nomem();
-      logit('I',request.s);
+      if (!stralloc_0(request)) die_nomem();
+      logit('I',request->s);
       write_to_client(to_client,internal_response);
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
@@ -195,9 +195,9 @@ void handle_request(int from_client,int to_server,int to_client,
   }
 }
 
-void handle_response(int to_client,stralloc response) {
-  if (!stralloc_0(&response)) die_nomem();
-  write_to_client(to_client,response.s);
+void handle_response(int to_client,stralloc *response) {
+  if (!stralloc_0(response)) die_nomem();
+  write_to_client(to_client,response->s);
 }
 
 void do_proxy_stuff(int from_client,int to_server,
@@ -221,7 +221,7 @@ void do_proxy_stuff(int from_client,int to_server,
       if (!safeappend(&request,from_client,buf,sizeof buf)) break;
       if (is_entire_line(&request)) {
         handle_request(from_client,to_server,to_client,
-            request,&verb,&arg,&want_data,&in_data);
+            &request,&verb,&arg,&want_data,&in_data);
         if (!stralloc_copys(&request,"")) die_nomem();
       }
     }
@@ -229,7 +229,7 @@ void do_proxy_stuff(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(&response,from_server,buf,sizeof buf)) break;
       if (is_entire_line(&response)) {
-        handle_response(to_client,response);
+        handle_response(to_client,&response);
         if (!stralloc_copys(&response,"")) die_nomem();
       }
     }
