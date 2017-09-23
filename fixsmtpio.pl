@@ -73,7 +73,7 @@ sub strip_last_eol { my ($string) = @_;
     return $string;
 }
 
-sub munge_response { my ($verb, $arg, $response) = @_;
+sub munge_response { my ($response, $verb, $arg) = @_;
     $response = strip_last_eol($response);
     $response = munge_timeout($response) if '' eq $verb;
     $response = munge_greeting($response) if 'greeting' eq $verb;
@@ -242,7 +242,7 @@ sub handle_request { my ($from_client, $to_server, $to_client,
         if ($internal_response = handle_internally($request, $verb_ref, $arg_ref)) {
             logit('I', $request);
             write_to_client($to_client,
-                munge_response(${$verb_ref}, ${$arg_ref}, $internal_response));
+                munge_response($internal_response, ${$verb_ref}, ${$arg_ref}));
         } else {
             ${$want_data_ref} = 1 if (verb_matches('data', ${$verb_ref}));
             write_to_server($to_server, $request);
@@ -258,7 +258,7 @@ sub handle_response { my ($to_client, $response, $verb, $arg,
             ${$in_data_ref} = 1;
         }
     }
-    write_to_client($to_client, munge_response($verb, $arg, $response));
+    write_to_client($to_client, munge_response($response, $verb, $arg));
 }
 
 sub do_proxy_stuff { my ($from_client, $to_server,
