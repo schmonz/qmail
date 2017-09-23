@@ -1,6 +1,7 @@
 #include "case.h"
 #include "error.h"
 #include "fd.h"
+#include "getln.h"
 #include "readwrite.h"
 #include "select.h"
 #include "str.h"
@@ -171,7 +172,27 @@ void *handle_internally(stralloc *request,stralloc *verb,stralloc *arg) {
   return 0;
 }
 
-void handle_request(int from_client,int to_server,int to_client,
+void send_keepalive(int server, stralloc *request) {
+  stralloc keepalive = {0};
+  if (!stralloc_copys(&keepalive,"NOOP ")) die_nomem();
+  if (!stralloc_cats(&keepalive,request->s)) die_nomem();
+  write_to_server(server,&keepalive);
+}
+
+char *blocking_line_read(int fd) {
+  char buf[128];
+  substdio ss;
+  stralloc line = {0};
+  int match;
+
+  substdio_fdbuf(&ss,read,fd,buf,sizeof buf);
+  if (getln(&ss,&line,&match,'\n') == -1) die_nomem();
+  if (!stralloc_0(&line)) die_nomem();
+  return line.s;
+}
+
+void handle_request(int from_client,int to_server,
+                    int from_server,int to_client,
                     stralloc *request,stralloc *verb,stralloc *arg,
                     int *want_data,int *in_data) {
   char *internal_response;
@@ -187,7 +208,14 @@ void handle_request(int from_client,int to_server,int to_client,
     if ((internal_response = handle_internally(request,verb,arg)) != '\0') {
       if (!stralloc_0(request)) die_nomem();
       logit('I',request->s);
+      request->len--;
       write_to_client(to_client,internal_response);
+      if (!stralloc_copys(verb,"")) die_nomem();
+      if (!stralloc_copys(arg,"")) die_nomem();
+
+      send_keepalive(to_server,request);
+      internal_response = blocking_line_read(from_server);
+      logit('O',internal_response);
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
       write_to_server(to_server,request);
@@ -206,7 +234,8 @@ void do_proxy_stuff(int from_client,int to_server,
   stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
   int want_data = 0, in_data = 0;
   
-  /* handle_request(from_client,to_server,to_client,
+  /* handle_request(from_client,to_server,
+      from_server,to_client,
       "greeting",&verb,&arg,
       &want_data,&in_data); */
 
@@ -220,7 +249,8 @@ void do_proxy_stuff(int from_client,int to_server,
     if (can_read(from_client)) {
       if (!safeappend(&request,from_client,buf,sizeof buf)) break;
       if (is_entire_line(&request)) {
-        handle_request(from_client,to_server,to_client,
+        handle_request(from_client,to_server,
+            from_server,to_client,
             &request,&verb,&arg,&want_data,&in_data);
         if (!stralloc_copys(&request,"")) die_nomem();
       }
@@ -231,6 +261,8 @@ void do_proxy_stuff(int from_client,int to_server,
       if (is_entire_line(&response)) {
         handle_response(to_client,&response);
         if (!stralloc_copys(&response,"")) die_nomem();
+        if (!stralloc_copys(&verb,"")) die_nomem();
+        if (!stralloc_copys(&arg,"")) die_nomem();
       }
     }
   }
