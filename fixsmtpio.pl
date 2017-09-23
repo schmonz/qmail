@@ -216,18 +216,20 @@ sub verb_matches { my ($s, $sa) = @_;
     return lc $s eq lc $sa;
 }
 
-sub handle_internally { my ($verb, $arg) = @_;
-    return \&smtp_test if verb_matches('test', $verb);
-    return \&smtp_unimplemented if verb_matches('auth', $verb);
-    return \&smtp_unimplemented if verb_matches('starttls', $verb);
+sub handle_internally { my ($request, $verb_ref, $arg_ref) = @_;
+    parse_request($request, $verb_ref, $arg_ref);
 
-    return 0;
+    return smtp_test(${$verb_ref}, ${$arg_ref}) if verb_matches('test', ${$verb_ref});
+    return smtp_unimplemented(${$verb_ref}, ${$arg_ref}) if verb_matches('auth', ${$verb_ref});
+    return smtp_unimplemented(${$verb_ref}, ${$arg_ref}) if verb_matches('starttls', ${$verb_ref});
+
+    return "";
 }
 
 sub handle_request { my ($from_client, $to_server, $to_client,
                          $request, $verb_ref, $arg_ref,
                          $want_data_ref, $in_data_ref) = @_;
-    my $internalfn;
+    my $internal_response;
 
     $request = strip_last_eol($request) . "\r\n";
 
@@ -237,11 +239,10 @@ sub handle_request { my ($from_client, $to_server, $to_client,
             ${$in_data_ref} = 0;
         }
     } else {
-        parse_request($request, $verb_ref, $arg_ref);
-        if ($internalfn = handle_internally(${$verb_ref}, ${$arg_ref})) {
-            my $response = $internalfn->(${$verb_ref}, ${$arg_ref});
+        if ($internal_response = handle_internally($request, $verb_ref, $arg_ref)) {
             logit('I', $request);
-            write_to_client($to_client, munge_response(${$verb_ref}, ${$arg_ref}, $response));
+            write_to_client($to_client,
+                munge_response(${$verb_ref}, ${$arg_ref}, $internal_response));
         } else {
             ${$want_data_ref} = 1 if (verb_matches('data', ${$verb_ref}));
             write_to_server($to_server, $request);

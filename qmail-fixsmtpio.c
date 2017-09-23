@@ -161,10 +161,12 @@ int verb_matches(char *s,stralloc *sa) {
   return !case_diffb(s,sa->len,sa->s);
 }
 
-void *handle_internally(stralloc *verb,stralloc *arg) {
-  if (verb_matches("test",verb)) return smtp_test;
-  if (verb_matches("auth",verb)) return smtp_unimplemented;
-  if (verb_matches("starttls",verb)) return smtp_unimplemented;
+void *handle_internally(stralloc request,stralloc *verb,stralloc *arg) {
+  parse_request(request,verb,arg);
+
+  if (verb_matches("test",verb)) return smtp_test(verb,arg);
+  if (verb_matches("auth",verb)) return smtp_unimplemented(verb,arg);
+  if (verb_matches("starttls",verb)) return smtp_unimplemented(verb,arg);
 
   return 0;
 }
@@ -172,7 +174,7 @@ void *handle_internally(stralloc *verb,stralloc *arg) {
 void handle_request(int from_client,int to_server,int to_client,
                     stralloc request,stralloc *verb,stralloc *arg,
                     int *want_data,int *in_data) {
-  char *(*internalfn)();
+  char *internal_response;
 
   //XXX request = strip_last_eol(request) . "\r\n";
 
@@ -182,12 +184,10 @@ void handle_request(int from_client,int to_server,int to_client,
       *in_data = 0;
     }
   } else {
-    parse_request(request,verb,arg);
-    if ((internalfn = handle_internally(verb,arg))) {
-      char *response = internalfn(verb,arg);
+    if ((internal_response = handle_internally(request,verb,arg)) != '\0') {
       if (!stralloc_0(&request)) die_nomem();
       logit('I',request.s);
-      write_to_client(to_client,response);
+      write_to_client(to_client,internal_response);
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
       write_to_server(to_server,request);
