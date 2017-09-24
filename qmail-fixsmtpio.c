@@ -277,30 +277,6 @@ void handle_response(int to_client,stralloc *response,
   write_to_client(to_client,response);
 }
 
-stralloc single_queued_request = {0};
-
-void dequeue_request(stralloc *sa) {
-  if (!stralloc_copy(sa,&single_queued_request)) die_nomem();
-  if (!stralloc_copys(&single_queued_request,"")) die_nomem();
-}
-
-void queue_request(stralloc *sa) {
-  if (!stralloc_copy(&single_queued_request,sa)) die_nomem();
-  if (!stralloc_copys(sa,"")) die_nomem();
-}
-
-stralloc single_queued_response = {0};
-
-void dequeue_response(stralloc *sa) {
-  if (!stralloc_copy(sa,&single_queued_response)) die_nomem();
-  if (!stralloc_copys(&single_queued_response,"")) die_nomem();
-}
-
-void queue_response(stralloc *sa) {
-  if (!stralloc_copy(&single_queued_response,sa)) die_nomem();
-  if (!stralloc_copys(sa,"")) die_nomem();
-}
-
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[128];
