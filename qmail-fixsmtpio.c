@@ -265,6 +265,30 @@ void handle_response(int to_client,stralloc *response,
   write_to_client(to_client,response);
 }
 
+stralloc single_queued_request = {0};
+
+void dequeue_request(stralloc *sa) {
+  if (!stralloc_copy(sa,&single_queued_request)) die_nomem();
+  if (!stralloc_copys(&single_queued_request,"")) die_nomem();
+}
+
+void queue_request(stralloc *sa) {
+  if (!stralloc_copy(&single_queued_request,sa)) die_nomem();
+  if (!stralloc_copys(sa,"")) die_nomem();
+}
+
+stralloc single_queued_response = {0};
+
+void dequeue_response(stralloc *sa) {
+  if (!stralloc_copy(sa,&single_queued_response)) die_nomem();
+  if (!stralloc_copys(&single_queued_response,"")) die_nomem();
+}
+
+void queue_response(stralloc *sa) {
+  if (!stralloc_copy(&single_queued_response,sa)) die_nomem();
+  if (!stralloc_copys(sa,"")) die_nomem();
+}
+
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[128];
@@ -272,14 +296,28 @@ void do_proxy_stuff(int from_client,int to_server,
   int want_data = 0, in_data = 0;
   
   if (!stralloc_copys(&request,"greeting")) die_nomem();
-  parse_request(&request,&verb,&arg);
-  handle_request(from_client,to_server,
-                 from_server,to_client,
-                 &request,&verb,&arg,
-                 &want_data,&in_data);
-  if (!stralloc_copys(&request,"")) die_nomem();
+  queue_request(&request);
 
   for (;;) {
+    dequeue_request(&request);
+    if (request.len) {
+      parse_request(&request,&verb,&arg);
+      handle_request(from_client,to_server,
+                     from_server,to_client,
+                     &request,&verb,&arg,
+                     &want_data,&in_data);
+      if (!stralloc_copys(&request,"")) die_nomem();
+    }
+
+    dequeue_response(&response);
+    if (response.len) {
+      handle_response(to_client,&response,
+                      &verb,&arg);
+      if (!stralloc_copys(&response,"")) die_nomem();
+      if (!stralloc_copys(&verb,"")) die_nomem();
+      if (!stralloc_copys(&arg,"")) die_nomem();
+    }
+
     FD_ZERO(&fds);
     want_to_read(from_client);
     want_to_read(from_server);
@@ -288,25 +326,12 @@ void do_proxy_stuff(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&request,from_client,buf,sizeof buf)) break;
-      if (is_entire_line(&request)) {
-        parse_request(&request,&verb,&arg);
-        handle_request(from_client,to_server,
-                       from_server,to_client,
-                       &request,&verb,&arg,
-                       &want_data,&in_data);
-        if (!stralloc_copys(&request,"")) die_nomem();
-      }
+      if (is_entire_line(&request)) queue_request(&request);
     }
 
     if (can_read(from_server)) {
       if (!safeappend(&response,from_server,buf,sizeof buf)) break;
-      if (is_entire_line(&response)) {
-        handle_response(to_client,&response,
-                        &verb,&arg);
-        if (!stralloc_copys(&response,"")) die_nomem();
-        if (!stralloc_copys(&verb,"")) die_nomem();
-        if (!stralloc_copys(&arg,"")) die_nomem();
-      }
+      if (is_entire_line(&response)) queue_response(&response);
     }
   }
 }
