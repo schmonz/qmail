@@ -179,11 +179,18 @@ void *handle_internally(stralloc *verb,stralloc *arg) {
   return 0;
 }
 
-void send_keepalive(int server, stralloc *request) {
+void send_keepalive(int server,stralloc *request) {
   stralloc keepalive = {0};
   if (!stralloc_copys(&keepalive,"NOOP ")) die_nomem();
   if (!stralloc_cat(&keepalive,request)) die_nomem();
   write_to_server(server,&keepalive);
+}
+
+void check_keepalive(int client, stralloc *response) {
+  if (!stralloc_starts(response,"250 ok")) {
+    write_to_client(client,response);
+    die();
+  }
 }
 
 char *blocking_line_read(int fd) {
@@ -192,7 +199,7 @@ char *blocking_line_read(int fd) {
   stralloc line = {0};
   int match;
 
-  substdio_fdbuf(&ss,read,fd,buf,sizeof buf);
+  substdio_fdbuf(&ss,saferead,fd,buf,sizeof buf);
   if (getln(&ss,&line,&match,'\n') == -1) die_nomem();
   if (!stralloc_0(&line)) die_nomem();
   return line.s;
@@ -213,13 +220,13 @@ void handle_request(int from_client,int to_server,
     }
   } else {
     if ((internal_response = handle_internally(verb,arg))) {
-      if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
-
       send_keepalive(to_server,request);
       if (!stralloc_copys(&sa_keepalive_response,blocking_line_read(from_server))) die_nomem();
+      check_keepalive(to_client,&sa_keepalive_response);
       logit('O',&sa_keepalive_response);
 
       logit('I',request);
+      if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
       write_to_client(to_client,&sa_internal_response);
       if (!stralloc_copys(verb,"")) die_nomem();
       if (!stralloc_copys(arg,"")) die_nomem();
