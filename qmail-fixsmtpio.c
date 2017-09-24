@@ -277,42 +277,43 @@ void handle_response(int to_client,stralloc *response,
   write_to_client(to_client,response);
 }
 
+void request_response_init(struct request_response *rr) {
+  static stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
+
+  if (!stralloc_copys(&request,"")) die_nomem();
+  if (!stralloc_copys(&verb,"")) die_nomem();
+  if (!stralloc_copys(&arg,"")) die_nomem();
+  if (!stralloc_copys(&response,"")) die_nomem();
+
+  rr->request = &request;
+  rr->verb = &verb;
+  rr->arg = &arg;
+  rr->response = &response;
+}
+
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[128];
   int want_data = 0, in_data = 0;
+  stralloc partial_request = {0}, partial_response = {0};
   struct request_response rr;
 
-  stralloc partial_request = {0};
-  stralloc partial_response = {0};
-  // XXX do not touch these directly
-  stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
-  // XXX extract initialization
-  rr.request = &request;
-  rr.verb = &verb;
-  rr.arg = &arg;
-  rr.response = &response;
-  
+  request_response_init(&rr);
   if (!stralloc_copys(rr.request,"greeting")) die_nomem();
 
   for (;;) {
-    if (rr.request->len) { //XXX && !rr.response->len
+    if (rr.request->len && !rr.response->len) {
       parse_request(rr.request,rr.verb,rr.arg);
       handle_request(from_client,to_server,
                      from_server,to_client,
                      rr.request,rr.verb,rr.arg,
                      &want_data,&in_data);
-      // XXX don't do this
-      if (!stralloc_copys(rr.request,"")) die_nomem();
     }
 
     if (rr.response->len) {
       handle_response(to_client,rr.response,
                       rr.verb,rr.arg);
-      // XXX reinitialize all of rr here
-      if (!stralloc_copys(rr.response,"")) die_nomem();
-      if (!stralloc_copys(rr.verb,"")) die_nomem();
-      if (!stralloc_copys(rr.arg,"")) die_nomem();
+      request_response_init(&rr);
     }
 
     FD_ZERO(&fds);
