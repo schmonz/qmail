@@ -214,7 +214,7 @@ void *handle_internally(stralloc *verb,stralloc *arg) {
 
 void send_keepalive(int server,stralloc *request) {
   stralloc keepalive = {0};
-  if (!stralloc_copys(&keepalive,"NOOP ")) die_nomem();
+  if (!stralloc_copys(&keepalive,"NOOP qmail-fixsmtpio ")) die_nomem();
   if (!stralloc_cat(&keepalive,request)) die_nomem();
   write_to_server(server,&keepalive);
 }
