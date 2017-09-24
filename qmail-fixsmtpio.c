@@ -23,6 +23,13 @@ void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
 void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
 void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
 
+struct request_response {
+  stralloc *request;
+  stralloc *verb;
+  stralloc *arg;
+  stralloc *response;
+};
+
 void strip_last_eol(stralloc *sa) {
   if (sa->s[sa->len-1] == '\n') sa->len--;
   if (sa->s[sa->len-1] == '\r') sa->len--;
@@ -41,10 +48,10 @@ int verb_matches(char *s,stralloc *sa) {
   return !case_diffb(s,sa->len,sa->s);
 }
 
-void munge_response(stralloc *response,stralloc *verb,stralloc *arg) {
+void munge_response(stralloc *response,struct request_response *rr) {
   strip_last_eol(response);
-  if (verb_matches("greeting",verb)) munge_greeting(response);
-  if (verb_matches("test",verb)) munge_test(response);
+  if (verb_matches("greeting",rr->verb)) munge_greeting(response);
+  if (verb_matches("test",rr->verb)) munge_test(response);
   stralloc_cats(response,"\r\n");
 }
 
@@ -132,31 +139,31 @@ int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
 
-void parse_request(stralloc *request,stralloc *verb,stralloc *arg) {
+void parse_request(struct request_response *rr) {
   stralloc chomped = {0};
   int len;
   int first_space;
 
-  len = request->len;
+  len = rr->request->len;
 
-  if (!stralloc_0(request)) die_nomem();
-  first_space = str_chr(request->s,' ');
+  if (!stralloc_0(rr->request)) die_nomem();
+  first_space = str_chr(rr->request->s,' ');
 
   // XXX strip_last_eol();
-  if (request->s[len-1] == '\n') len--;
-  if (request->s[len-1] == '\r') len--;
-  if (!stralloc_copyb(&chomped,request->s,len)) die_nomem();
+  if (rr->request->s[len-1] == '\n') len--;
+  if (rr->request->s[len-1] == '\r') len--;
+  if (!stralloc_copyb(&chomped,rr->request->s,len)) die_nomem();
 
   if (first_space <= 0 || first_space >= chomped.len) {
-    if (!stralloc_copy(verb,&chomped)) die_nomem();
-    if (!stralloc_copys(arg,"")) die_nomem();
+    if (!stralloc_copy(rr->verb,&chomped)) die_nomem();
+    if (!stralloc_copys(rr->arg,"")) die_nomem();
   } else {
-    if (!stralloc_copyb(verb,chomped.s,first_space)) die_nomem();
-    if (!stralloc_copyb(arg,chomped.s + first_space + 1,chomped.len - first_space - 1)) die_nomem();
+    if (!stralloc_copyb(rr->verb,chomped.s,first_space)) die_nomem();
+    if (!stralloc_copyb(rr->arg,chomped.s + first_space + 1,chomped.len - first_space - 1)) die_nomem();
   }
 
-  if (!stralloc_copy(request,&chomped)) die_nomem();
-  if (!stralloc_cats(request,"\r\n")) die_nomem();
+  if (!stralloc_copy(rr->request,&chomped)) die_nomem();
+  if (!stralloc_cats(rr->request,"\r\n")) die_nomem();
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -207,7 +214,7 @@ void send_keepalive(int server,stralloc *request) {
   write_to_server(server,&keepalive);
 }
 
-void check_keepalive(int client, stralloc *response) {
+void check_keepalive(int client,stralloc *response) {
   if (!stralloc_starts(response,"250 ok")) {
     write_to_client(client,response);
     die();
@@ -226,55 +233,47 @@ char *blocking_line_read(int fd) {
   return line.s;
 }
 
-struct request_response {
-  stralloc *request;
-  stralloc *verb;
-  stralloc *arg;
-  stralloc *response;
-};
-
 void handle_request(int from_client,int to_server,
                     int from_server,int to_client,
-                    stralloc *request,stralloc *verb,stralloc *arg,
+                    struct request_response *rr,
                     int *want_data,int *in_data) {
   char *internal_response;
   stralloc sa_internal_response = {0};
   stralloc sa_keepalive_response = {0};
 
   if (*in_data) {
-    write_to_server(to_server,request);
-    if (is_last_line_of_data(request)) {
+    write_to_server(to_server,rr->request);
+    if (is_last_line_of_data(rr->request)) {
       *in_data = 0;
     }
   } else {
-    if ((internal_response = handle_internally(verb,arg))) {
+    if ((internal_response = handle_internally(rr->verb,rr->arg))) {
 /*
  * 1. Add our response to the queue
  * 2. Add a keepalive request to the queue
  * 3. Catch the keepalive response, and munge it
  */
-      send_keepalive(to_server,request);
+      send_keepalive(to_server,rr->request);
       if (!stralloc_copys(&sa_keepalive_response,blocking_line_read(from_server))) die_nomem();
       check_keepalive(to_client,&sa_keepalive_response);
       logit('O',&sa_keepalive_response);
 
-      logit('I',request);
+      logit('I',rr->request);
       if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
-      munge_response(&sa_internal_response,verb,arg);
+      munge_response(&sa_internal_response,rr);
       write_to_client(to_client,&sa_internal_response);
-      if (!stralloc_copys(verb,"")) die_nomem();
-      if (!stralloc_copys(arg,"")) die_nomem();
+      if (!stralloc_copys(rr->verb,"")) die_nomem();
+      if (!stralloc_copys(rr->arg,"")) die_nomem();
     } else {
-      if (verb_matches("data",verb)) *want_data = 1;
-      write_to_server(to_server,request);
+      if (verb_matches("data",rr->verb)) *want_data = 1;
+      write_to_server(to_server,rr->request);
     }
   }
 }
 
-void handle_response(int to_client,stralloc *response,
-                     stralloc *verb,stralloc *arg) {
-  munge_response(response,verb,arg);
-  write_to_client(to_client,response);
+void handle_response(int to_client,struct request_response *rr) {
+  munge_response(rr->response,rr);
+  write_to_client(to_client,rr->response);
 }
 
 void request_response_init(struct request_response *rr) {
@@ -303,16 +302,15 @@ void do_proxy_stuff(int from_client,int to_server,
 
   for (;;) {
     if (rr.request->len && !rr.response->len) {
-      parse_request(rr.request,rr.verb,rr.arg);
+      parse_request(&rr);
       handle_request(from_client,to_server,
                      from_server,to_client,
-                     rr.request,rr.verb,rr.arg,
+                     &rr,
                      &want_data,&in_data);
     }
 
     if (rr.response->len) {
-      handle_response(to_client,rr.response,
-                      rr.verb,rr.arg);
+      handle_response(to_client,&rr);
       request_response_init(&rr);
     }
 
@@ -372,8 +370,8 @@ int main(int argc,char **argv) {
   argv += 1; if (!*argv) die_usage();
 
   from_client = 0;
-  mypipe(&from_proxy, &to_server);
-  mypipe(&from_server, &to_proxy);
+  mypipe(&from_proxy,&to_server);
+  mypipe(&from_server,&to_proxy);
   to_client = 1;
 
   if ((child = fork()))
