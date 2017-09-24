@@ -226,6 +226,13 @@ char *blocking_line_read(int fd) {
   return line.s;
 }
 
+struct request_response {
+  stralloc *request;
+  stralloc *verb;
+  stralloc *arg;
+  stralloc *response;
+};
+
 void handle_request(int from_client,int to_server,
                     int from_server,int to_client,
                     stralloc *request,stralloc *verb,stralloc *arg,
@@ -241,6 +248,11 @@ void handle_request(int from_client,int to_server,
     }
   } else {
     if ((internal_response = handle_internally(verb,arg))) {
+/*
+ * 1. Add our response to the queue
+ * 2. Add a keepalive request to the queue
+ * 3. Catch the keepalive response, and munge it
+ */
       send_keepalive(to_server,request);
       if (!stralloc_copys(&sa_keepalive_response,blocking_line_read(from_server))) die_nomem();
       check_keepalive(to_client,&sa_keepalive_response);
@@ -292,30 +304,39 @@ void queue_response(stralloc *sa) {
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[128];
-  stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
   int want_data = 0, in_data = 0;
+  struct request_response rr;
+
+  stralloc partial_request = {0};
+  stralloc partial_response = {0};
+  // XXX do not touch these directly
+  stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
+  // XXX extract initialization
+  rr.request = &request;
+  rr.verb = &verb;
+  rr.arg = &arg;
+  rr.response = &response;
   
-  if (!stralloc_copys(&request,"greeting")) die_nomem();
-  queue_request(&request);
+  if (!stralloc_copys(rr.request,"greeting")) die_nomem();
 
   for (;;) {
-    dequeue_request(&request);
-    if (request.len) {
-      parse_request(&request,&verb,&arg);
+    if (rr.request->len) { //XXX && !rr.response->len
+      parse_request(rr.request,rr.verb,rr.arg);
       handle_request(from_client,to_server,
                      from_server,to_client,
-                     &request,&verb,&arg,
+                     rr.request,rr.verb,rr.arg,
                      &want_data,&in_data);
-      if (!stralloc_copys(&request,"")) die_nomem();
+      // XXX don't do this
+      if (!stralloc_copys(rr.request,"")) die_nomem();
     }
 
-    dequeue_response(&response);
-    if (response.len) {
-      handle_response(to_client,&response,
-                      &verb,&arg);
-      if (!stralloc_copys(&response,"")) die_nomem();
-      if (!stralloc_copys(&verb,"")) die_nomem();
-      if (!stralloc_copys(&arg,"")) die_nomem();
+    if (rr.response->len) {
+      handle_response(to_client,rr.response,
+                      rr.verb,rr.arg);
+      // XXX reinitialize all of rr here
+      if (!stralloc_copys(rr.response,"")) die_nomem();
+      if (!stralloc_copys(rr.verb,"")) die_nomem();
+      if (!stralloc_copys(rr.arg,"")) die_nomem();
     }
 
     FD_ZERO(&fds);
@@ -325,13 +346,19 @@ void do_proxy_stuff(int from_client,int to_server,
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(&request,from_client,buf,sizeof buf)) break;
-      if (is_entire_line(&request)) queue_request(&request);
+      if (!safeappend(&partial_request,from_client,buf,sizeof buf)) break;
+      if (is_entire_line(&partial_request)) {
+        if (!stralloc_copy(rr.request,&partial_request)) die_nomem();
+        if (!stralloc_copys(&partial_request,"")) die_nomem();
+      }
     }
 
     if (can_read(from_server)) {
-      if (!safeappend(&response,from_server,buf,sizeof buf)) break;
-      if (is_entire_line(&response)) queue_response(&response);
+      if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
+      if (is_entire_line(&partial_response)) {
+        if (!stralloc_copy(rr.response,&partial_response)) die_nomem();
+        if (!stralloc_copys(&partial_response,"")) die_nomem();
+      }
     }
   }
 }
