@@ -23,6 +23,31 @@ void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
 void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
 void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
 
+void strip_last_eol(stralloc *sa) {
+  if (sa->s[sa->len-1] == '\n') sa->len--;
+  if (sa->s[sa->len-1] == '\r') sa->len--;
+}
+
+void munge_greeting(stralloc *response) {
+  if (!stralloc_copys(response,"235 ok go ahead (#2.0.0)")) die_nomem();
+}
+
+void munge_test(stralloc *response) {
+  stralloc_cats(response," and also it's mungeable");
+}
+
+int verb_matches(char *s,stralloc *sa) {
+  if (!sa->len) return 0;
+  return !case_diffb(s,sa->len,sa->s);
+}
+
+void munge_response(stralloc *response,stralloc *verb,stralloc *arg) {
+  strip_last_eol(response);
+  if (verb_matches("greeting",verb)) munge_greeting(response);
+  if (verb_matches("test",verb)) munge_test(response);
+  stralloc_cats(response,"\r\n");
+}
+
 void use_as_stdin(int fd) {
   if (fd_move(0,fd) == -1) die_pipe();
 }
@@ -117,6 +142,7 @@ void parse_request(stralloc *request,stralloc *verb,stralloc *arg) {
   if (!stralloc_0(request)) die_nomem();
   first_space = str_chr(request->s,' ');
 
+  // XXX strip_last_eol();
   if (request->s[len-1] == '\n') len--;
   if (request->s[len-1] == '\r') len--;
   if (!stralloc_copyb(&chomped,request->s,len)) die_nomem();
@@ -164,11 +190,6 @@ char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
   if (!stralloc_cats(&response,"\r\n")) die_nomem();
   if (!stralloc_0(&response)) die_nomem();
   return response.s;
-}
-
-int verb_matches(char *s,stralloc *sa) {
-  if (!sa->len) return 0;
-  return !case_diffb(s,sa->len,sa->s);
 }
 
 void *handle_internally(stralloc *verb,stralloc *arg) {
@@ -227,6 +248,7 @@ void handle_request(int from_client,int to_server,
 
       logit('I',request);
       if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
+      munge_response(&sa_internal_response,verb,arg);
       write_to_client(to_client,&sa_internal_response);
       if (!stralloc_copys(verb,"")) die_nomem();
       if (!stralloc_copys(arg,"")) die_nomem();
@@ -237,7 +259,9 @@ void handle_request(int from_client,int to_server,
   }
 }
 
-void handle_response(int to_client,stralloc *response) {
+void handle_response(int to_client,stralloc *response,
+                     stralloc *verb,stralloc *arg) {
+  munge_response(response,verb,arg);
   write_to_client(to_client,response);
 }
 
@@ -247,10 +271,13 @@ void do_proxy_stuff(int from_client,int to_server,
   stralloc request = {0}, verb = {0}, arg = {0}, response = {0};
   int want_data = 0, in_data = 0;
   
-  /* handle_request(from_client,to_server,
-      from_server,to_client,
-      "greeting",&verb,&arg,
-      &want_data,&in_data); */
+  if (!stralloc_copys(&request,"greeting")) die_nomem();
+  parse_request(&request,&verb,&arg);
+  handle_request(from_client,to_server,
+                 from_server,to_client,
+                 &request,&verb,&arg,
+                 &want_data,&in_data);
+  if (!stralloc_copys(&request,"")) die_nomem();
 
   for (;;) {
     FD_ZERO(&fds);
@@ -265,7 +292,8 @@ void do_proxy_stuff(int from_client,int to_server,
         parse_request(&request,&verb,&arg);
         handle_request(from_client,to_server,
                        from_server,to_client,
-                       &request,&verb,&arg,&want_data,&in_data);
+                       &request,&verb,&arg,
+                       &want_data,&in_data);
         if (!stralloc_copys(&request,"")) die_nomem();
       }
     }
@@ -273,7 +301,8 @@ void do_proxy_stuff(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(&response,from_server,buf,sizeof buf)) break;
       if (is_entire_line(&response)) {
-        handle_response(to_client,&response);
+        handle_response(to_client,&response,
+                        &verb,&arg);
         if (!stralloc_copys(&response,"")) die_nomem();
         if (!stralloc_copys(&verb,"")) die_nomem();
         if (!stralloc_copys(&arg,"")) die_nomem();
