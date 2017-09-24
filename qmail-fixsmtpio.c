@@ -204,6 +204,7 @@ char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
 }
 
 void *handle_internally(stralloc *verb,stralloc *arg) {
+  if (verb_matches("noop",verb)) return 0;
   if (verb_matches("test",verb)) return smtp_test(verb,arg);
   if (verb_matches("auth",verb)) return smtp_unimplemented(verb,arg);
   if (verb_matches("starttls",verb)) return smtp_unimplemented(verb,arg);
