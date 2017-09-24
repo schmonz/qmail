@@ -171,7 +171,7 @@ int verb_matches(char *s,stralloc *sa) {
   return !case_diffb(s,sa->len,sa->s);
 }
 
-void *handle_internally(stralloc *request,stralloc *verb,stralloc *arg) {
+void *handle_internally(stralloc *verb,stralloc *arg) {
   if (verb_matches("test",verb)) return smtp_test(verb,arg);
   if (verb_matches("auth",verb)) return smtp_unimplemented(verb,arg);
   if (verb_matches("starttls",verb)) return smtp_unimplemented(verb,arg);
@@ -206,15 +206,13 @@ void handle_request(int from_client,int to_server,
   stralloc sa_internal_response = {0};
   stralloc sa_keepalive_response = {0};
 
-  //XXX request = strip_last_eol(request) . "\r\n";
-
   if (*in_data) {
     write_to_server(to_server,request);
     if (is_last_line_of_data(request)) {
       *in_data = 0;
     }
   } else {
-    if ((internal_response = handle_internally(request,verb,arg))) {
+    if ((internal_response = handle_internally(verb,arg))) {
       if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
 
       send_keepalive(to_server,request);
@@ -259,8 +257,8 @@ void do_proxy_stuff(int from_client,int to_server,
       if (is_entire_line(&request)) {
         parse_request(&request,&verb,&arg);
         handle_request(from_client,to_server,
-            from_server,to_client,
-            &request,&verb,&arg,&want_data,&in_data);
+                       from_server,to_client,
+                       &request,&verb,&arg,&want_data,&in_data);
         if (!stralloc_copys(&request,"")) die_nomem();
       }
     }
