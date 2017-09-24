@@ -35,6 +35,10 @@ void strip_last_eol(stralloc *sa) {
   if (sa->s[sa->len-1] == '\r') sa->len--;
 }
 
+int accepted_data(stralloc *response) {
+  return stralloc_starts(response,"354 ");
+}
+
 void munge_greeting(stralloc *response) {
   if (!stralloc_copys(response,"235 ok go ahead (#2.0.0)")) die_nomem();
 }
@@ -243,9 +247,7 @@ void handle_request(int from_client,int to_server,
 
   if (*in_data) {
     write_to_server(to_server,rr->request);
-    if (is_last_line_of_data(rr->request)) {
-      *in_data = 0;
-    }
+    if (is_last_line_of_data(rr->request)) *in_data = 0;
   } else {
     if ((internal_response = handle_internally(rr->verb,rr->arg))) {
 /*
@@ -271,7 +273,13 @@ void handle_request(int from_client,int to_server,
   }
 }
 
-void handle_response(int to_client,struct request_response *rr) {
+void handle_response(int to_client,
+                     struct request_response *rr,
+                     int *want_data,int *in_data) {
+  if (*want_data) {
+    *want_data = 0;
+    if (accepted_data(rr->response)) *in_data = 1;
+  }
   munge_response(rr->response,rr);
   write_to_client(to_client,rr->response);
 }
@@ -310,7 +318,9 @@ void do_proxy_stuff(int from_client,int to_server,
     }
 
     if (rr.response->len) {
-      handle_response(to_client,&rr);
+      handle_response(to_client,
+                      &rr,
+                      &want_data,&in_data);
       request_response_init(&rr);
     }
 
