@@ -39,12 +39,22 @@ int accepted_data(stralloc *response) {
   return stralloc_starts(response,"354 ");
 }
 
+/* XXX munge_timeout() */
+
 void munge_greeting(stralloc *response) {
   if (!stralloc_copys(response,"235 ok go ahead (#2.0.0)")) die_nomem();
+  // XXX more
+}
+
+void munge_help(stralloc *response) {
+  stralloc munged = {0};
+  if (!stralloc_copys(&munged,"214 qmail-fixsmtpio home page: https://schmonz.com/qmail/authutils\r\n")) die_nomem();
+  if (!stralloc_cat(&munged,response)) die_nomem();
+  if (!stralloc_copy(response,&munged)) die_nomem();
 }
 
 void munge_test(stralloc *response) {
-  stralloc_cats(response," and also it's mungeable");
+  if (!stralloc_cats(response," and also it's mungeable")) die_nomem();
 }
 
 int verb_matches(char *s,stralloc *sa) {
@@ -52,11 +62,38 @@ int verb_matches(char *s,stralloc *sa) {
   return !case_diffb(s,sa->len,sa->s);
 }
 
+void change_every_line_fourth_char_to_dash(stralloc *multiline) {
+  int pos = 0;
+  for (int i = 0; i < multiline->len; i++) {
+    if (multiline->s[i] == '\n') pos = -1;
+    if (pos == 3) multiline->s[i] = '-';
+    pos++;
+  }
+}
+
+void change_last_line_fourth_char_to_space(stralloc *multiline) {
+  int pos = 0;
+  for (int i = multiline->len - 1; i >= 0; i--) {
+    if (multiline->s[i] == '\n') {
+      pos = i + 1;
+      break;
+    }
+  }
+  multiline->s[pos+3] = ' ';
+}
+
+void reformat_multiline_response(stralloc *response) {
+  change_every_line_fourth_char_to_dash(response);
+  change_last_line_fourth_char_to_space(response);
+  if (!stralloc_cats(response,"\r\n")) die_nomem();
+}
+
 void munge_response(stralloc *response,struct request_response *rr) {
   strip_last_eol(response);
   if (verb_matches("greeting",rr->verb)) munge_greeting(response);
+  if (verb_matches("help",rr->verb)) munge_help(response);
   if (verb_matches("test",rr->verb)) munge_test(response);
-  stralloc_cats(response,"\r\n");
+  reformat_multiline_response(response);
 }
 
 void use_as_stdin(int fd) {
@@ -341,6 +378,7 @@ void do_proxy_stuff(int from_client,int to_server,
 
     if (can_read(from_server)) {
       if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
+      //XXX is_entire_response
       if (is_entire_line(&partial_response)) {
         if (!stralloc_copy(rr.response,&partial_response)) die_nomem();
         if (!stralloc_copys(&partial_response,"")) die_nomem();
