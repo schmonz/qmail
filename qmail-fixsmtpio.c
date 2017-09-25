@@ -57,6 +57,35 @@ void munge_test(stralloc *response) {
   if (!stralloc_cats(response," and also it's mungeable")) die_nomem();
 }
 
+void munge_ehlo(stralloc *response) {
+  stralloc munged = {0};
+  stralloc line = {0};
+  stralloc subline = {0};
+
+  char *avoids[] = {
+    "AUTH ",
+    0,
+  };
+
+  for (int i = 0; i < response->len; i++) {
+    if (!stralloc_append(&line,i + response->s)) die_nomem();
+    if (response->s[i] == '\n' || i == response->len - 1) {
+      if (!stralloc_copyb(&subline,line.s + 4,line.len - 4)) die_nomem();
+      int keep = 1;
+      char *s;
+      for (int j = 0; (s = avoids[j]); j++)
+        if (stralloc_starts(&line,"250"))
+          if (stralloc_starts(&subline,s))
+            keep = 0;
+      if (keep && !stralloc_cat(&munged,&line)) die_nomem();
+      if (!stralloc_copys(&line,"")) die_nomem();
+      if (!stralloc_copys(&subline,"")) die_nomem();
+    }
+  }
+  strip_last_eol(&munged);
+  if (!stralloc_copy(response,&munged)) die_nomem();
+}
+
 int verb_matches(char *s,stralloc *sa) {
   if (!sa->len) return 0;
   return !case_diffb(s,sa->len,sa->s);
@@ -93,6 +122,7 @@ void munge_response(stralloc *response,struct request_response *rr) {
   if (verb_matches("greeting",rr->verb)) munge_greeting(response);
   if (verb_matches("help",rr->verb)) munge_help(response);
   if (verb_matches("test",rr->verb)) munge_test(response);
+  if (verb_matches("ehlo",rr->verb)) munge_ehlo(response);
   reformat_multiline_response(response);
 }
 
