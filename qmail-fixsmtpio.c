@@ -348,6 +348,7 @@ void construct_proxy_request(stralloc *proxy_request,
 void construct_proxy_response(stralloc *proxy_response,
                               stralloc *verb,stralloc *arg,
                               stralloc *server_response,
+                              int request_received,
                               int *want_data,int *in_data) {
   char *(*func)();
 
@@ -361,6 +362,7 @@ void construct_proxy_response(stralloc *proxy_response,
     if (!stralloc_copy(proxy_response,server_response)) die_nomem();
   }
   munge_response(proxy_response,verb);
+  if (!request_received) munge_timeout(proxy_response);
 }
 
 void request_response_init(struct request_response *rr) {
@@ -411,6 +413,7 @@ void do_proxy_stuff(int from_client,int to_server,
       construct_proxy_response(rr.proxy_response,
                                rr.client_verb,rr.client_arg,
                                rr.server_response,
+                               rr.client_request->len,
                                &want_data,&in_data);
       write_to_client(to_client,rr.proxy_response);
       request_response_init(&rr);
