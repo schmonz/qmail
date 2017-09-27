@@ -5,82 +5,87 @@ use strict;
 
 use POSIX qw(_exit);
 
+sub die_usage { die "usage: fixsmtpio.pl prog [ arg ... ]\n"; }
+sub die_pipe  { die "fixsmtpio.pl: unable to open pipe: $!\n"; }
+sub die_fork  { die "fixsmtpio.pl: unable to fork: $!\n"; }
+sub die_read  { die "fixsmtpio.pl: unable to read: $!\n"; }
+sub die_write { die "fixsmtpio.pl: unable to write: $!\n"; }
+
+# XXX struct request_response
+
 my $exitcode = 0;
+
+sub strip_last_eol { my ($string_ref) = @_;
+    ${$string_ref} =~ s/\r?\n$//;
+}
 
 sub accepted_data { my ($response) = @_;
     return $response =~ /^354 /;
 }
 
-sub munge_timeout { my ($response) = @_;
+sub munge_timeout { my ($response_ref) = @_;
     $exitcode = 16;
-    return $response;
 }
 
-sub munge_greeting { my ($response) = @_;
-    if ($response =~ /^4[0-9]{2} /) {
+sub munge_greeting { my ($response_ref) = @_;
+    if (${$response_ref} =~ /^4/) {
         $exitcode = 14;
-    } elsif ($response =~ /^5[0-9]{2} /) {
-        $exitcode = 15;
+    } elsif (${$response_ref} =~ /^5/) {
+        ${$response_ref} = 15;
     } else {
-        $response = q{235 ok};
-        $response .= qq{, $ENV{AUTHUSER},} if defined $ENV{AUTHUSER};
-        $response .= qq{ go ahead $< (#2.0.0)};
+        ${$response_ref} = q{235 ok};
+        ${$response_ref} .= qq{, $ENV{AUTHUSER},} if defined $ENV{AUTHUSER};
+        ${$response_ref} .= qq{ go ahead $< (#2.0.0)};
     }
-    return $response;
 }
 
-sub munge_help { my ($response) = @_;
-    $response = q{214 fixsmtpio.pl home page: }
+sub munge_help { my ($response_ref) = @_;
+    ${$response_ref} = q{214 fixsmtpio.pl home page: }
         . q{https://schmonz.com/qmail/authutils}
         . "\r\n"
-        . $response;
-    return $response;
+        . ${$response_ref};
 }
 
-sub munge_test { my ($response) = @_;
-    $response .= q{ and also it's mungeable};
-    return $response;
+sub munge_test { my ($response_ref) = @_;
+    ${$response_ref} .= q{ and also it's mungeable};
 }
 
-sub munge_ehlo { my ($response) = @_;
-    my @lines = split(/\r\n/, $response);
+sub munge_ehlo { my ($response_ref) = @_;
+    # XXX @avoids
+    my @lines = split(/\r\n/, ${$response_ref});
     @lines = grep { ! /^250.AUTH / } @lines;
     @lines = grep { ! /^250.STARTTLS/ } @lines;
-    $response = join("\r\n", @lines);
-    return $response;
+    ${$response_ref} = join("\r\n", @lines);
 }
 
-sub change_every_line_fourth_char_to_dash { my ($multiline) = @_;
-    $multiline =~ s/^(.{3})./$1-/msg;
-    return $multiline;
+sub verb_matches { my ($s, $sa) = @_;
+    return 0 unless length $sa;
+    return lc $s eq lc $sa;
 }
 
-sub change_last_line_fourth_char_to_space { my ($multiline) = @_;
-    $multiline =~ s/(.{3})-(.+)$/$1 $2/;
-    return $multiline;
+sub change_every_line_fourth_char_to_dash { my ($multiline_ref) = @_;
+    ${$multiline_ref} =~ s/^(.{3})./$1-/msg;
 }
 
-sub reformat_multiline_response { my ($response) = @_;
+sub change_last_line_fourth_char_to_space { my ($multiline_ref) = @_;
+    ${$multiline_ref} =~ s/(.{3})-(.+)$/$1 $2/;
+}
+
+sub reformat_multiline_response { my ($response_ref) = @_;
     # XXX maybe fix up line breaks? or just keep them correct all along
-    $response = change_every_line_fourth_char_to_dash($response);
-    $response = change_last_line_fourth_char_to_space($response);
-    $response .= "\r\n";
-    return $response;
+    change_every_line_fourth_char_to_dash($response_ref);
+    change_last_line_fourth_char_to_space($response_ref);
+    ${$response_ref} .= "\r\n";
 }
 
-sub strip_last_eol { my ($string) = @_;
-    $string =~ s/\r?\n$//;
-    return $string;
-}
-
-sub munge_response { my ($response, $verb, $arg) = @_;
-    $response = strip_last_eol($response);
-    $response = munge_timeout($response) if '' eq $verb;
-    $response = munge_greeting($response) if 'greeting' eq $verb;
-    $response = munge_help($response) if 'help' eq $verb;
-    $response = munge_test($response) if 'test' eq $verb;
-    $response = munge_ehlo($response) if 'ehlo' eq $verb;
-    return reformat_multiline_response($response);
+sub munge_response { my ($response_ref, $verb, $arg) = @_;
+    strip_last_eol($response_ref);
+    munge_timeout($response_ref) if '' eq $verb;
+    munge_greeting($response_ref) if verb_matches('greeting', $verb);
+    munge_help($response_ref) if verb_matches('help', $verb);
+    munge_test($response_ref) if verb_matches('test', $verb);
+    munge_ehlo($response_ref) if verb_matches('ehlo', $verb);
+    reformat_multiline_response($response_ref);
 }
 
 sub could_be_final_response_line { my ($line) = @_;
@@ -91,14 +96,6 @@ sub is_entire_response { my ($response) = @_;
     my @lines = split(/\r\n/, $response);
     return could_be_final_response_line($lines[-1]) && is_entire_line($response);
 }
-
-#####
-
-sub die_usage { die "usage: fixsmtpio.pl prog [ arg ... ]\n"; }
-sub die_pipe  { die "fixsmtpio.pl: unable to open pipe: $!\n"; }
-sub die_fork  { die "fixsmtpio.pl: unable to fork: $!\n"; }
-sub die_read  { die "fixsmtpio.pl: unable to read: $!\n"; }
-sub die_write { die "fixsmtpio.pl: unable to write: $!\n"; }
 
 sub use_as_stdin { my ($fd) = @_;
     open(STDIN, '<&=', $fd) || die_pipe();
@@ -178,29 +175,28 @@ sub is_last_line_of_data { my ($r) = @_;
     return $r =~ /^\.\r$/;
 }
 
-sub parse_request { my ($request, $verb_ref, $arg_ref) = @_;
-    my $chomped;
+sub parse_request { my ($request_ref, $verb_ref, $arg_ref) = @_;
+    strip_last_eol($request_ref);
 
-    $chomped = strip_last_eol($request);
-
-    (${$verb_ref}, ${$arg_ref}) = split(/ /, $chomped, 2);
+    (${$verb_ref}, ${$arg_ref}) = split(/ /, ${$request_ref}, 2);
     ${$verb_ref} ||= '';
     ${$arg_ref}  ||= '';
-    ${$verb_ref} = lc(${$verb_ref});
+
+    ${$request_ref} .= "\r\n";
 }
 
 sub logit { my ($logprefix, $s) = @_;
     print STDERR "$logprefix: $s";
 }
 
-sub write_to_client { my ($client, $response) = @_;
-    syswrite($client, $response) || die_write();
-    logit('O', $response);
+sub write_to_client { my ($fd, $s) = @_;
+    syswrite($fd, $s) || die_write();
+    logit('O', $s);
 }
 
-sub write_to_server { my ($server, $request) = @_;
-    syswrite($server, $request) || die_write();
-    logit('I', $request);
+sub write_to_server { my ($fd, $s) = @_;
+    syswrite($fd, $s) || die_write();
+    logit('I', $s);
 }
 
 sub smtp_test { my ($verb, $arg) = @_;
@@ -211,14 +207,8 @@ sub smtp_unimplemented { my ($verb, $arg) = @_;
     return "502 unimplemented (#5.5.1)";
 }
 
-sub verb_matches { my ($s, $sa) = @_;
-    return 0 unless length $sa;
-    return lc $s eq lc $sa;
-}
-
 sub handle_internally { my ($request, $verb_ref, $arg_ref) = @_;
-    parse_request($request, $verb_ref, $arg_ref);
-
+    return "" if verb_matches('noop', ${$verb_ref});
     return smtp_test(${$verb_ref}, ${$arg_ref}) if verb_matches('test', ${$verb_ref});
     return smtp_unimplemented(${$verb_ref}, ${$arg_ref}) if verb_matches('auth', ${$verb_ref});
     return smtp_unimplemented(${$verb_ref}, ${$arg_ref}) if verb_matches('starttls', ${$verb_ref});
@@ -227,7 +217,14 @@ sub handle_internally { my ($request, $verb_ref, $arg_ref) = @_;
 }
 
 sub send_keepalive { my ($server, $request) = @_;
-    write_to_server($server, "NOOP " . $request);
+    write_to_server($server, "NOOP fixsmtpio.pl " . $request);
+}
+
+sub check_keepalive { my ($client, $response) = @_;
+    if ($response !~ /^250 ok/) {
+        write_to_client($client, $response);
+        die();
+    }
 }
 
 sub blocking_line_read { my ($fd) = @_;
@@ -240,24 +237,22 @@ sub handle_request { my ($from_client, $to_server,
                          $request, $verb_ref, $arg_ref,
                          $want_data_ref, $in_data_ref) = @_;
     my $internal_response;
-
-    $request = strip_last_eol($request) . "\r\n";
+    my $keepalive_response;
 
     if (${$in_data_ref}) {
         write_to_server($to_server, $request);
-        if (is_last_line_of_data($request)) {
-            ${$in_data_ref} = 0;
-        }
+        ${$in_data_ref} = 0 if is_last_line_of_data($request);
     } else {
         if ($internal_response = handle_internally($request, $verb_ref, $arg_ref)) {
-            logit('I', $request);
-            write_to_client($to_client,
-                munge_response($internal_response, ${$verb_ref}, ${$arg_ref}));
-            (${$verb_ref}, ${$arg_ref}) = ('', '');
-
             send_keepalive($to_server, $request);
-            $internal_response = blocking_line_read($from_server);
-            logit('O', $internal_response);
+            $keepalive_response = blocking_line_read($from_server);
+            check_keepalive($to_client, $keepalive_response);
+            logit('O', $keepalive_response);
+
+            logit('I', $request);
+            munge_response(\$internal_response, ${$verb_ref}, ${$arg_ref});
+            write_to_client($to_client, $internal_response);
+            (${$verb_ref}, ${$arg_ref}) = ('', '');
         } else {
             ${$want_data_ref} = 1 if (verb_matches('data', ${$verb_ref}));
             write_to_server($to_server, $request);
@@ -265,55 +260,67 @@ sub handle_request { my ($from_client, $to_server,
     }
 }
 
-sub handle_response { my ($to_client, $response, $verb, $arg,
+sub handle_response { my ($to_client,
+                          $response, $verb, $arg,
                           $want_data_ref, $in_data_ref) = @_;
     if (${$want_data_ref}) {
         ${$want_data_ref} = 0;
-        if (accepted_data($response)) {
-            ${$in_data_ref} = 1;
-        }
+        ${$in_data_ref} = 1 if accepted_data($response);
     }
-    write_to_client($to_client, munge_response($response, $verb, $arg));
+    munge_response(\$response, $verb, $arg);
+    write_to_client($to_client, $response);
 }
+
+# XXX sub request_response_init()
 
 sub do_proxy_stuff { my ($from_client, $to_server,
                          $from_server, $to_client) = @_;
+    my ($partial_request, $partial_response) = ('', '');
     my ($request, $verb, $arg, $response) = ('', '', '', '');
     my ($want_data, $in_data) = (0, 0);
 
-    handle_request($from_client, $to_server, $from_server, $to_client,
-        'greeting', \$verb, \$arg,
-        \$want_data, \$in_data);
+    $request = 'greeting';
 
     want_to_read($from_client);
     want_to_read($from_server);
     for (;;) {
+        if (length $request && ! length $response) {
+            parse_request(\$request, \$verb, \$arg);
+            handle_request($from_client, $to_server,
+                           $from_server, $to_client,
+                           $request, \$verb, \$arg,
+                           \$want_data, \$in_data);
+        }
+
+        if (length $response) {
+            handle_response($to_client,
+                            $response, $verb, $arg,
+                            \$want_data, \$in_data);
+            ($request, $verb, $arg, $response) = ('', '', '', '');
+        }
+
         next unless can_read_something();
 
         if (can_read($from_client)) {
-            last unless safeappend(\$request, $from_client);
-            if (is_entire_line($request)) {
-                handle_request($from_client, $to_server,
-                    $from_server, $to_client,
-                    $request, \$verb, \$arg,
-                    \$want_data, \$in_data);
-                $request = '';
+            last unless safeappend(\$partial_request, $from_client);
+            if (is_entire_line($partial_request)) {
+                $request = $partial_request;
+                $partial_request = '';
             }
         }
 
         if (can_read($from_server)) {
-            last unless safeappend(\$response, $from_server);
-            if (is_entire_response($response)) {
-                handle_response($to_client, $response, $verb, $arg,
-                    \$want_data, \$in_data);
-                $response = '';
-                ($verb, $arg) = ('','');
+            last unless safeappend(\$partial_response, $from_server);
+            if (is_entire_response($partial_response)) {
+                $response = $partial_response;
+                $partial_response = '';
             }
         }
     }
 }
 
 sub wait_crashed { my ($wstat) = @_;
+    # XXX untested
     return $wstat & 127;
 }
 
