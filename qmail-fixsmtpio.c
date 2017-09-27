@@ -78,7 +78,7 @@ void munge_greeting(stralloc *proxy_response) {
     if (!stralloc_cats(proxy_response," go ahead ")) die_nomem();
     str_copy(uid + fmt_ulong(uid,getuid()),"");
     if (!stralloc_cats(proxy_response,uid)) die_nomem();
-    if (!stralloc_cats(proxy_response," (#2.0.0)")) die_nomem();
+    if (!stralloc_cats(proxy_response," (#2.0.0)\r\n")) die_nomem();
   }
 }
 
@@ -92,7 +92,8 @@ void munge_help(stralloc *proxy_response) {
 }
 
 void munge_test(stralloc *proxy_response) {
-  if (!stralloc_cats(proxy_response," and also it's mungeable")) die_nomem();
+  strip_last_eol(proxy_response);
+  if (!stralloc_cats(proxy_response," and also it's mungeable\r\n")) die_nomem();
 }
 
 void munge_ehlo(stralloc *proxy_response) {
@@ -120,7 +121,6 @@ void munge_ehlo(stralloc *proxy_response) {
       blank(&subline);
     }
   }
-  strip_last_eol(&munged);
   if (!stralloc_copy(proxy_response,&munged)) die_nomem();
 }
 
@@ -140,7 +140,7 @@ void change_every_line_fourth_char_to_dash(stralloc *multiline) {
 
 void change_last_line_fourth_char_to_space(stralloc *multiline) {
   int pos = 0;
-  for (int i = multiline->len - 1; i >= 0; i--) {
+  for (int i = multiline->len - 2; i >= 0; i--) {
     if (multiline->s[i] == '\n') {
       pos = i + 1;
       break;
@@ -152,15 +152,13 @@ void change_last_line_fourth_char_to_space(stralloc *multiline) {
 void reformat_multiline_response(stralloc *proxy_response) {
   change_every_line_fourth_char_to_dash(proxy_response);
   change_last_line_fourth_char_to_space(proxy_response);
-  if (!stralloc_cats(proxy_response,"\r\n")) die_nomem();
 }
 
-void munge_response(stralloc *proxy_response,stralloc *client_verb) {
-  strip_last_eol(proxy_response);
-  if (verb_matches(GREETING_PSEUDOREQUEST,client_verb)) munge_greeting(proxy_response);
-  if (verb_matches("help",client_verb)) munge_help(proxy_response);
-  if (verb_matches("test",client_verb)) munge_test(proxy_response);
-  if (verb_matches("ehlo",client_verb)) munge_ehlo(proxy_response);
+void munge_response(stralloc *proxy_response,stralloc *verb) {
+  if (verb_matches(GREETING_PSEUDOREQUEST,verb)) munge_greeting(proxy_response);
+  if (verb_matches("help",verb)) munge_help(proxy_response);
+  if (verb_matches("test",verb)) munge_test(proxy_response);
+  if (verb_matches("ehlo",verb)) munge_ehlo(proxy_response);
   reformat_multiline_response(proxy_response);
 }
 
@@ -317,7 +315,6 @@ char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
 }
 
 void *handle_internally(stralloc *client_verb,stralloc *client_arg) {
-  if (verb_matches("noop",client_verb)) return 0;
   if (verb_matches("test",client_verb)) return &smtp_test;
   if (verb_matches("auth",client_verb)) return &smtp_unimplemented;
   if (verb_matches("starttls",client_verb)) return &smtp_unimplemented;
@@ -336,8 +333,6 @@ void construct_proxy_request(stralloc *proxy_request,
     if (handle_internally(verb,arg)) {
       if (!stralloc_copys(proxy_request,"NOOP qmail-fixsmtpio ")) die_nomem();
       if (!stralloc_cat(proxy_request,client_request)) die_nomem();
-      strip_last_eol(proxy_request);
-      if (!stralloc_cats(proxy_request,"\r\n")) die_nomem();
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
       if (!stralloc_copy(proxy_request,client_request)) die_nomem();
