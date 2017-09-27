@@ -11,7 +11,7 @@
 #include "substdio.h"
 #include "wait.h"
 
-#define GREETING_PSEUDOREQUEST "greeting"
+#define GREETING_PSEUDOREQUEST "greeting\r\n"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
 #define PIPE_READ_BUFFER_SIZE SUBSTDIO_INSIZE
 
@@ -49,53 +49,53 @@ void blank(stralloc *sa) {
 }
 
 void strip_last_eol(stralloc *sa) {
-  if (sa->s[sa->len-1] == '\n') sa->len--;
-  if (sa->s[sa->len-1] == '\r') sa->len--;
+  if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
+  if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
 }
 
 int accepted_data(stralloc *server_response) {
   return stralloc_starts(server_response,"354 ");
 }
 
-void munge_timeout(stralloc *server_response) {
+void munge_timeout(stralloc *proxy_response) {
   exitcode = 16;
 }
 
-void munge_greeting(stralloc *server_response) {
+void munge_greeting(stralloc *proxy_response) {
   char *x;
   char uid[FMT_ULONG];
 
-  if (stralloc_starts(server_response,"4")) exitcode = 14;
-  else if (stralloc_starts(server_response,"5")) exitcode = 15;
+  if (stralloc_starts(proxy_response,"4")) exitcode = 14;
+  else if (stralloc_starts(proxy_response,"5")) exitcode = 15;
   else {
-    if (!stralloc_copys(server_response,"235 ok")) die_nomem();
+    if (!stralloc_copys(proxy_response,"235 ok")) die_nomem();
     x = env_get("AUTHUSER");
     if (x) {
-      if (!stralloc_cats(server_response,", ")) die_nomem();
-      if (!stralloc_cats(server_response,x)) die_nomem();
-      if (!stralloc_cats(server_response,",")) die_nomem();
+      if (!stralloc_cats(proxy_response,", ")) die_nomem();
+      if (!stralloc_cats(proxy_response,x)) die_nomem();
+      if (!stralloc_cats(proxy_response,",")) die_nomem();
     }
-    if (!stralloc_cats(server_response," go ahead ")) die_nomem();
+    if (!stralloc_cats(proxy_response," go ahead ")) die_nomem();
     str_copy(uid + fmt_ulong(uid,getuid()),"");
-    if (!stralloc_cats(server_response,uid)) die_nomem();
-    if (!stralloc_cats(server_response," (#2.0.0)")) die_nomem();
+    if (!stralloc_cats(proxy_response,uid)) die_nomem();
+    if (!stralloc_cats(proxy_response," (#2.0.0)")) die_nomem();
   }
 }
 
-void munge_help(stralloc *server_response) {
+void munge_help(stralloc *proxy_response) {
   stralloc munged = {0};
   if (!stralloc_copys(&munged,"214 qmail-fixsmtpio home page: ")) die_nomem();
   if (!stralloc_cats(&munged, HOMEPAGE)) die_nomem();
   if (!stralloc_cats(&munged, "\r\n")) die_nomem();
-  if (!stralloc_cat(&munged,server_response)) die_nomem();
-  if (!stralloc_copy(server_response,&munged)) die_nomem();
+  if (!stralloc_cat(&munged,proxy_response)) die_nomem();
+  if (!stralloc_copy(proxy_response,&munged)) die_nomem();
 }
 
-void munge_test(stralloc *server_response) {
-  if (!stralloc_cats(server_response," and also it's mungeable")) die_nomem();
+void munge_test(stralloc *proxy_response) {
+  if (!stralloc_cats(proxy_response," and also it's mungeable")) die_nomem();
 }
 
-void munge_ehlo(stralloc *server_response) {
+void munge_ehlo(stralloc *proxy_response) {
   stralloc munged = {0};
   stralloc line = {0};
   stralloc subline = {0};
@@ -105,9 +105,9 @@ void munge_ehlo(stralloc *server_response) {
     0,
   };
 
-  for (int i = 0; i < server_response->len; i++) {
-    if (!stralloc_append(&line,i + server_response->s)) die_nomem();
-    if (server_response->s[i] == '\n' || i == server_response->len - 1) {
+  for (int i = 0; i < proxy_response->len; i++) {
+    if (!stralloc_append(&line,i + proxy_response->s)) die_nomem();
+    if (proxy_response->s[i] == '\n' || i == proxy_response->len - 1) {
       if (!stralloc_copyb(&subline,line.s + 4,line.len - 4)) die_nomem();
       int keep = 1;
       char *s;
@@ -121,7 +121,7 @@ void munge_ehlo(stralloc *server_response) {
     }
   }
   strip_last_eol(&munged);
-  if (!stralloc_copy(server_response,&munged)) die_nomem();
+  if (!stralloc_copy(proxy_response,&munged)) die_nomem();
 }
 
 int verb_matches(char *s,stralloc *sa) {
@@ -149,19 +149,19 @@ void change_last_line_fourth_char_to_space(stralloc *multiline) {
   multiline->s[pos+3] = ' ';
 }
 
-void reformat_multiline_response(stralloc *server_response) {
-  change_every_line_fourth_char_to_dash(server_response);
-  change_last_line_fourth_char_to_space(server_response);
-  if (!stralloc_cats(server_response,"\r\n")) die_nomem();
+void reformat_multiline_response(stralloc *proxy_response) {
+  change_every_line_fourth_char_to_dash(proxy_response);
+  change_last_line_fourth_char_to_space(proxy_response);
+  if (!stralloc_cats(proxy_response,"\r\n")) die_nomem();
 }
 
-void munge_response(stralloc *server_response,struct request_response *rr) {
-  strip_last_eol(server_response);
-  if (verb_matches(GREETING_PSEUDOREQUEST,rr->verb)) munge_greeting(server_response);
-  if (verb_matches("help",rr->verb)) munge_help(server_response);
-  if (verb_matches("test",rr->verb)) munge_test(server_response);
-  if (verb_matches("ehlo",rr->verb)) munge_ehlo(server_response);
-  reformat_multiline_response(server_response);
+void munge_response(stralloc *proxy_response,stralloc *verb) {
+  strip_last_eol(proxy_response);
+  if (verb_matches(GREETING_PSEUDOREQUEST,verb)) munge_greeting(proxy_response);
+  if (verb_matches("help",verb)) munge_help(proxy_response);
+  if (verb_matches("test",verb)) munge_test(proxy_response);
+  if (verb_matches("ehlo",verb)) munge_ehlo(proxy_response);
+  reformat_multiline_response(proxy_response);
 }
 
 int is_entire_line(stralloc *sa) {
@@ -267,33 +267,20 @@ int is_last_line_of_data(stralloc *r) {
 }
 
 void parse_client_request(struct request_response *rr) {
-  // XXX do not mess with client_request
-  // XXX use it to populate verb and arg, then get out of here
-  // XXX then call generate_proxy_request()
-  stralloc chomped = {0};
-  int len;
-  int first_space;
+  int i;
+  for (i = 0; i < rr->client_request->len; i++)
+    if (rr->client_request->s[i] == ' ') break;
+  i++;
 
-  len = rr->client_request->len;
-
-  if (!stralloc_0(rr->client_request)) die_nomem();
-  first_space = str_chr(rr->client_request->s,' ');
-
-  // XXX strip_last_eol();
-  if (rr->client_request->s[len-1] == '\n') len--;
-  if (rr->client_request->s[len-1] == '\r') len--;
-  if (!stralloc_copyb(&chomped,rr->client_request->s,len)) die_nomem();
-
-  if (first_space <= 0 || first_space >= chomped.len) {
-    if (!stralloc_copy(rr->verb,&chomped)) die_nomem();
+  if (i > rr->client_request->len) {
+    if (!stralloc_copy(rr->verb,rr->client_request)) die_nomem();
     blank(rr->arg);
   } else {
-    if (!stralloc_copyb(rr->verb,chomped.s,first_space)) die_nomem();
-    if (!stralloc_copyb(rr->arg,chomped.s + first_space + 1,chomped.len - first_space - 1)) die_nomem();
+    if (!stralloc_copyb(rr->verb,rr->client_request->s,i-1)) die_nomem();
+    if (!stralloc_copyb(rr->arg,rr->client_request->s+i,rr->client_request->len-i)) die_nomem();
   }
-
-  if (!stralloc_copy(rr->client_request,&chomped)) die_nomem();
-  if (!stralloc_cats(rr->client_request,"\r\n")) die_nomem();
+  strip_last_eol(rr->verb);
+  strip_last_eol(rr->arg);
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -329,81 +316,47 @@ char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
   return proxy_response.s;
 }
 
-char *handle_internally(stralloc *verb,stralloc *arg) {
+void *handle_internally(stralloc *verb,stralloc *arg) {
   if (verb_matches("noop",verb)) return 0;
-  if (verb_matches("test",verb)) return smtp_test(verb,arg);
-  if (verb_matches("auth",verb)) return smtp_unimplemented(verb,arg);
-  if (verb_matches("starttls",verb)) return smtp_unimplemented(verb,arg);
+  if (verb_matches("test",verb)) return &smtp_test;
+  if (verb_matches("auth",verb)) return &smtp_unimplemented;
+  if (verb_matches("starttls",verb)) return &smtp_unimplemented;
 
   return 0;
 }
 
-void send_keepalive(int server,stralloc *client_request) {
-  stralloc keepalive = {0};
-  if (!stralloc_copys(&keepalive,"NOOP qmail-fixsmtpio ")) die_nomem();
-  if (!stralloc_cat(&keepalive,client_request)) die_nomem();
-  write_to_server(server,&keepalive);
-}
-
-void check_keepalive(int client,stralloc *server_response) {
-  if (!stralloc_starts(server_response,"250 ok")) {
-    write_to_client(client,server_response);
-    die();
-  }
-}
-
-char *blocking_line_read(int fd) {
-  char buf[SUBSTDIO_INSIZE];
-  substdio ss;
-  stralloc line = {0};
-  int match;
-
-  substdio_fdbuf(&ss,saferead,fd,buf,sizeof buf);
-  if (getln(&ss,&line,&match,'\n') == -1) die_nomem();
-  if (!stralloc_0(&line)) die_nomem();
-  return line.s;
-}
-
-void handle_request(int from_client,int to_server,
-                    int from_server,int to_client,
-                    struct request_response *rr,
-                    int *want_data,int *in_data) {
-  char *internal_response;
-  stralloc sa_internal_response = {0};
-  stralloc sa_keepalive_response = {0};
-
+void construct_proxy_request(struct request_response *rr,
+                             int *want_data,int *in_data) {
   if (*in_data) {
-    write_to_server(to_server,rr->client_request);
-    if (is_last_line_of_data(rr->client_request)) *in_data = 0;
+    if (!stralloc_copy(rr->proxy_request,rr->client_request)) die_nomem();
+    if (is_last_line_of_data(rr->proxy_request)) *in_data = 0;
   } else {
-    if ((internal_response = handle_internally(rr->verb,rr->arg))) {
-      send_keepalive(to_server,rr->client_request);
-      if (!stralloc_copys(&sa_keepalive_response,blocking_line_read(from_server))) die_nomem();
-      check_keepalive(to_client,&sa_keepalive_response);
-      logit('O',&sa_keepalive_response);
-
-      logit('I',rr->client_request);
-      if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
-      munge_response(&sa_internal_response,rr);
-      write_to_client(to_client,&sa_internal_response);
-      blank(rr->verb);
-      blank(rr->arg);
+    if (handle_internally(rr->verb,rr->arg)) {
+      if (!stralloc_copys(rr->proxy_request,"NOOP qmail-fixsmtpio ")) die_nomem();
+      if (!stralloc_cat(rr->proxy_request,rr->client_request)) die_nomem();
+      strip_last_eol(rr->proxy_request);
+      if (!stralloc_cats(rr->proxy_request,"\r\n")) die_nomem();
     } else {
       if (verb_matches("data",rr->verb)) *want_data = 1;
-      write_to_server(to_server,rr->client_request);
+      if (!stralloc_copy(rr->proxy_request,rr->client_request)) die_nomem();
     }
   }
 }
 
-void handle_response(int to_client,
-                     struct request_response *rr,
-                     int *want_data,int *in_data) {
+void construct_proxy_response(struct request_response *rr,
+                              int *want_data,int *in_data) {
+  char *(*func)();
+
   if (*want_data) {
     *want_data = 0;
     if (accepted_data(rr->server_response)) *in_data = 1;
   }
-  munge_response(rr->server_response,rr);
-  write_to_client(to_client,rr->server_response);
+  if ((func = handle_internally(rr->verb,rr->arg))) {
+    if (!stralloc_copys(rr->proxy_response,func(rr->verb,rr->arg))) die_nomem();
+  } else {
+    if (!stralloc_copy(rr->proxy_response,rr->server_response)) die_nomem();
+  }
+  munge_response(rr->proxy_response,rr->verb);
 }
 
 void request_response_init(struct request_response *rr) {
@@ -439,16 +392,13 @@ void do_proxy_stuff(int from_client,int to_server,
   for (;;) {
     if (rr.client_request->len && !rr.server_response->len) {
       parse_client_request(&rr);
-      handle_request(from_client,to_server,
-                     from_server,to_client,
-                     &rr,
-                     &want_data,&in_data);
+      construct_proxy_request(&rr,&want_data,&in_data);
+      write_to_server(to_server,rr.proxy_request);
     }
 
     if (rr.server_response->len) {
-      handle_response(to_client,
-                      &rr,
-                      &want_data,&in_data);
+      construct_proxy_response(&rr,&want_data,&in_data);
+      write_to_client(to_client,rr.proxy_response);
       request_response_init(&rr);
     }
 
