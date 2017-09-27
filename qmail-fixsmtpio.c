@@ -11,19 +11,28 @@
 #include "substdio.h"
 #include "wait.h"
 
+#define GREETING_PSEUDOREQUEST "greeting"
+#define HOMEPAGE "https://schmonz.com/qmail/authutils"
+#define PIPE_READ_BUFFER_SIZE SUBSTDIO_INSIZE
+
 void die() { _exit(1); }
 
-char sserrbuf[128];
+char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void errflush(char *s) { substdio_putsflush(&sserr,s); }
+void dieerrflush(char *s) {
+  substdio_putsflush(&sserr,"qmail-fixsmtpio: ");
+  substdio_putsflush(&sserr,s);
+  substdio_putsflush(&sserr,"\n");
+  die();
+}
 
-void die_usage() { errflush("usage: qmail-fixsmtpio prog [ arg ... ]\n"); die(); }
-void die_pipe()  { errflush("qmail-fixsmtpio: unable to open pipe\n"); die(); }
-void die_fork()  { errflush("qmail-fixsmtpio: unable to fork\n"); die(); }
-void die_read()  { errflush("qmail-fixsmtpio: unable to read\n"); die(); }
-void die_write() { errflush("qmail-fixsmtpio: unable to write\n"); die(); }
-void die_nomem() { errflush("qmail-fixsmtpio: out of memory\n"); die(); }
+void die_usage() { dieerrflush("usage: qmail-fixsmtpio prog [ arg ... ]"); }
+void die_pipe()  { dieerrflush("unable to open pipe"); }
+void die_fork()  { dieerrflush("unable to fork"); }
+void die_read()  { dieerrflush("unable to read"); }
+void die_write() { dieerrflush("unable to write"); }
+void die_nomem() { dieerrflush("out of memory"); }
 
 struct request_response {
   stralloc *request;
@@ -70,7 +79,9 @@ void munge_greeting(stralloc *response) {
 
 void munge_help(stralloc *response) {
   stralloc munged = {0};
-  if (!stralloc_copys(&munged,"214 qmail-fixsmtpio home page: https://schmonz.com/qmail/authutils\r\n")) die_nomem();
+  if (!stralloc_copys(&munged,"214 qmail-fixsmtpio home page: ")) die_nomem();
+  if (!stralloc_cats(&munged, HOMEPAGE)) die_nomem();
+  if (!stralloc_cats(&munged, "\r\n")) die_nomem();
   if (!stralloc_cat(&munged,response)) die_nomem();
   if (!stralloc_copy(response,&munged)) die_nomem();
 }
@@ -141,7 +152,7 @@ void reformat_multiline_response(stralloc *response) {
 
 void munge_response(stralloc *response,struct request_response *rr) {
   strip_last_eol(response);
-  if (verb_matches("greeting",rr->verb)) munge_greeting(response);
+  if (verb_matches(GREETING_PSEUDOREQUEST,rr->verb)) munge_greeting(response);
   if (verb_matches("help",rr->verb)) munge_help(response);
   if (verb_matches("test",rr->verb)) munge_test(response);
   if (verb_matches("ehlo",rr->verb)) munge_ehlo(response);
@@ -334,7 +345,7 @@ void check_keepalive(int client,stralloc *response) {
 }
 
 char *blocking_line_read(int fd) {
-  char buf[128];
+  char buf[SUBSTDIO_INSIZE];
   substdio ss;
   stralloc line = {0};
   int match;
@@ -403,13 +414,13 @@ void request_response_init(struct request_response *rr) {
 
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
-  char buf[128];
+  char buf[PIPE_READ_BUFFER_SIZE];
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
   struct request_response rr;
 
   request_response_init(&rr);
-  if (!stralloc_copys(rr.request,"greeting")) die_nomem();
+  if (!stralloc_copys(rr.request,GREETING_PSEUDOREQUEST)) die_nomem();
 
   for (;;) {
     if (rr.request->len && !rr.response->len) {
