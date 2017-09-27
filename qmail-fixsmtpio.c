@@ -266,21 +266,21 @@ int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
 
-void parse_client_request(struct request_response *rr) {
+void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   int i;
-  for (i = 0; i < rr->client_request->len; i++)
-    if (rr->client_request->s[i] == ' ') break;
+  for (i = 0; i < request->len; i++)
+    if (request->s[i] == ' ') break;
   i++;
 
-  if (i > rr->client_request->len) {
-    if (!stralloc_copy(rr->client_verb,rr->client_request)) die_nomem();
-    blank(rr->client_arg);
+  if (i > request->len) {
+    if (!stralloc_copy(verb,request)) die_nomem();
+    blank(arg);
   } else {
-    if (!stralloc_copyb(rr->client_verb,rr->client_request->s,i-1)) die_nomem();
-    if (!stralloc_copyb(rr->client_arg,rr->client_request->s+i,rr->client_request->len-i)) die_nomem();
+    if (!stralloc_copyb(verb,request->s,i-1)) die_nomem();
+    if (!stralloc_copyb(arg,request->s+i,request->len-i)) die_nomem();
   }
-  strip_last_eol(rr->client_verb);
-  strip_last_eol(rr->client_arg);
+  strip_last_eol(verb);
+  strip_last_eol(arg);
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -325,38 +325,42 @@ void *handle_internally(stralloc *client_verb,stralloc *client_arg) {
   return 0;
 }
 
-void construct_proxy_request(struct request_response *rr,
+void construct_proxy_request(stralloc *proxy_request,
+                             stralloc *verb,stralloc *arg,
+                             stralloc *client_request,
                              int *want_data,int *in_data) {
   if (*in_data) {
-    if (!stralloc_copy(rr->proxy_request,rr->client_request)) die_nomem();
-    if (is_last_line_of_data(rr->proxy_request)) *in_data = 0;
+    if (!stralloc_copy(proxy_request,client_request)) die_nomem();
+    if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
-    if (handle_internally(rr->client_verb,rr->client_arg)) {
-      if (!stralloc_copys(rr->proxy_request,"NOOP qmail-fixsmtpio ")) die_nomem();
-      if (!stralloc_cat(rr->proxy_request,rr->client_request)) die_nomem();
-      strip_last_eol(rr->proxy_request);
-      if (!stralloc_cats(rr->proxy_request,"\r\n")) die_nomem();
+    if (handle_internally(verb,arg)) {
+      if (!stralloc_copys(proxy_request,"NOOP qmail-fixsmtpio ")) die_nomem();
+      if (!stralloc_cat(proxy_request,client_request)) die_nomem();
+      strip_last_eol(proxy_request);
+      if (!stralloc_cats(proxy_request,"\r\n")) die_nomem();
     } else {
-      if (verb_matches("data",rr->client_verb)) *want_data = 1;
-      if (!stralloc_copy(rr->proxy_request,rr->client_request)) die_nomem();
+      if (verb_matches("data",verb)) *want_data = 1;
+      if (!stralloc_copy(proxy_request,client_request)) die_nomem();
     }
   }
 }
 
-void construct_proxy_response(struct request_response *rr,
+void construct_proxy_response(stralloc *proxy_response,
+                              stralloc *verb,stralloc *arg,
+                              stralloc *server_response,
                               int *want_data,int *in_data) {
   char *(*func)();
 
   if (*want_data) {
     *want_data = 0;
-    if (accepted_data(rr->server_response)) *in_data = 1;
+    if (accepted_data(server_response)) *in_data = 1;
   }
-  if ((func = handle_internally(rr->client_verb,rr->client_arg))) {
-    if (!stralloc_copys(rr->proxy_response,func(rr->client_verb,rr->client_arg))) die_nomem();
+  if ((func = handle_internally(verb,arg))) {
+    if (!stralloc_copys(proxy_response,func(verb,arg))) die_nomem();
   } else {
-    if (!stralloc_copy(rr->proxy_response,rr->server_response)) die_nomem();
+    if (!stralloc_copy(proxy_response,server_response)) die_nomem();
   }
-  munge_response(rr->proxy_response,rr->client_verb);
+  munge_response(proxy_response,verb);
 }
 
 void request_response_init(struct request_response *rr) {
@@ -394,13 +398,20 @@ void do_proxy_stuff(int from_client,int to_server,
 
   for (;;) {
     if (rr.client_request->len && !rr.server_response->len) {
-      parse_client_request(&rr);
-      construct_proxy_request(&rr,&want_data,&in_data);
+      parse_client_request(rr.client_verb,rr.client_arg,
+                           rr.client_request);
+      construct_proxy_request(rr.proxy_request,
+                              rr.client_verb,rr.client_arg,
+                              rr.client_request,
+                              &want_data,&in_data);
       write_to_server(to_server,rr.proxy_request);
     }
 
     if (rr.server_response->len) {
-      construct_proxy_response(&rr,&want_data,&in_data);
+      construct_proxy_response(rr.proxy_response,
+                               rr.client_verb,rr.client_arg,
+                               rr.server_response,
+                               &want_data,&in_data);
       write_to_client(to_client,rr.proxy_response);
       request_response_init(&rr);
     }
