@@ -88,6 +88,10 @@ sub munge_response { my ($response_ref, $verb, $arg) = @_;
     reformat_multiline_response($response_ref);
 }
 
+sub is_entire_line { my ($string) = @_;
+    return substr($string, -1, 1) eq "\n";
+}
+
 sub could_be_final_response_line { my ($line) = @_;
     return length($line) >= 4 && substr($line, 3, 1) eq " ";
 }
@@ -132,10 +136,6 @@ sub be_child { my ($from_proxy, $to_proxy,
 sub setup_proxy { my ($from_proxy, $to_proxy) = @_;
     close($from_proxy);
     close($to_proxy);
-}
-
-sub is_entire_line { my ($string) = @_;
-    return substr($string, -1, 1) eq "\n";
 }
 
 my $want_to_read_bits;
