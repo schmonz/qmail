@@ -44,6 +44,10 @@ struct request_response {
 
 int exitcode = 0;
 
+void blank(stralloc *sa) {
+  if (!stralloc_copys(sa,"")) die_nomem();
+}
+
 void strip_last_eol(stralloc *sa) {
   if (sa->s[sa->len-1] == '\n') sa->len--;
   if (sa->s[sa->len-1] == '\r') sa->len--;
@@ -112,8 +116,8 @@ void munge_ehlo(stralloc *server_response) {
           if (stralloc_starts(&subline,s))
             keep = 0;
       if (keep && !stralloc_cat(&munged,&line)) die_nomem();
-      if (!stralloc_copys(&line,"")) die_nomem();
-      if (!stralloc_copys(&subline,"")) die_nomem();
+      blank(&line);
+      blank(&subline);
     }
   }
   strip_last_eol(&munged);
@@ -282,7 +286,7 @@ void parse_client_request(struct request_response *rr) {
 
   if (first_space <= 0 || first_space >= chomped.len) {
     if (!stralloc_copy(rr->verb,&chomped)) die_nomem();
-    if (!stralloc_copys(rr->arg,"")) die_nomem();
+    blank(rr->arg);
   } else {
     if (!stralloc_copyb(rr->verb,chomped.s,first_space)) die_nomem();
     if (!stralloc_copyb(rr->arg,chomped.s + first_space + 1,chomped.len - first_space - 1)) die_nomem();
@@ -382,8 +386,8 @@ void handle_request(int from_client,int to_server,
       if (!stralloc_copys(&sa_internal_response,internal_response)) die_nomem();
       munge_response(&sa_internal_response,rr);
       write_to_client(to_client,&sa_internal_response);
-      if (!stralloc_copys(rr->verb,"")) die_nomem();
-      if (!stralloc_copys(rr->arg,"")) die_nomem();
+      blank(rr->verb);
+      blank(rr->arg);
     } else {
       if (verb_matches("data",rr->verb)) *want_data = 1;
       write_to_server(to_server,rr->client_request);
@@ -409,12 +413,11 @@ void request_response_init(struct request_response *rr) {
                   server_response = {0},
                   proxy_response = {0};
 
-  if (!stralloc_copys(&client_request,"")) die_nomem();
-  if (!stralloc_copys(&verb,"")) die_nomem();
-  if (!stralloc_copys(&arg,"")) die_nomem();
-  if (!stralloc_copys(&proxy_request,"")) die_nomem();
-  if (!stralloc_copys(&server_response,"")) die_nomem();
-  if (!stralloc_copys(&proxy_response,"")) die_nomem();
+  blank(&client_request);
+  blank(&verb); blank(&arg);
+  blank(&proxy_request);
+  blank(&server_response);
+  blank(&proxy_response);
 
   rr->client_request = &client_request;
   rr->verb = &verb; rr->arg = &arg;
@@ -459,7 +462,7 @@ void do_proxy_stuff(int from_client,int to_server,
       if (!safeappend(&partial_request,from_client,buf,sizeof buf)) break;
       if (is_entire_line(&partial_request)) {
         if (!stralloc_copy(rr.client_request,&partial_request)) die_nomem();
-        if (!stralloc_copys(&partial_request,"")) die_nomem();
+        blank(&partial_request);
       }
     }
 
@@ -467,7 +470,7 @@ void do_proxy_stuff(int from_client,int to_server,
       if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
       if (is_entire_response(&partial_response)) {
         if (!stralloc_copy(rr.server_response,&partial_response)) die_nomem();
-        if (!stralloc_copys(&partial_response,"")) die_nomem();
+        blank(&partial_response);
       }
     }
   }
