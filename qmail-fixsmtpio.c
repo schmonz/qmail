@@ -3,7 +3,6 @@
 #include "error.h"
 #include "fd.h"
 #include "fmt.h"
-#include "getln.h"
 #include "readwrite.h"
 #include "select.h"
 #include "str.h"
@@ -36,7 +35,8 @@ void die_nomem() { dieerrflush("out of memory"); }
 
 struct request_response {
   stralloc *client_request;
-  stralloc *verb; stralloc *arg;
+  stralloc *client_verb;
+  stralloc *client_arg;
   stralloc *proxy_request;
   stralloc *server_response;
   stralloc *proxy_response;
@@ -155,12 +155,12 @@ void reformat_multiline_response(stralloc *proxy_response) {
   if (!stralloc_cats(proxy_response,"\r\n")) die_nomem();
 }
 
-void munge_response(stralloc *proxy_response,stralloc *verb) {
+void munge_response(stralloc *proxy_response,stralloc *client_verb) {
   strip_last_eol(proxy_response);
-  if (verb_matches(GREETING_PSEUDOREQUEST,verb)) munge_greeting(proxy_response);
-  if (verb_matches("help",verb)) munge_help(proxy_response);
-  if (verb_matches("test",verb)) munge_test(proxy_response);
-  if (verb_matches("ehlo",verb)) munge_ehlo(proxy_response);
+  if (verb_matches(GREETING_PSEUDOREQUEST,client_verb)) munge_greeting(proxy_response);
+  if (verb_matches("help",client_verb)) munge_help(proxy_response);
+  if (verb_matches("test",client_verb)) munge_test(proxy_response);
+  if (verb_matches("ehlo",client_verb)) munge_ehlo(proxy_response);
   reformat_multiline_response(proxy_response);
 }
 
@@ -273,14 +273,14 @@ void parse_client_request(struct request_response *rr) {
   i++;
 
   if (i > rr->client_request->len) {
-    if (!stralloc_copy(rr->verb,rr->client_request)) die_nomem();
-    blank(rr->arg);
+    if (!stralloc_copy(rr->client_verb,rr->client_request)) die_nomem();
+    blank(rr->client_arg);
   } else {
-    if (!stralloc_copyb(rr->verb,rr->client_request->s,i-1)) die_nomem();
-    if (!stralloc_copyb(rr->arg,rr->client_request->s+i,rr->client_request->len-i)) die_nomem();
+    if (!stralloc_copyb(rr->client_verb,rr->client_request->s,i-1)) die_nomem();
+    if (!stralloc_copyb(rr->client_arg,rr->client_request->s+i,rr->client_request->len-i)) die_nomem();
   }
-  strip_last_eol(rr->verb);
-  strip_last_eol(rr->arg);
+  strip_last_eol(rr->client_verb);
+  strip_last_eol(rr->client_arg);
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -299,16 +299,16 @@ void write_to_server(int fd,stralloc *sa) {
   logit('I',sa);
 }
 
-char *smtp_test(stralloc *verb,stralloc *arg) {
+char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
   stralloc proxy_response = {0};
   if (!stralloc_copys(&proxy_response,"250 qmail-fixsmtpio test ok: ")) die_nomem();
-  if (!stralloc_catb(&proxy_response,arg->s,arg->len)) die_nomem();
+  if (!stralloc_catb(&proxy_response,client_arg->s,client_arg->len)) die_nomem();
   if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
   if (!stralloc_0(&proxy_response)) die_nomem();
   return proxy_response.s;
 }
 
-char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
+char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
   stralloc proxy_response = {0};
   if (!stralloc_copys(&proxy_response,"502 unimplemented (#5.5.1)")) die_nomem();
   if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
@@ -316,11 +316,11 @@ char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
   return proxy_response.s;
 }
 
-void *handle_internally(stralloc *verb,stralloc *arg) {
-  if (verb_matches("noop",verb)) return 0;
-  if (verb_matches("test",verb)) return &smtp_test;
-  if (verb_matches("auth",verb)) return &smtp_unimplemented;
-  if (verb_matches("starttls",verb)) return &smtp_unimplemented;
+void *handle_internally(stralloc *client_verb,stralloc *client_arg) {
+  if (verb_matches("noop",client_verb)) return 0;
+  if (verb_matches("test",client_verb)) return &smtp_test;
+  if (verb_matches("auth",client_verb)) return &smtp_unimplemented;
+  if (verb_matches("starttls",client_verb)) return &smtp_unimplemented;
 
   return 0;
 }
@@ -331,13 +331,13 @@ void construct_proxy_request(struct request_response *rr,
     if (!stralloc_copy(rr->proxy_request,rr->client_request)) die_nomem();
     if (is_last_line_of_data(rr->proxy_request)) *in_data = 0;
   } else {
-    if (handle_internally(rr->verb,rr->arg)) {
+    if (handle_internally(rr->client_verb,rr->client_arg)) {
       if (!stralloc_copys(rr->proxy_request,"NOOP qmail-fixsmtpio ")) die_nomem();
       if (!stralloc_cat(rr->proxy_request,rr->client_request)) die_nomem();
       strip_last_eol(rr->proxy_request);
       if (!stralloc_cats(rr->proxy_request,"\r\n")) die_nomem();
     } else {
-      if (verb_matches("data",rr->verb)) *want_data = 1;
+      if (verb_matches("data",rr->client_verb)) *want_data = 1;
       if (!stralloc_copy(rr->proxy_request,rr->client_request)) die_nomem();
     }
   }
@@ -351,29 +351,32 @@ void construct_proxy_response(struct request_response *rr,
     *want_data = 0;
     if (accepted_data(rr->server_response)) *in_data = 1;
   }
-  if ((func = handle_internally(rr->verb,rr->arg))) {
-    if (!stralloc_copys(rr->proxy_response,func(rr->verb,rr->arg))) die_nomem();
+  if ((func = handle_internally(rr->client_verb,rr->client_arg))) {
+    if (!stralloc_copys(rr->proxy_response,func(rr->client_verb,rr->client_arg))) die_nomem();
   } else {
     if (!stralloc_copy(rr->proxy_response,rr->server_response)) die_nomem();
   }
-  munge_response(rr->proxy_response,rr->verb);
+  munge_response(rr->proxy_response,rr->client_verb);
 }
 
 void request_response_init(struct request_response *rr) {
   static stralloc client_request = {0},
-                  verb = {0}, arg = {0},
+                  client_verb = {0},
+                  client_arg = {0},
                   proxy_request = {0},
                   server_response = {0},
                   proxy_response = {0};
 
   blank(&client_request);
-  blank(&verb); blank(&arg);
+  blank(&client_verb);
+  blank(&client_arg);
   blank(&proxy_request);
   blank(&server_response);
   blank(&proxy_response);
 
   rr->client_request = &client_request;
-  rr->verb = &verb; rr->arg = &arg;
+  rr->client_verb = &client_verb;
+  rr->client_arg = &client_arg;
   rr->proxy_request = &proxy_request;
   rr->server_response = &server_response;
   rr->proxy_response = &proxy_response;
