@@ -1,6 +1,8 @@
 #include "case.h"
+#include "env.h"
 #include "error.h"
 #include "fd.h"
+#include "fmt.h"
 #include "getln.h"
 #include "readwrite.h"
 #include "select.h"
@@ -30,6 +32,8 @@ struct request_response {
   stralloc *response;
 };
 
+int exitcode = 0;
+
 void strip_last_eol(stralloc *sa) {
   if (sa->s[sa->len-1] == '\n') sa->len--;
   if (sa->s[sa->len-1] == '\r') sa->len--;
@@ -39,11 +43,29 @@ int accepted_data(stralloc *response) {
   return stralloc_starts(response,"354 ");
 }
 
-/* XXX munge_timeout() */
+void munge_timeout(stralloc *response) {
+  exitcode = 16;
+}
 
 void munge_greeting(stralloc *response) {
-  if (!stralloc_copys(response,"235 ok go ahead (#2.0.0)")) die_nomem();
-  // XXX more
+  char *x;
+  char uid[FMT_ULONG];
+
+  if (stralloc_starts(response,"4")) exitcode = 14;
+  else if (stralloc_starts(response,"5")) exitcode = 15;
+  else {
+    if (!stralloc_copys(response,"235 ok")) die_nomem();
+    x = env_get("AUTHUSER");
+    if (x) {
+      if (!stralloc_cats(response,", ")) die_nomem();
+      if (!stralloc_cats(response,x)) die_nomem();
+      if (!stralloc_cats(response,",")) die_nomem();
+    }
+    if (!stralloc_cats(response," go ahead ")) die_nomem();
+    str_copy(uid + fmt_ulong(uid,getuid()),"");
+    if (!stralloc_cats(response,uid)) die_nomem();
+    if (!stralloc_cats(response," (#2.0.0)")) die_nomem();
+  }
 }
 
 void munge_help(stralloc *response) {
@@ -126,6 +148,28 @@ void munge_response(stralloc *response,struct request_response *rr) {
   reformat_multiline_response(response);
 }
 
+int is_entire_line(stralloc *sa) {
+  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
+}
+
+int could_be_final_response_line(stralloc *line) {
+  return line->len >= 4 && line->s[3] == ' ';
+}
+
+int is_entire_response(stralloc *response) {
+  stralloc lastline = {0};
+  int pos = 0;
+  if (!is_entire_line(response)) return 0;
+  for (int i = response->len - 2; i >= 0; i--) {
+    if (response->s[i] == '\n') {
+      pos = i + 1;
+      break;
+    }
+  }
+  if (!stralloc_copyb(&lastline,response->s+pos,response->len-pos)) die_nomem();
+  return could_be_final_response_line(&lastline);
+}
+
 void use_as_stdin(int fd) {
   if (fd_move(0,fd) == -1) die_pipe();
 }
@@ -164,10 +208,6 @@ void be_child(int from_proxy,int to_proxy,
 void setup_proxy(int from_proxy,int to_proxy) {
   close(from_proxy);
   close(to_proxy);
-}
-
-int is_entire_line(stralloc *sa) {
-  return sa->s[sa->len - 1] == '\n';
 }
 
 fd_set fds;
@@ -270,7 +310,7 @@ char *smtp_unimplemented(stralloc *verb,stralloc *arg) {
   return response.s;
 }
 
-void *handle_internally(stralloc *verb,stralloc *arg) {
+char *handle_internally(stralloc *verb,stralloc *arg) {
   if (verb_matches("noop",verb)) return 0;
   if (verb_matches("test",verb)) return smtp_test(verb,arg);
   if (verb_matches("auth",verb)) return smtp_unimplemented(verb,arg);
@@ -318,11 +358,6 @@ void handle_request(int from_client,int to_server,
     if (is_last_line_of_data(rr->request)) *in_data = 0;
   } else {
     if ((internal_response = handle_internally(rr->verb,rr->arg))) {
-/*
- * 1. Add our response to the queue
- * 2. Add a keepalive request to the queue
- * 3. Catch the keepalive response, and munge it
- */
       send_keepalive(to_server,rr->request);
       if (!stralloc_copys(&sa_keepalive_response,blocking_line_read(from_server))) die_nomem();
       check_keepalive(to_client,&sa_keepalive_response);
@@ -408,8 +443,7 @@ void do_proxy_stuff(int from_client,int to_server,
 
     if (can_read(from_server)) {
       if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
-      //XXX is_entire_response
-      if (is_entire_line(&partial_response)) {
+      if (is_entire_response(&partial_response)) {
         if (!stralloc_copy(rr.response,&partial_response)) die_nomem();
         if (!stralloc_copys(&partial_response,"")) die_nomem();
       }
@@ -426,7 +460,7 @@ void teardown_proxy_and_exit(int child,int from_server,int to_server) {
   if (wait_pid(&wstat,child) == -1) die();
   if (wait_crashed(wstat)) die();
 
-  _exit(wait_exitcode(wstat));
+  _exit(exitcode);
 }
 
 void be_parent(int from_client,int to_client,
