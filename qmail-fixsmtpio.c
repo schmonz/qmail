@@ -36,9 +36,10 @@ void die_nomem() { dieerrflush("out of memory"); }
 
 struct request_response {
   stralloc *client_request;
-  stralloc *verb;
-  stralloc *arg;
+  stralloc *verb; stralloc *arg;
+  stralloc *proxy_request;
   stralloc *server_response;
+  stralloc *proxy_response;
 };
 
 int exitcode = 0;
@@ -402,17 +403,24 @@ void handle_response(int to_client,
 }
 
 void request_response_init(struct request_response *rr) {
-  static stralloc client_request = {0}, verb = {0}, arg = {0}, server_response = {0};
+  static stralloc client_request = {0},
+                  verb = {0}, arg = {0},
+                  proxy_request = {0},
+                  server_response = {0},
+                  proxy_response = {0};
 
   if (!stralloc_copys(&client_request,"")) die_nomem();
   if (!stralloc_copys(&verb,"")) die_nomem();
   if (!stralloc_copys(&arg,"")) die_nomem();
+  if (!stralloc_copys(&proxy_request,"")) die_nomem();
   if (!stralloc_copys(&server_response,"")) die_nomem();
+  if (!stralloc_copys(&proxy_response,"")) die_nomem();
 
   rr->client_request = &client_request;
-  rr->verb = &verb;
-  rr->arg = &arg;
+  rr->verb = &verb; rr->arg = &arg;
+  rr->proxy_request = &proxy_request;
   rr->server_response = &server_response;
+  rr->proxy_response = &proxy_response;
 }
 
 void do_proxy_stuff(int from_client,int to_server,
