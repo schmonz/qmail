@@ -285,16 +285,11 @@ void logit(char logprefix,stralloc *sa) {
   substdio_putflush(&sserr,&logprefix,1);
   substdio_putsflush(&sserr,": ");
   substdio_putflush(&sserr,sa->s,sa->len);
+  if (!is_entire_line(sa)) substdio_putsflush(&sserr,"\r\n");
 }
 
-void write_to_client(int fd,stralloc *sa) {
+void safewrite(int fd,stralloc *sa) {
   if (write(fd,sa->s,sa->len) == -1) die_write();
-  logit('O',sa);
-}
-
-void write_to_server(int fd,stralloc *sa) {
-  if (write(fd,sa->s,sa->len) == -1) die_write();
-  logit('I',sa);
 }
 
 char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
@@ -412,7 +407,11 @@ void do_proxy_stuff(int from_client,int to_server,
                               rr.client_verb,rr.client_arg,
                               rr.client_request,
                               &want_data,&in_data);
-      write_to_server(to_server,rr.proxy_request);
+      logit('1',rr.client_request);
+      logit('2',rr.client_verb);
+      logit('3',rr.client_arg);
+      logit('4',rr.proxy_request);
+      safewrite(to_server,rr.proxy_request);
     }
 
     if (rr.server_response->len) {
@@ -421,7 +420,9 @@ void do_proxy_stuff(int from_client,int to_server,
                                rr.server_response,
                                rr.client_request->len,
                                &want_data,&in_data);
-      write_to_client(to_client,rr.proxy_response);
+      logit('5',rr.server_response);
+      logit('6',rr.proxy_response);
+      safewrite(to_client,rr.proxy_response);
       request_response_init(&rr);
     }
 
