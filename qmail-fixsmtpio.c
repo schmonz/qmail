@@ -403,9 +403,8 @@ void request_response_init(struct request_response *rr) {
   blank(&proxy_response); rr->proxy_response = &proxy_response;
 }
 
-void handle_client_request(struct request_response *rr,
-                           int *want_data,int *in_data,
-                           int to_server) {
+void handle_client_request(int to_server,struct request_response *rr,
+                           int *want_data,int *in_data) {
   logit('1',rr->client_request);
   if (!*in_data)
     parse_client_request(rr->client_verb,rr->client_arg,rr->client_request);
@@ -423,6 +422,19 @@ void handle_client_request(struct request_response *rr,
   }
 }
 
+void handle_server_response(int to_client,struct request_response *rr,
+                            int *want_data,int *in_data) {
+  logit('5',rr->server_response);
+  construct_proxy_response(rr->proxy_response,
+                           rr->client_verb,rr->client_arg,
+                           rr->server_response,
+                           rr->client_request->len,
+                           want_data,in_data);
+  logit('6',rr->proxy_response);
+  safewrite(to_client,rr->proxy_response);
+  request_response_init(rr);
+}
+
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[PIPE_READ_BUFFER_SIZE];
@@ -435,19 +447,10 @@ void do_proxy_stuff(int from_client,int to_server,
 
   for (;;) {
     if (rr.client_request->len && !rr.proxy_request->len)
-      handle_client_request(&rr,&want_data,&in_data,to_server);
+      handle_client_request(to_server,&rr,&want_data,&in_data);
 
-    if (rr.server_response->len && !rr.proxy_response->len) {
-      logit('5',rr.server_response);
-      construct_proxy_response(rr.proxy_response,
-                               rr.client_verb,rr.client_arg,
-                               rr.server_response,
-                               rr.client_request->len,
-                               &want_data,&in_data);
-      logit('6',rr.proxy_response);
-      safewrite(to_client,rr.proxy_response);
-      request_response_init(&rr);
-    }
+    if (rr.server_response->len && !rr.proxy_response->len)
+      handle_server_response(to_client,&rr,&want_data,&in_data);
 
     FD_ZERO(&fds);
     want_to_read(from_client);
