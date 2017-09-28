@@ -48,6 +48,10 @@ void blank(stralloc *sa) {
   if (!stralloc_copys(sa,"")) die_nomem();
 }
 
+void copy(stralloc *to,stralloc *from) {
+  if (!stralloc_copy(to,from)) die_nomem();
+}
+
 void strip_last_eol(stralloc *sa) {
   if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
   if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
@@ -88,7 +92,7 @@ void munge_help(stralloc *proxy_response) {
   if (!stralloc_cats(&munged, HOMEPAGE)) die_nomem();
   if (!stralloc_cats(&munged, "\r\n")) die_nomem();
   if (!stralloc_cat(&munged,proxy_response)) die_nomem();
-  if (!stralloc_copy(proxy_response,&munged)) die_nomem();
+  copy(proxy_response,&munged);
 }
 
 void munge_test(stralloc *proxy_response) {
@@ -121,7 +125,7 @@ void munge_ehlo(stralloc *proxy_response) {
       blank(&subline);
     }
   }
-  if (!stralloc_copy(proxy_response,&munged)) die_nomem();
+  copy(proxy_response,&munged);
 }
 
 int verb_matches(char *s,stralloc *sa) {
@@ -271,7 +275,7 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   i++;
 
   if (i > request->len) {
-    if (!stralloc_copy(verb,request)) die_nomem();
+    copy(verb,request);
     blank(arg);
   } else {
     if (!stralloc_copyb(verb,request->s,i-1)) die_nomem();
@@ -333,7 +337,7 @@ void construct_proxy_request(stralloc *proxy_request,
                              stralloc *client_request,
                              int *want_data,int *in_data) {
   if (*in_data) {
-    if (!stralloc_copy(proxy_request,client_request)) die_nomem();
+    copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
     if (handle_internally(verb,arg)) {
@@ -341,7 +345,7 @@ void construct_proxy_request(stralloc *proxy_request,
       if (!stralloc_cat(proxy_request,client_request)) die_nomem();
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
-      if (!stralloc_copy(proxy_request,client_request)) die_nomem();
+      copy(proxy_request,client_request);
     }
   }
 }
@@ -360,7 +364,7 @@ void construct_proxy_response(stralloc *proxy_response,
   if ((func = handle_internally(verb,arg))) {
     if (!stralloc_copys(proxy_response,func(verb,arg))) die_nomem();
   } else {
-    if (!stralloc_copy(proxy_response,server_response)) die_nomem();
+    copy(proxy_response,server_response);
   }
   munge_response(proxy_response,verb);
   if (!verb->len && !request_received) munge_timeout(proxy_response);
@@ -439,7 +443,7 @@ void do_proxy_stuff(int from_client,int to_server,
     if (can_read(from_client)) {
       if (!safeappend(&partial_request,from_client,buf,sizeof buf)) break;
       if (is_entire_line(&partial_request)) {
-        if (!stralloc_copy(rr.client_request,&partial_request)) die_nomem();
+        copy(rr.client_request,&partial_request);
         blank(&partial_request);
       }
     }
@@ -447,7 +451,7 @@ void do_proxy_stuff(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
       if (is_entire_response(&partial_response)) {
-        if (!stralloc_copy(rr.server_response,&partial_response)) die_nomem();
+        copy(rr.server_response,&partial_response);
         blank(&partial_response);
       }
     }
