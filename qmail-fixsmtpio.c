@@ -445,6 +445,11 @@ int response_needs_handling(struct request_response *rr) {
   return rr->server_response->len && !rr->proxy_response->len;
 }
 
+void prepare_for_handling(stralloc *to,stralloc *from) {
+  copy(to,from);
+  blank(from);
+}
+
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[PIPE_READ_BUFFER_SIZE];
@@ -467,18 +472,14 @@ void do_proxy_stuff(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&partial_request,from_client,buf,sizeof buf)) break;
-      if (is_entire_line(&partial_request)) {
-        copy(rr.client_request,&partial_request);
-        blank(&partial_request);
-      }
+      if (is_entire_line(&partial_request))
+        prepare_for_handling(rr.client_request,&partial_request);
     }
 
     if (can_read(from_server)) {
       if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
-      if (is_entire_response(&partial_response)) {
-        copy(rr.server_response,&partial_response);
-        blank(&partial_response);
-      }
+      if (is_entire_response(&partial_response))
+        prepare_for_handling(rr.server_response,&partial_response);
     }
   }
 }
