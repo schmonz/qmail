@@ -293,7 +293,7 @@ void safewrite(int fd,stralloc *sa) {
 }
 
 char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
-  stralloc proxy_response = {0};
+  static stralloc proxy_response = {0};
   if (!stralloc_copys(&proxy_response,"250 qmail-fixsmtpio test ok: ")) die_nomem();
   if (!stralloc_catb(&proxy_response,client_arg->s,client_arg->len)) die_nomem();
   if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
@@ -302,7 +302,7 @@ char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
 }
 
 char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
-  stralloc proxy_response = {0};
+  static stralloc proxy_response = {0};
   if (!stralloc_copys(&proxy_response,"502 unimplemented (#5.5.1)")) die_nomem();
   if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
   if (!stralloc_0(&proxy_response)) die_nomem();
