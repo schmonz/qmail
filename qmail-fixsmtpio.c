@@ -320,26 +320,19 @@ void safewrite(int fd,stralloc *sa) {
   if (write(fd,sa->s,sa->len) == -1) die_write();
 }
 
-char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
-  static stralloc proxy_response = {0};
-  copys(&proxy_response,"250 qmail-fixsmtpio test ok: ");
-  catb(&proxy_response,client_arg->s,client_arg->len);
-  cats(&proxy_response,"\r\n");
-  if (!stralloc_0(&proxy_response)) die_nomem();
-  return proxy_response.s;
+void smtp_test(stralloc *response,stralloc *verb,stralloc *arg) {
+  copys(response,"250 qmail-fixsmtpio test ok: ");
+  catb(response,arg->s,arg->len);
+  cats(response,"\r\n");
 }
 
-char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
-  static stralloc proxy_response = {0};
-  copys(&proxy_response,"502 unimplemented (#5.5.1)");
-  cats(&proxy_response,"\r\n");
-  if (!stralloc_0(&proxy_response)) die_nomem();
-  return proxy_response.s;
+void smtp_unimplemented(stralloc *response,stralloc *verb,stralloc *arg) {
+  copys(response,"502 unimplemented (#5.5.1)\r\n");
 }
 
 struct internal_verb {
   char *name;
-  char *(*func)();
+  void (*func)();
 };
 
 struct internal_verb verbs[] = {
@@ -379,14 +372,14 @@ void construct_proxy_response(stralloc *proxy_response,
                               stralloc *server_response,
                               int request_received,
                               int *want_data,int *in_data) {
-  char *(*func)();
+  void (*func)();
 
   if (*want_data) {
     *want_data = 0;
     if (accepted_data(server_response)) *in_data = 1;
   }
   if ((func = handle_internally(verb,arg))) {
-    copys(proxy_response,func(verb,arg));
+    func(proxy_response,verb,arg);
   } else {
     copy(proxy_response,server_response);
   }
