@@ -363,7 +363,7 @@ void construct_proxy_response(stralloc *proxy_response,
     if (!stralloc_copy(proxy_response,server_response)) die_nomem();
   }
   munge_response(proxy_response,verb);
-  if (!request_received) munge_timeout(proxy_response);
+  if (!verb->len && !request_received) munge_timeout(proxy_response);
 }
 
 void request_response_init(struct request_response *rr) {
