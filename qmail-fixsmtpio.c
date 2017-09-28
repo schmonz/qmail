@@ -401,26 +401,26 @@ void do_proxy_stuff(int from_client,int to_server,
 
   for (;;) {
     if (rr.client_request->len && !rr.proxy_request->len) {
+      logit('1',rr.client_request);
       parse_client_request(rr.client_verb,rr.client_arg,
                            rr.client_request);
+      logit('2',rr.client_verb);
+      logit('3',rr.client_arg);
       construct_proxy_request(rr.proxy_request,
                               rr.client_verb,rr.client_arg,
                               rr.client_request,
                               &want_data,&in_data);
-      logit('1',rr.client_request);
-      logit('2',rr.client_verb);
-      logit('3',rr.client_arg);
       logit('4',rr.proxy_request);
       safewrite(to_server,rr.proxy_request);
     }
 
     if (rr.server_response->len && !rr.proxy_response->len) {
+      logit('5',rr.server_response);
       construct_proxy_response(rr.proxy_response,
                                rr.client_verb,rr.client_arg,
                                rr.server_response,
                                rr.client_request->len,
                                &want_data,&in_data);
-      logit('5',rr.server_response);
       logit('6',rr.proxy_response);
       safewrite(to_client,rr.proxy_response);
       request_response_init(&rr);
