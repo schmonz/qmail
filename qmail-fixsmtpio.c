@@ -81,50 +81,50 @@ void strip_last_eol(stralloc *sa) {
   if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
 }
 
-int accepted_data(stralloc *server_response) {
-  return starts(server_response,"354 ");
+int accepted_data(stralloc *response) {
+  return starts(response,"354 ");
 }
 
-void munge_timeout(stralloc *proxy_response) {
+void munge_timeout(stralloc *response) {
   exitcode = 16;
 }
 
-void munge_greeting(stralloc *proxy_response) {
+void munge_greeting(stralloc *response) {
   char *x;
   char uid[FMT_ULONG];
 
-  if (starts(proxy_response,"4")) exitcode = 14;
-  else if (starts(proxy_response,"5")) exitcode = 15;
+  if (starts(response,"4")) exitcode = 14;
+  else if (starts(response,"5")) exitcode = 15;
   else {
-    copys(proxy_response,"235 ok");
+    copys(response,"235 ok");
     x = env_get("AUTHUSER");
     if (x) {
-      cats(proxy_response,", ");
-      cats(proxy_response,x);
-      cats(proxy_response,",");
+      cats(response,", ");
+      cats(response,x);
+      cats(response,",");
     }
-    cats(proxy_response," go ahead ");
+    cats(response," go ahead ");
     str_copy(uid + fmt_ulong(uid,getuid()),"");
-    cats(proxy_response,uid);
-    cats(proxy_response," (#2.0.0)\r\n");
+    cats(response,uid);
+    cats(response," (#2.0.0)\r\n");
   }
 }
 
-void munge_help(stralloc *proxy_response) {
+void munge_help(stralloc *response) {
   stralloc munged = {0};
   copys(&munged,"214 qmail-fixsmtpio home page: ");
   cats(&munged, HOMEPAGE);
   cats(&munged, "\r\n");
-  cat(&munged,proxy_response);
-  copy(proxy_response,&munged);
+  cat(&munged,response);
+  copy(response,&munged);
 }
 
-void munge_test(stralloc *proxy_response) {
-  strip_last_eol(proxy_response);
-  cats(proxy_response," and also it's mungeable\r\n");
+void munge_test(stralloc *response) {
+  strip_last_eol(response);
+  cats(response," and also it's mungeable\r\n");
 }
 
-void munge_ehlo(stralloc *proxy_response) {
+void munge_ehlo(stralloc *response) {
   stralloc munged = {0};
   stralloc line = {0};
   stralloc subline = {0};
@@ -134,9 +134,9 @@ void munge_ehlo(stralloc *proxy_response) {
     0,
   };
 
-  for (int i = 0; i < proxy_response->len; i++) {
-    if (!stralloc_append(&line,i + proxy_response->s)) die_nomem();
-    if (proxy_response->s[i] == '\n' || i == proxy_response->len - 1) {
+  for (int i = 0; i < response->len; i++) {
+    if (!stralloc_append(&line,i + response->s)) die_nomem();
+    if (response->s[i] == '\n' || i == response->len - 1) {
       copyb(&subline,line.s + 4,line.len - 4);
       int keep = 1;
       char *s;
@@ -149,7 +149,7 @@ void munge_ehlo(stralloc *proxy_response) {
       blank(&subline);
     }
   }
-  copy(proxy_response,&munged);
+  copy(response,&munged);
 }
 
 int verb_matches(char *s,stralloc *sa) {
@@ -177,17 +177,17 @@ void change_last_line_fourth_char_to_space(stralloc *multiline) {
   multiline->s[pos+3] = ' ';
 }
 
-void reformat_multiline_response(stralloc *proxy_response) {
-  change_every_line_fourth_char_to_dash(proxy_response);
-  change_last_line_fourth_char_to_space(proxy_response);
+void reformat_multiline_response(stralloc *response) {
+  change_every_line_fourth_char_to_dash(response);
+  change_last_line_fourth_char_to_space(response);
 }
 
-void munge_response(stralloc *proxy_response,stralloc *verb) {
-  if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(proxy_response);
-  if (verb_matches("help",verb)) munge_help(proxy_response);
-  if (verb_matches("test",verb)) munge_test(proxy_response);
-  if (verb_matches("ehlo",verb)) munge_ehlo(proxy_response);
-  reformat_multiline_response(proxy_response);
+void munge_response(stralloc *response,stralloc *verb) {
+  if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(response);
+  if (verb_matches("help",verb)) munge_help(response);
+  if (verb_matches("test",verb)) munge_test(response);
+  if (verb_matches("ehlo",verb)) munge_ehlo(response);
+  reformat_multiline_response(response);
 }
 
 int is_entire_line(stralloc *sa) {
