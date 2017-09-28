@@ -314,11 +314,22 @@ char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
   return proxy_response.s;
 }
 
-void *handle_internally(stralloc *client_verb,stralloc *client_arg) {
-  if (verb_matches("test",client_verb)) return &smtp_test;
-  if (verb_matches("auth",client_verb)) return &smtp_unimplemented;
-  if (verb_matches("starttls",client_verb)) return &smtp_unimplemented;
+struct internal_verb {
+  char *name;
+  char *(*func)();
+};
 
+struct internal_verb verbs[] = {
+  { "test", smtp_test }
+, { "auth", smtp_unimplemented }
+, { "starttls", smtp_unimplemented }
+, { 0, 0 }
+};
+
+void *handle_internally(stralloc *verb,stralloc *arg) {
+  for (int i = 0; verbs[i].name; ++i)
+    if (verb_matches(verbs[i].name,verb))
+      return verbs[i].func;
   return 0;
 }
 
