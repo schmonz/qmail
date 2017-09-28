@@ -44,6 +44,10 @@ struct request_response {
 
 int exitcode = 0;
 
+void cat(stralloc *to,stralloc *from) {
+  if (!stralloc_cat(to,from)) die_nomem();
+}
+
 void cats(stralloc *to,char *from) {
   if (!stralloc_cats(to,from)) die_nomem();
 }
@@ -99,7 +103,7 @@ void munge_help(stralloc *proxy_response) {
   copys(&munged,"214 qmail-fixsmtpio home page: ");
   cats(&munged, HOMEPAGE);
   cats(&munged, "\r\n");
-  if (!stralloc_cat(&munged,proxy_response)) die_nomem();
+  cat(&munged,proxy_response);
   copy(proxy_response,&munged);
 }
 
@@ -128,7 +132,7 @@ void munge_ehlo(stralloc *proxy_response) {
         if (stralloc_starts(&line,"250"))
           if (stralloc_starts(&subline,s))
             keep = 0;
-      if (keep && !stralloc_cat(&munged,&line)) die_nomem();
+      if (keep) cat(&munged,&line);
       blank(&line);
       blank(&subline);
     }
@@ -350,7 +354,7 @@ void construct_proxy_request(stralloc *proxy_request,
   } else {
     if (handle_internally(verb,arg)) {
       copys(proxy_request,"NOOP qmail-fixsmtpio ");
-      if (!stralloc_cat(proxy_request,client_request)) die_nomem();
+      cat(proxy_request,client_request);
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
       copy(proxy_request,client_request);
