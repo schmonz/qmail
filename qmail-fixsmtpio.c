@@ -402,19 +402,12 @@ void request_response_init(struct request_response *rr) {
                   server_response = {0},
                   proxy_response = {0};
 
-  blank(&client_request);
-  blank(&client_verb);
-  blank(&client_arg);
-  blank(&proxy_request);
-  blank(&server_response);
-  blank(&proxy_response);
-
-  rr->client_request = &client_request;
-  rr->client_verb = &client_verb;
-  rr->client_arg = &client_arg;
-  rr->proxy_request = &proxy_request;
-  rr->server_response = &server_response;
-  rr->proxy_response = &proxy_response;
+  blank(&client_request); rr->client_request = &client_request;
+  blank(&client_verb); rr->client_verb = &client_verb;
+  blank(&client_arg); rr->client_arg = &client_arg;
+  blank(&proxy_request); rr->proxy_request = &proxy_request;
+  blank(&server_response); rr->server_response = &server_response;
+  blank(&proxy_response); rr->proxy_response = &proxy_response;
 }
 
 void do_proxy_stuff(int from_client,int to_server,
