@@ -52,6 +52,10 @@ void cats(stralloc *to,char *from) {
   if (!stralloc_cats(to,from)) die_nomem();
 }
 
+void copy(stralloc *to,stralloc *from) {
+  if (!stralloc_copy(to,from)) die_nomem();
+}
+
 void copys(stralloc *to,char *from) {
   if (!stralloc_copys(to,from)) die_nomem();
 }
@@ -60,8 +64,8 @@ void blank(stralloc *sa) {
   copys(sa,"");
 }
 
-void copy(stralloc *to,stralloc *from) {
-  if (!stralloc_copy(to,from)) die_nomem();
+int starts(stralloc *haystack,char *needle) {
+  return stralloc_starts(haystack,needle);
 }
 
 void strip_last_eol(stralloc *sa) {
@@ -70,7 +74,7 @@ void strip_last_eol(stralloc *sa) {
 }
 
 int accepted_data(stralloc *server_response) {
-  return stralloc_starts(server_response,"354 ");
+  return starts(server_response,"354 ");
 }
 
 void munge_timeout(stralloc *proxy_response) {
@@ -81,8 +85,8 @@ void munge_greeting(stralloc *proxy_response) {
   char *x;
   char uid[FMT_ULONG];
 
-  if (stralloc_starts(proxy_response,"4")) exitcode = 14;
-  else if (stralloc_starts(proxy_response,"5")) exitcode = 15;
+  if (starts(proxy_response,"4")) exitcode = 14;
+  else if (starts(proxy_response,"5")) exitcode = 15;
   else {
     copys(proxy_response,"235 ok");
     x = env_get("AUTHUSER");
@@ -129,8 +133,8 @@ void munge_ehlo(stralloc *proxy_response) {
       int keep = 1;
       char *s;
       for (int j = 0; (s = avoids[j]); j++)
-        if (stralloc_starts(&line,"250"))
-          if (stralloc_starts(&subline,s))
+        if (starts(&line,"250"))
+          if (starts(&subline,s))
             keep = 0;
       if (keep) cat(&munged,&line);
       blank(&line);
