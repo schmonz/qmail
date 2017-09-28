@@ -97,8 +97,7 @@ void munge_greeting(stralloc *response) {
   else if (starts(response,"5")) exitcode = 15;
   else {
     copys(response,"235 ok");
-    x = env_get("AUTHUSER");
-    if (x) {
+    if ((x = env_get("AUTHUSER"))) {
       cats(response,", ");
       cats(response,x);
       cats(response,",");
