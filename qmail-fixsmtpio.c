@@ -254,8 +254,10 @@ void setup_proxy(int from_proxy,int to_proxy) {
 
 fd_set fds;
 
-void want_to_read(int fd) {
-  FD_SET(fd,&fds);
+void want_to_read(int fd1,int fd2) {
+  FD_ZERO(&fds);
+  FD_SET(fd1,&fds);
+  FD_SET(fd2,&fds);
 }
 
 int can_read(int fd) {
@@ -435,6 +437,14 @@ void handle_server_response(int to_client,struct request_response *rr,
   request_response_init(rr);
 }
 
+int request_needs_handling(struct request_response *rr) {
+  return rr->client_request->len && !rr->proxy_request->len;
+}
+
+int response_needs_handling(struct request_response *rr) {
+  return rr->server_response->len && !rr->proxy_response->len;
+}
+
 void do_proxy_stuff(int from_client,int to_server,
                     int from_server,int to_client) {
   char buf[PIPE_READ_BUFFER_SIZE];
@@ -446,16 +456,13 @@ void do_proxy_stuff(int from_client,int to_server,
   copys(rr.client_verb,GREETING_PSEUDOVERB);
 
   for (;;) {
-    if (rr.client_request->len && !rr.proxy_request->len)
+    if (request_needs_handling(&rr))
       handle_client_request(to_server,&rr,&want_data,&in_data);
 
-    if (rr.server_response->len && !rr.proxy_response->len)
+    if (response_needs_handling(&rr))
       handle_server_response(to_client,&rr,&want_data,&in_data);
 
-    FD_ZERO(&fds);
-    want_to_read(from_client);
-    want_to_read(from_server);
-
+    want_to_read(from_client,from_server);
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
