@@ -48,6 +48,10 @@ void cat(stralloc *to,stralloc *from) {
   if (!stralloc_cat(to,from)) die_nomem();
 }
 
+void catb(stralloc *to,char *buf,int len) {
+  if (!stralloc_catb(to,buf,len)) die_nomem();
+}
+
 void cats(stralloc *to,char *from) {
   if (!stralloc_cats(to,from)) die_nomem();
 }
@@ -280,7 +284,7 @@ int saferead(int fd,char *buf,int len) {
 int safeappend(stralloc *sa,int fd,char *buf,int len) {
   int r;
   r = saferead(fd,buf,len);
-  if (!stralloc_catb(sa,buf,r)) die_nomem();
+  catb(sa,buf,r);
   return r;
 }
 
@@ -319,7 +323,7 @@ void safewrite(int fd,stralloc *sa) {
 char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
   static stralloc proxy_response = {0};
   copys(&proxy_response,"250 qmail-fixsmtpio test ok: ");
-  if (!stralloc_catb(&proxy_response,client_arg->s,client_arg->len)) die_nomem();
+  catb(&proxy_response,client_arg->s,client_arg->len);
   cats(&proxy_response,"\r\n");
   if (!stralloc_0(&proxy_response)) die_nomem();
   return proxy_response.s;
