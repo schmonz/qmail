@@ -44,6 +44,10 @@ struct request_response {
 
 int exitcode = 0;
 
+void cats(stralloc *to,char *from) {
+  if (!stralloc_cats(to,from)) die_nomem();
+}
+
 void copys(stralloc *to,char *from) {
   if (!stralloc_copys(to,from)) die_nomem();
 }
@@ -79,29 +83,29 @@ void munge_greeting(stralloc *proxy_response) {
     copys(proxy_response,"235 ok");
     x = env_get("AUTHUSER");
     if (x) {
-      if (!stralloc_cats(proxy_response,", ")) die_nomem();
-      if (!stralloc_cats(proxy_response,x)) die_nomem();
-      if (!stralloc_cats(proxy_response,",")) die_nomem();
+      cats(proxy_response,", ");
+      cats(proxy_response,x);
+      cats(proxy_response,",");
     }
-    if (!stralloc_cats(proxy_response," go ahead ")) die_nomem();
+    cats(proxy_response," go ahead ");
     str_copy(uid + fmt_ulong(uid,getuid()),"");
-    if (!stralloc_cats(proxy_response,uid)) die_nomem();
-    if (!stralloc_cats(proxy_response," (#2.0.0)\r\n")) die_nomem();
+    cats(proxy_response,uid);
+    cats(proxy_response," (#2.0.0)\r\n");
   }
 }
 
 void munge_help(stralloc *proxy_response) {
   stralloc munged = {0};
   copys(&munged,"214 qmail-fixsmtpio home page: ");
-  if (!stralloc_cats(&munged, HOMEPAGE)) die_nomem();
-  if (!stralloc_cats(&munged, "\r\n")) die_nomem();
+  cats(&munged, HOMEPAGE);
+  cats(&munged, "\r\n");
   if (!stralloc_cat(&munged,proxy_response)) die_nomem();
   copy(proxy_response,&munged);
 }
 
 void munge_test(stralloc *proxy_response) {
   strip_last_eol(proxy_response);
-  if (!stralloc_cats(proxy_response," and also it's mungeable\r\n")) die_nomem();
+  cats(proxy_response," and also it's mungeable\r\n");
 }
 
 void munge_ehlo(stralloc *proxy_response) {
@@ -304,7 +308,7 @@ char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
   static stralloc proxy_response = {0};
   copys(&proxy_response,"250 qmail-fixsmtpio test ok: ");
   if (!stralloc_catb(&proxy_response,client_arg->s,client_arg->len)) die_nomem();
-  if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
+  cats(&proxy_response,"\r\n");
   if (!stralloc_0(&proxy_response)) die_nomem();
   return proxy_response.s;
 }
@@ -312,7 +316,7 @@ char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
 char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
   static stralloc proxy_response = {0};
   copys(&proxy_response,"502 unimplemented (#5.5.1)");
-  if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
+  cats(&proxy_response,"\r\n");
   if (!stralloc_0(&proxy_response)) die_nomem();
   return proxy_response.s;
 }
