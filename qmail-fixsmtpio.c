@@ -402,8 +402,8 @@ void do_proxy_stuff(int from_client,int to_server,
   for (;;) {
     if (rr.client_request->len && !rr.proxy_request->len) {
       logit('1',rr.client_request);
-      parse_client_request(rr.client_verb,rr.client_arg,
-                           rr.client_request);
+      if (!in_data)
+        parse_client_request(rr.client_verb,rr.client_arg,rr.client_request);
       logit('2',rr.client_verb);
       logit('3',rr.client_arg);
       construct_proxy_request(rr.proxy_request,
@@ -412,6 +412,10 @@ void do_proxy_stuff(int from_client,int to_server,
                               &want_data,&in_data);
       logit('4',rr.proxy_request);
       safewrite(to_server,rr.proxy_request);
+      if (in_data) {
+        blank(rr.client_request);
+        blank(rr.proxy_request);
+      }
     }
 
     if (rr.server_response->len && !rr.proxy_response->len) {
