@@ -128,7 +128,7 @@ void munge_ehlo(stralloc *response) {
   stralloc line = {0};
   stralloc subline = {0};
 
-  char *avoids[] = {
+  char *block_these[] = {
     "AUTH ",
     0,
   };
@@ -139,7 +139,7 @@ void munge_ehlo(stralloc *response) {
       copyb(&subline,line.s + 4,line.len - 4);
       int keep = 1;
       char *s;
-      for (int j = 0; (s = avoids[j]); j++)
+      for (int j = 0; (s = block_these[j]); j++)
         if (starts(&line,"250"))
           if (starts(&subline,s))
             keep = 0;
