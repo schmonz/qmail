@@ -13,18 +13,19 @@ or
 .BR qmail-smtpd )
 that expects descriptor 0 to read from the network
 and descriptor 1 to write to the network, but
-might not expect to be run under something like
+that might not have expected to run under something like
 .BR qmail-authup .
 
 .B qmail-fixsmtpio
 is most commonly used with
 .B qmail-authup
-to accept message submissions from authenticated users,
-but can also be used for public-facing SMTP service.
+to accept submitted messages from authenticated users.
+It can also be used to change the behavior of a public SMTP service.
 
 By default,
 .B qmail-fixsmtpio
-does not intercept any requests or modify any responses.
+should not change observable behavior (modulo EXIT CODES, below).
+If you observe that it does, please report the bug.
 .SH "EXIT CODES"
 On most any failure,
 .B ofmipd
@@ -36,6 +37,7 @@ uses for incorrect passwords.
 .B qmail-fixsmtpio
 almost always exits 0 instead, to avoid confusing
 .BR qmail-authup .
+
 Exceptions:
 .TP
 .B 14
@@ -51,12 +53,11 @@ sent a greeting starting with 5xx.
 timed out.
 
 .SH "ENVIRONMENT VARIABLES"
-Typical filter rules apply iff
+Most filter rules typically apply iff
 .B AUTHUSER
 is set.
-.B AUTHUSER
-is set by
-.BR qmail-authup .
+.B qmail-authup
+sets it.
 
 .SH "CONTROL FILES"
 .TP 5
@@ -72,10 +73,13 @@ Format:
  :help:*:214 authutils home page: https://schmonz.com/qmail/authutils
 
  # if we've already authenticated, replace the SMTP greeting
- AUTHUSER:greet:*:235 ok, go ahead (#2.0.0)
+ AUTHUSER:greeting:*:235 ok, go ahead (#2.0.0)
 
  # and the QUIT message
  AUTHUSER:quit:*:221 qmail-authup
+
+ # and hide the timeout message (qmail-authup has one of its own)
+ AUTHUSER:timeout:*:
 
  # and don't advertise STARTTLS or AUTH
  AUTHUSER:ehlo:250?STARTTLS:
