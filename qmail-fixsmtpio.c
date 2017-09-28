@@ -12,7 +12,7 @@
 
 #define GREETING_PSEUDOVERB "greeting"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
-#define PIPE_READ_BUFFER_SIZE SUBSTDIO_INSIZE
+#define PIPE_READ_SIZE SUBSTDIO_INSIZE
 
 void die() { _exit(1); }
 
@@ -68,12 +68,12 @@ void copys(stralloc *to,char *from) {
   if (!stralloc_copys(to,from)) die_nomem();
 }
 
-void blank(stralloc *sa) {
-  copys(sa,"");
-}
-
 int starts(stralloc *haystack,char *needle) {
   return stralloc_starts(haystack,needle);
+}
+
+void blank(stralloc *sa) {
+  copys(sa,"");
 }
 
 void strip_last_eol(stralloc *sa) {
@@ -197,17 +197,17 @@ int could_be_final_response_line(stralloc *line) {
   return line->len >= 4 && line->s[3] == ' ';
 }
 
-int is_entire_response(stralloc *server_response) {
+int is_entire_response(stralloc *response) {
   stralloc lastline = {0};
   int pos = 0;
-  if (!is_entire_line(server_response)) return 0;
-  for (int i = server_response->len - 2; i >= 0; i--) {
-    if (server_response->s[i] == '\n') {
+  if (!is_entire_line(response)) return 0;
+  for (int i = response->len - 2; i >= 0; i--) {
+    if (response->s[i] == '\n') {
       pos = i + 1;
       break;
     }
   }
-  copyb(&lastline,server_response->s+pos,server_response->len-pos);
+  copyb(&lastline,response->s+pos,response->len-pos);
   return could_be_final_response_line(&lastline);
 }
 
@@ -226,15 +226,15 @@ void mypipe(int *from,int *to) {
   *to = pi[1];
 }
 
-void setup_server(int from_proxy,int to_server,
-                  int from_server,int to_proxy) {
+void setup_child(int from_proxy,int to_server,
+                 int from_server,int to_proxy) {
   close(from_server);
   close(to_server);
   use_as_stdin(from_proxy);
   use_as_stdout(to_proxy);
 }
 
-void exec_server_and_never_return(char **argv) {
+void exec_child_and_never_return(char **argv) {
   execvp(*argv,argv);
   die();
 }
@@ -242,11 +242,11 @@ void exec_server_and_never_return(char **argv) {
 void be_child(int from_proxy,int to_proxy,
               int from_server,int to_server,
               char **argv) {
-  setup_server(from_proxy,to_server,from_server,to_proxy);
-  exec_server_and_never_return(argv);
+  setup_child(from_proxy,to_server,from_server,to_proxy);
+  exec_child_and_never_return(argv);
 }
 
-void setup_proxy(int from_proxy,int to_proxy) {
+void setup_parent(int from_proxy,int to_proxy) {
   close(from_proxy);
   close(to_proxy);
 }
@@ -451,7 +451,7 @@ void prepare_for_handling(stralloc *to,stralloc *from) {
 
 void read_and_process_until_either_end_closes(int from_client,int to_server,
                                               int from_server,int to_client) {
-  char buf[PIPE_READ_BUFFER_SIZE];
+  char buf[PIPE_READ_SIZE];
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
   struct request_response rr;
@@ -483,7 +483,7 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
   }
 }
 
-void teardown_proxy_and_exit(int child,int from_server,int to_server) {
+void teardown_and_exit(int child,int from_server,int to_server) {
   int wstat;
 
   close(from_server);
@@ -499,10 +499,10 @@ void be_parent(int from_client,int to_client,
                int from_proxy,int to_proxy,
                int from_server,int to_server,
                int child) {
-  setup_proxy(from_proxy,to_proxy);
+  setup_parent(from_proxy,to_proxy);
   read_and_process_until_either_end_closes(from_client,to_server,
                                            from_server,to_client);
-  teardown_proxy_and_exit(child,from_server,to_server);
+  teardown_and_exit(child,from_server,to_server);
 }
 
 int main(int argc,char **argv) {
@@ -512,7 +512,7 @@ int main(int argc,char **argv) {
   int to_client;
   int child;
 
-  argv += 1; if (!*argv) die_usage();
+  argv++; if (!*argv) die_usage();
 
   from_client = 0;
   mypipe(&from_proxy,&to_server);
