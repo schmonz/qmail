@@ -10,7 +10,7 @@
 #include "substdio.h"
 #include "wait.h"
 
-#define GREETING_PSEUDOREQUEST "greeting\r\n"
+#define GREETING_PSEUDOVERB "greeting"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
 #define PIPE_READ_BUFFER_SIZE SUBSTDIO_INSIZE
 
@@ -155,7 +155,7 @@ void reformat_multiline_response(stralloc *proxy_response) {
 }
 
 void munge_response(stralloc *proxy_response,stralloc *verb) {
-  if (verb_matches(GREETING_PSEUDOREQUEST,verb)) munge_greeting(proxy_response);
+  if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(proxy_response);
   if (verb_matches("help",verb)) munge_help(proxy_response);
   if (verb_matches("test",verb)) munge_test(proxy_response);
   if (verb_matches("ehlo",verb)) munge_ehlo(proxy_response);
@@ -397,10 +397,10 @@ void do_proxy_stuff(int from_client,int to_server,
   struct request_response rr;
 
   request_response_init(&rr);
-  if (!stralloc_copys(rr.client_request,GREETING_PSEUDOREQUEST)) die_nomem();
+  if (!stralloc_copys(rr.client_verb,GREETING_PSEUDOVERB)) die_nomem();
 
   for (;;) {
-    if (rr.client_request->len && !rr.server_response->len) {
+    if (rr.client_request->len && !rr.proxy_request->len) {
       parse_client_request(rr.client_verb,rr.client_arg,
                            rr.client_request);
       construct_proxy_request(rr.proxy_request,
@@ -414,7 +414,7 @@ void do_proxy_stuff(int from_client,int to_server,
       safewrite(to_server,rr.proxy_request);
     }
 
-    if (rr.server_response->len) {
+    if (rr.server_response->len && !rr.proxy_response->len) {
       construct_proxy_response(rr.proxy_response,
                                rr.client_verb,rr.client_arg,
                                rr.server_response,
