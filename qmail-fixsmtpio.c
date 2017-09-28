@@ -56,6 +56,10 @@ void copy(stralloc *to,stralloc *from) {
   if (!stralloc_copy(to,from)) die_nomem();
 }
 
+void copyb(stralloc *to,char *buf,int len) {
+  if (!stralloc_copyb(to,buf,len)) die_nomem();
+}
+
 void copys(stralloc *to,char *from) {
   if (!stralloc_copys(to,from)) die_nomem();
 }
@@ -129,7 +133,7 @@ void munge_ehlo(stralloc *proxy_response) {
   for (int i = 0; i < proxy_response->len; i++) {
     if (!stralloc_append(&line,i + proxy_response->s)) die_nomem();
     if (proxy_response->s[i] == '\n' || i == proxy_response->len - 1) {
-      if (!stralloc_copyb(&subline,line.s + 4,line.len - 4)) die_nomem();
+      copyb(&subline,line.s + 4,line.len - 4);
       int keep = 1;
       char *s;
       for (int j = 0; (s = avoids[j]); j++)
@@ -200,7 +204,7 @@ int is_entire_response(stralloc *server_response) {
       break;
     }
   }
-  if (!stralloc_copyb(&lastline,server_response->s+pos,server_response->len-pos)) die_nomem();
+  copyb(&lastline,server_response->s+pos,server_response->len-pos);
   return could_be_final_response_line(&lastline);
 }
 
@@ -294,8 +298,8 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
     copy(verb,request);
     blank(arg);
   } else {
-    if (!stralloc_copyb(verb,request->s,i-1)) die_nomem();
-    if (!stralloc_copyb(arg,request->s+i,request->len-i)) die_nomem();
+    copyb(verb,request->s,i-1);
+    copyb(arg,request->s+i,request->len-i);
   }
   strip_last_eol(verb);
   strip_last_eol(arg);
