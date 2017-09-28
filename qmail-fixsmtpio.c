@@ -449,8 +449,8 @@ void prepare_for_handling(stralloc *to,stralloc *from) {
   blank(from);
 }
 
-void do_proxy_stuff(int from_client,int to_server,
-                    int from_server,int to_client) {
+void read_and_process_until_either_end_closes(int from_client,int to_server,
+                                              int from_server,int to_client) {
   char buf[PIPE_READ_BUFFER_SIZE];
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
@@ -500,8 +500,8 @@ void be_parent(int from_client,int to_client,
                int from_server,int to_server,
                int child) {
   setup_proxy(from_proxy,to_proxy);
-  do_proxy_stuff(from_client,to_server,from_server,to_client);
-
+  read_and_process_until_either_end_closes(from_client,to_server,
+                                           from_server,to_client);
   teardown_proxy_and_exit(child,from_server,to_server);
 }
 
