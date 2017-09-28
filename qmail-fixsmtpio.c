@@ -44,8 +44,12 @@ struct request_response {
 
 int exitcode = 0;
 
+void copys(stralloc *to,char *from) {
+  if (!stralloc_copys(to,from)) die_nomem();
+}
+
 void blank(stralloc *sa) {
-  if (!stralloc_copys(sa,"")) die_nomem();
+  copys(sa,"");
 }
 
 void copy(stralloc *to,stralloc *from) {
@@ -72,7 +76,7 @@ void munge_greeting(stralloc *proxy_response) {
   if (stralloc_starts(proxy_response,"4")) exitcode = 14;
   else if (stralloc_starts(proxy_response,"5")) exitcode = 15;
   else {
-    if (!stralloc_copys(proxy_response,"235 ok")) die_nomem();
+    copys(proxy_response,"235 ok");
     x = env_get("AUTHUSER");
     if (x) {
       if (!stralloc_cats(proxy_response,", ")) die_nomem();
@@ -88,7 +92,7 @@ void munge_greeting(stralloc *proxy_response) {
 
 void munge_help(stralloc *proxy_response) {
   stralloc munged = {0};
-  if (!stralloc_copys(&munged,"214 qmail-fixsmtpio home page: ")) die_nomem();
+  copys(&munged,"214 qmail-fixsmtpio home page: ");
   if (!stralloc_cats(&munged, HOMEPAGE)) die_nomem();
   if (!stralloc_cats(&munged, "\r\n")) die_nomem();
   if (!stralloc_cat(&munged,proxy_response)) die_nomem();
@@ -298,7 +302,7 @@ void safewrite(int fd,stralloc *sa) {
 
 char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
   static stralloc proxy_response = {0};
-  if (!stralloc_copys(&proxy_response,"250 qmail-fixsmtpio test ok: ")) die_nomem();
+  copys(&proxy_response,"250 qmail-fixsmtpio test ok: ");
   if (!stralloc_catb(&proxy_response,client_arg->s,client_arg->len)) die_nomem();
   if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
   if (!stralloc_0(&proxy_response)) die_nomem();
@@ -307,7 +311,7 @@ char *smtp_test(stralloc *client_verb,stralloc *client_arg) {
 
 char *smtp_unimplemented(stralloc *client_verb,stralloc *client_arg) {
   static stralloc proxy_response = {0};
-  if (!stralloc_copys(&proxy_response,"502 unimplemented (#5.5.1)")) die_nomem();
+  copys(&proxy_response,"502 unimplemented (#5.5.1)");
   if (!stralloc_cats(&proxy_response,"\r\n")) die_nomem();
   if (!stralloc_0(&proxy_response)) die_nomem();
   return proxy_response.s;
@@ -341,7 +345,7 @@ void construct_proxy_request(stralloc *proxy_request,
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
     if (handle_internally(verb,arg)) {
-      if (!stralloc_copys(proxy_request,"NOOP qmail-fixsmtpio ")) die_nomem();
+      copys(proxy_request,"NOOP qmail-fixsmtpio ");
       if (!stralloc_cat(proxy_request,client_request)) die_nomem();
     } else {
       if (verb_matches("data",verb)) *want_data = 1;
@@ -362,7 +366,7 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
   if ((func = handle_internally(verb,arg))) {
-    if (!stralloc_copys(proxy_response,func(verb,arg))) die_nomem();
+    copys(proxy_response,func(verb,arg));
   } else {
     copy(proxy_response,server_response);
   }
@@ -401,7 +405,7 @@ void do_proxy_stuff(int from_client,int to_server,
   struct request_response rr;
 
   request_response_init(&rr);
-  if (!stralloc_copys(rr.client_verb,GREETING_PSEUDOVERB)) die_nomem();
+  copys(rr.client_verb,GREETING_PSEUDOVERB);
 
   for (;;) {
     if (rr.client_request->len && !rr.proxy_request->len) {
