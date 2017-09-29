@@ -86,6 +86,7 @@ int accepted_data(stralloc *response) {
 }
 
 void munge_timeout(stralloc *response) {
+  blank(response);
   exitcode = 16;
 }
 

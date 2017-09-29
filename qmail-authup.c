@@ -128,11 +128,16 @@ int is_checkpassword_failure(int exitcode) {
   return (exitcode == 1 || exitcode == 2 || exitcode == 111);
 }
 
+int is_smtpio_timeout(int exitcode) {
+  return exitcode == 16;
+}
+
 stralloc username = {0};
 stralloc password = {0};
 stralloc timestamp = {0};
 
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
+  int exitcode;
   int child;
   int wstat;
   int pi[2];
@@ -171,9 +176,11 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
 
   if (wait_pid(&wstat,child) == -1) authup_die("wait");
   if (wait_crashed(wstat)) authup_die("crash");
-  if (is_checkpassword_failure(wait_exitcode(wstat))) authup_die("badauth");
+  exitcode = wait_exitcode(wstat);
+  if (is_checkpassword_failure(exitcode)) authup_die("badauth");
+  if (is_smtpio_timeout(exitcode)) authup_die("alarm");
 
-  authup_die("protocol");
+  _exit(0);
 }
 
 static char unique[FMT_ULONG + FMT_ULONG + 3];
