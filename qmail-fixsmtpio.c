@@ -359,7 +359,7 @@ void construct_proxy_request(stralloc *proxy_request,
     copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
-    if (handle_internally(verb,arg)) {
+    if (0 && handle_internally(verb,arg)) {
       copys(proxy_request,"NOOP qmail-fixsmtpio ");
       cat(proxy_request,client_request);
     } else {
@@ -380,13 +380,13 @@ void construct_proxy_response(stralloc *proxy_response,
     *want_data = 0;
     if (accepted_data(server_response)) *in_data = 1;
   }
-  if ((func = handle_internally(verb,arg))) {
+  if (0 && (func = handle_internally(verb,arg))) {
     func(proxy_response,verb,arg);
   } else {
     copy(proxy_response,server_response);
   }
-  munge_response(proxy_response,verb);
-  if (!verb->len && !request_received) munge_timeout(proxy_response);
+  if (0) munge_response(proxy_response,verb);
+  if (0 && !verb->len && !request_received) munge_timeout(proxy_response);
 }
 
 void request_response_init(struct request_response *rr) {
