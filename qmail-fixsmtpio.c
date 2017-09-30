@@ -119,11 +119,6 @@ void munge_help(stralloc *response) {
   copy(response,&munged);
 }
 
-void munge_test(stralloc *response) {
-  strip_last_eol(response);
-  cats(response," and also it's mungeable\r\n");
-}
-
 void munge_ehlo(stralloc *response) {
   stralloc munged = {0};
   stralloc line = {0};
@@ -185,7 +180,6 @@ void reformat_multiline_response(stralloc *response) {
 void munge_response(stralloc *response,stralloc *verb) {
   if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(response);
   if (verb_matches("help",verb)) munge_help(response);
-  if (verb_matches("test",verb)) munge_test(response);
   if (verb_matches("ehlo",verb)) munge_ehlo(response);
   reformat_multiline_response(response);
 }
@@ -322,12 +316,6 @@ void safewrite(int fd,stralloc *sa) {
   if (write(fd,sa->s,sa->len) == -1) die_write();
 }
 
-void smtp_test(stralloc *response,stralloc *verb,stralloc *arg) {
-  copys(response,"250 qmail-fixsmtpio test ok: ");
-  catb(response,arg->s,arg->len);
-  cats(response,"\r\n");
-}
-
 void smtp_unimplemented(stralloc *response,stralloc *verb,stralloc *arg) {
   copys(response,"502 unimplemented (#5.5.1)\r\n");
 }
@@ -338,8 +326,7 @@ struct internal_verb {
 };
 
 struct internal_verb verbs[] = {
-  { "test", smtp_test }
-, { "auth", smtp_unimplemented }
+  { "auth", smtp_unimplemented }
 , { "starttls", smtp_unimplemented }
 , { 0, 0 }
 };
