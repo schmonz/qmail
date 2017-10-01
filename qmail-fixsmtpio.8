@@ -60,34 +60,81 @@ is set.
 sets it.
 
 .SH "CONTROL FILES"
+[env]:event:[request-prepend]:response-line-glob:[exitcode][:response]
 .TP 5
 .I fixsmtpio
-Filter rules.
+Filter rules in the above format.
 Default: none.
-Format:
 
-.I [env-var]:verb:output-line-glob:[replacement-output]
+Values may not contain ":", the field separator.
+
+.B env
+(optional)
+is an environment variable that must be present for the rule to apply.
+If empty, no environment variable is required.
+
+.B event
+(required)
+is an SMTP verb (or "greeting" or "timeout") whose requests, responses,
+or both are to be filtered.
+This field is matched case-insensitively.
+
+.B request-prepend
+(optional)
+is a string to be prepended to the request before it's seen by the server.
+"NOOP " prevents the server from taking unwanted action.
+If empty, the request is sent as is.
+
+.B response-line-glob
+(required)
+is a glob pattern.
+The rule applies to every matching line of the server response.
+
+.B exitcode
+(optional)
+is a numeric code with which
+.B qmail-fixsmtpio
+is to immediately exit.
+If empty, the program exits 0 when the client or server disconnects.
+
+.B response
+(optional)
+is a string that replaces every matching line of the server response.
+If empty, matching lines are removed.
+If
+.I unset
+(by leaving off the ":" after
+.BR exitcode ),
+the response is sent as is.
+
+As a special case, if
+.B response
+is set to "&qmail-fixsmtpio",
+the replacement string is computed by an internal routine for that event.
+If no such routine exists, the response is sent as is.
+
 .SH "EXAMPLES"
 .EX
- # always replace HELP response with link to authutils
- :help:*:214 authutils home page: https://schmonz.com/qmail/authutils
+ # always prepend authutils link to HELP message
+ :help::*::&qmail-fixsmtpio
 
- # if we've already authenticated, replace the SMTP greeting
- AUTHUSER:greeting:*:235 ok, go ahead (#2.0.0)
+ # if we've already authenticated, replace greeting
+ AUTHUSER:greeting::2*::&qmail-fixsmtpio
 
- # and the QUIT message
- AUTHUSER:quit:*:221 qmail-authup
+ # if server greets us unhappily, notify qmail-authup
+ AUTHUSER:greeting::4*:14
+ AUTHUSER:greeting::5*:15
 
- # and hide the timeout message (qmail-authup has one of its own)
- AUTHUSER:timeout:*:
+ # if server times out, hide message (qmail-authup has its own)
+ AUTHUSER:timeout::*:16:
 
- # and don't advertise STARTTLS or AUTH
- AUTHUSER:ehlo:250?STARTTLS:
- AUTHUSER:ehlo:250?AUTH*:
+ # don't advertise AUTH or STARTTLS
+ AUTHUSER:ehlo::250?AUTH*::
+ AUTHUSER:ehlo::250?STARTTLS::
 
- # and if asked, respond "500 unrecognised (#5.5.2)"
- AUTHUSER:starttls::
- AUTHUSER:auth::
+ # don't allow AUTH or STARTTLS
+ AUTHUSER:auth:NOOP :*::502 unimplemented (#5.5.1)\\r\\n
+ AUTHUSER:starttls:NOOP :*::502 unimplemented (#5.5.1)\\r\\n
 .EE
 
 .SH "AUTHOR"
@@ -97,4 +144,5 @@ qmail-authup(8),
 checkpassword(8),
 checkpassword-rejectroot(8),
 qmail-smtpd(8),
-ofmipd(8).
+ofmipd(8),
+fnmatch(3).
