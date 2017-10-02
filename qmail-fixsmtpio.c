@@ -40,14 +40,14 @@ void die_read()  { dieerrflush("unable to read"); }
 void die_write() { dieerrflush("unable to write"); }
 void die_nomem() { dieerrflush("out of memory"); }
 
-struct request_response {
+typedef struct request_response {
   stralloc *client_request;
   stralloc *client_verb;
   stralloc *client_arg;
   stralloc *proxy_request;
   stralloc *server_response;
   stralloc *proxy_response;
-};
+} request_response;
 
 typedef struct filter_rule {
   struct filter_rule *next;
@@ -400,7 +400,7 @@ void construct_proxy_response(stralloc *proxy_response,
   munge_response(proxy_response,rules,verb);
 }
 
-void request_response_init(struct request_response *rr) {
+void request_response_init(request_response *rr) {
   static stralloc client_request = {0},
                   client_verb = {0},
                   client_arg = {0},
@@ -417,7 +417,7 @@ void request_response_init(struct request_response *rr) {
 }
 
 void handle_client_request(int to_server,filter_rule *rules,
-                           struct request_response *rr,
+                           request_response *rr,
                            int *want_data,int *in_data) {
   logit('1',rr->client_request);
   if (!*in_data)
@@ -437,7 +437,7 @@ void handle_client_request(int to_server,filter_rule *rules,
 }
 
 void handle_server_response(int to_client,filter_rule *rules,
-                            struct request_response *rr,
+                            request_response *rr,
                             int *want_data,int *in_data) {
   logit('5',rr->server_response);
   construct_proxy_response(rr->proxy_response,rules,
@@ -450,11 +450,11 @@ void handle_server_response(int to_client,filter_rule *rules,
   request_response_init(rr);
 }
 
-int request_needs_handling(struct request_response *rr) {
+int request_needs_handling(request_response *rr) {
   return rr->client_request->len && !rr->proxy_request->len;
 }
 
-int response_needs_handling(struct request_response *rr) {
+int response_needs_handling(request_response *rr) {
   return rr->server_response->len && !rr->proxy_response->len;
 }
 
@@ -469,7 +469,7 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
   char buf[PIPE_READ_SIZE];
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
-  struct request_response rr;
+  request_response rr;
 
   request_response_init(&rr);
   copys(rr.client_verb,GREETING_PSEUDOVERB);
