@@ -4,7 +4,6 @@
 #include "env.h"
 #include "error.h"
 #include "fd.h"
-#include "fmt.h"
 #include "readwrite.h"
 #include "select.h"
 #include "str.h"
