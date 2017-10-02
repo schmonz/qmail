@@ -1,3 +1,5 @@
+#include <fnmatch.h>
+#include "alloc.h"
 #include "case.h"
 #include "env.h"
 #include "error.h"
@@ -11,6 +13,11 @@
 #include "wait.h"
 
 #define GREETING_PSEUDOVERB "greeting"
+#define TIMEOUT_PSEUDOVERB "timeout"
+#define IGNORE_REQUEST "noop "
+#define SMTP_UNIMPLEMENTED "502 unimplemented (#5.5.1)\r\n"
+#define MODIFY_INTERNALLY "&qmail-fixsmtpio"
+#define AUTHUSER "AUTHUSER"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
 #define PIPE_READ_SIZE SUBSTDIO_INSIZE
 
@@ -41,6 +48,43 @@ struct request_response {
   stralloc *server_response;
   stralloc *proxy_response;
 };
+
+typedef struct filter_rule {
+  struct filter_rule *next;
+  char *env;
+  char *event;
+  char *request_prepend;
+  char *response_line_glob;
+  int exitcode;
+  char *response;
+} filter_rule;
+
+filter_rule *add_rule(filter_rule *next,
+                      char *env,char *event,char *request_prepend,
+                      char *response_line_glob,int exitcode,char *response) {
+  filter_rule *fr = (filter_rule *)alloc(sizeof(filter_rule));
+  if (!fr) die_nomem();
+  fr->next = next;
+  fr->env = env; fr->event = event; fr->request_prepend = request_prepend;
+  fr->response_line_glob = response_line_glob; fr->exitcode = exitcode;
+  fr->response = response;
+  next = fr;
+  return next;
+}
+
+filter_rule *load_filter_rules() {
+  filter_rule *rules = 0;
+  rules = add_rule(rules,0,"help",0,"*",0,MODIFY_INTERNALLY);
+  rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"2*",0,MODIFY_INTERNALLY);
+  rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"4*",14,0);
+  rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"5*",15,0);
+  rules = add_rule(rules,AUTHUSER,TIMEOUT_PSEUDOVERB,0,"*",16,"");
+  //rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?AUTH*",0,"");
+  //rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?STARTTLS",0,"");
+  rules = add_rule(rules,AUTHUSER,"auth",IGNORE_REQUEST,"*",0,SMTP_UNIMPLEMENTED);
+  rules = add_rule(rules,AUTHUSER,"starttls",IGNORE_REQUEST,"*",0,SMTP_UNIMPLEMENTED);
+  return rules;
+}
 
 int exitcode = 0;
 
@@ -85,28 +129,19 @@ int accepted_data(stralloc *response) {
   return starts(response,"354 ");
 }
 
-void munge_timeout(stralloc *response) {
-  blank(response);
-  exitcode = 16;
-}
-
 void munge_greeting(stralloc *response) {
   char *x;
-  char uid[FMT_ULONG];
 
   if (starts(response,"4")) exitcode = 14;
   else if (starts(response,"5")) exitcode = 15;
   else {
     copys(response,"235 ok");
-    if ((x = env_get("AUTHUSER"))) {
+    if ((x = env_get(AUTHUSER))) {
       cats(response,", ");
       cats(response,x);
       cats(response,",");
     }
-    cats(response," go ahead ");
-    str_copy(uid + fmt_ulong(uid,getuid()),"");
-    cats(response,uid);
-    cats(response," (#2.0.0)\r\n");
+    cats(response," go ahead (#2.0.0)\r\n");
   }
 }
 
@@ -177,10 +212,26 @@ void reformat_multiline_response(stralloc *response) {
   change_last_line_fourth_char_to_space(response);
 }
 
-void munge_response(stralloc *response,stralloc *verb) {
-  if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(response);
-  if (verb_matches("help",verb)) munge_help(response);
-  if (verb_matches("ehlo",verb)) munge_ehlo(response);
+void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
+  stralloc resp0 = {0};
+  copy(&resp0,response);
+  if (!stralloc_0(&resp0)) die_nomem();
+  for (filter_rule *fr = rules; fr; fr = fr->next) {
+    if ((!fr->env) || (fr->env && env_get(fr->env))) {
+      if (fr->response && verb_matches(fr->event,verb)) {
+        if (0 == fnmatch(fr->response_line_glob,resp0.s,0)) {
+          if (!str_diffn(fr->response,MODIFY_INTERNALLY,sizeof MODIFY_INTERNALLY)) {
+            if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(response);
+            if (verb_matches("help",verb)) munge_help(response);
+            if (verb_matches("ehlo",verb)) munge_ehlo(response);
+          } else {
+            copys(response,fr->response);
+            if (verb_matches(TIMEOUT_PSEUDOVERB,verb)) exitcode = fr->exitcode;
+          }
+        }
+      }
+    }
+  }
   reformat_multiline_response(response);
 }
 
@@ -316,29 +367,8 @@ void safewrite(int fd,stralloc *sa) {
   if (write(fd,sa->s,sa->len) == -1) die_write();
 }
 
-void smtp_unimplemented(stralloc *response,stralloc *verb,stralloc *arg) {
-  copys(response,"502 unimplemented (#5.5.1)\r\n");
-}
-
-struct internal_verb {
-  char *name;
-  void (*func)();
-};
-
-struct internal_verb verbs[] = {
-  { "auth", smtp_unimplemented }
-, { "starttls", smtp_unimplemented }
-, { 0, 0 }
-};
-
-void *handle_internally(stralloc *verb,stralloc *arg) {
-  for (int i = 0; verbs[i].name; ++i)
-    if (verb_matches(verbs[i].name,verb))
-      return verbs[i].func;
-  return 0;
-}
-
 void construct_proxy_request(stralloc *proxy_request,
+                             filter_rule *rules,
                              stralloc *verb,stralloc *arg,
                              stralloc *client_request,
                              int *want_data,int *in_data) {
@@ -346,34 +376,28 @@ void construct_proxy_request(stralloc *proxy_request,
     copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
-    if (0 && handle_internally(verb,arg)) {
-      copys(proxy_request,"NOOP qmail-fixsmtpio ");
-      cat(proxy_request,client_request);
-    } else {
-      if (verb_matches("data",verb)) *want_data = 1;
-      copy(proxy_request,client_request);
-    }
+    for (filter_rule *fr = rules; fr; fr = fr->next)
+      if (fr->request_prepend && verb_matches(fr->event,verb))
+        if ((!fr->env) || (fr->env && env_get(fr->env)))
+          cats(proxy_request,fr->request_prepend);
+    if (verb_matches("data",verb)) *want_data = 1;
+    cat(proxy_request,client_request);
   }
 }
 
 void construct_proxy_response(stralloc *proxy_response,
+                              filter_rule *rules,
                               stralloc *verb,stralloc *arg,
                               stralloc *server_response,
                               int request_received,
                               int *want_data,int *in_data) {
-  void (*func)();
-
   if (*want_data) {
     *want_data = 0;
     if (accepted_data(server_response)) *in_data = 1;
   }
-  if (0 && (func = handle_internally(verb,arg))) {
-    func(proxy_response,verb,arg);
-  } else {
-    copy(proxy_response,server_response);
-  }
-  if (0) munge_response(proxy_response,verb);
-  if (0 && !verb->len && !request_received) munge_timeout(proxy_response);
+  copy(proxy_response,server_response);
+  if (!request_received && !verb->len) copys(verb,TIMEOUT_PSEUDOVERB);
+  munge_response(proxy_response,rules,verb);
 }
 
 void request_response_init(struct request_response *rr) {
@@ -392,14 +416,15 @@ void request_response_init(struct request_response *rr) {
   blank(&proxy_response); rr->proxy_response = &proxy_response;
 }
 
-void handle_client_request(int to_server,struct request_response *rr,
+void handle_client_request(int to_server,filter_rule *rules,
+                           struct request_response *rr,
                            int *want_data,int *in_data) {
   logit('1',rr->client_request);
   if (!*in_data)
     parse_client_request(rr->client_verb,rr->client_arg,rr->client_request);
   logit('2',rr->client_verb);
   logit('3',rr->client_arg);
-  construct_proxy_request(rr->proxy_request,
+  construct_proxy_request(rr->proxy_request,rules,
                           rr->client_verb,rr->client_arg,
                           rr->client_request,
                           want_data,in_data);
@@ -411,10 +436,11 @@ void handle_client_request(int to_server,struct request_response *rr,
   }
 }
 
-void handle_server_response(int to_client,struct request_response *rr,
+void handle_server_response(int to_client,filter_rule *rules,
+                            struct request_response *rr,
                             int *want_data,int *in_data) {
   logit('5',rr->server_response);
-  construct_proxy_response(rr->proxy_response,
+  construct_proxy_response(rr->proxy_response,rules,
                            rr->client_verb,rr->client_arg,
                            rr->server_response,
                            rr->client_request->len,
@@ -438,7 +464,8 @@ void prepare_for_handling(stralloc *to,stralloc *from) {
 }
 
 void read_and_process_until_either_end_closes(int from_client,int to_server,
-                                              int from_server,int to_client) {
+                                              int from_server,int to_client,
+                                              filter_rule *rules) {
   char buf[PIPE_READ_SIZE];
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
@@ -449,10 +476,10 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
 
   for (;;) {
     if (request_needs_handling(&rr))
-      handle_client_request(to_server,&rr,&want_data,&in_data);
+      handle_client_request(to_server,rules,&rr,&want_data,&in_data);
 
     if (response_needs_handling(&rr))
-      handle_server_response(to_client,&rr,&want_data,&in_data);
+      handle_server_response(to_client,rules,&rr,&want_data,&in_data);
 
     want_to_read(from_client,from_server);
     if (!can_read_something(from_client,from_server)) continue;
@@ -486,10 +513,11 @@ void teardown_and_exit(int child,int from_server,int to_server) {
 void be_parent(int from_client,int to_client,
                int from_proxy,int to_proxy,
                int from_server,int to_server,
-               int child) {
+               int child,filter_rule *rules) {
   setup_parent(from_proxy,to_proxy);
   read_and_process_until_either_end_closes(from_client,to_server,
-                                           from_server,to_client);
+                                           from_server,to_client,
+                                           rules);
   teardown_and_exit(child,from_server,to_server);
 }
 
@@ -511,7 +539,7 @@ int main(int argc,char **argv) {
     be_parent(from_client,to_client,
               from_proxy,to_proxy,
               from_server,to_server,
-              child);
+              child,load_filter_rules());
   else if (child == 0)
     be_child(from_proxy,to_proxy,
              from_server,to_server,
