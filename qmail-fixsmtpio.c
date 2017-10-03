@@ -507,9 +507,23 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   return add_rule(rules,env,event,request_prepend,response_line_glob,exitcode,response);
 }
 
+filter_rule *reverse_backwards_rules_to_match_file_order(filter_rule *rules) {
+  filter_rule *rules_in_file_order = 0;
+  filter_rule *temp;
+
+  while (rules) {
+    temp = rules;
+    rules = rules->next;
+    temp->next = rules_in_file_order;
+    rules_in_file_order = temp;
+  }
+
+  return rules_in_file_order;
+}
+
 filter_rule *load_filter_rules() {
   stralloc lines = {0}, line = {0};
-  filter_rule *rules = 0;
+  filter_rule *backwards_rules = 0;
   int i;
 
   if (chdir(auto_qmail) == -1) die_control();
@@ -518,18 +532,18 @@ filter_rule *load_filter_rules() {
     die_control();
   switch (control_readfile(&lines,"control/fixsmtpio",0)) {
     case -1: die_control();
-    case  0: return rules;
+    case  0: return backwards_rules;
   }
 
   for (i = 0; i < lines.len; i++) {
     if (!stralloc_append(&line,i + lines.s)) die_nomem();
     if (lines.s[i] == '\0' || i == lines.len - 1) {
-      rules = load_filter_rule(rules,&line);
+      backwards_rules = load_filter_rule(backwards_rules,&line);
       blank(&line);
     }
   }
 
-  return rules;
+  return reverse_backwards_rules_to_match_file_order(backwards_rules);
 }
 
 void read_and_process_until_either_end_closes(int from_client,int to_server,
