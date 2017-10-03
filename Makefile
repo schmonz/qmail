@@ -20,6 +20,9 @@ alloc_re.o: \
 compile alloc_re.c alloc.h byte.h
 	./compile alloc_re.c
 
+authutils: \
+qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
+
 auto-ccld.sh: \
 conf-cc conf-ld warn-auto.sh
 	( cat warn-auto.sh; \
