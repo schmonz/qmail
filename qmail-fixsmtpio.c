@@ -79,6 +79,7 @@ filter_rule *add_rule(filter_rule *next,
   return next;
 }
 
+stralloc smtpgreeting = {0};
 int exitcode = USE_CHILD_EXITCODE;
 
 void cat(stralloc *to,stralloc *from) {
@@ -124,20 +125,15 @@ int accepted_data(stralloc *response) {
 
 void munge_greeting(stralloc *response) {
   char *x;
-  stralloc greeting = {0};
 
   if ((x = env_get(AUTHUSER))) {
     copys(response,"235 ok, ");
     cats(response,x);
     cats(response,",");
-    cats(response," go ahead (#2.0.0)\r\n");
+    cats(response," go ahead (#2.0.0)");
   } else {
-    if (control_init() == -1) die_control();
-    if (control_rldef(&greeting,"control/smtpgreeting",1,(char *) 0) != 1)
-      die_control();
     copys(response,"220 ");
-    cat(response,&greeting);
-    cats(response,"\r\n");
+    cat(response,&smtpgreeting);
   }
 }
 
@@ -145,9 +141,13 @@ void munge_help(stralloc *response) {
   stralloc munged = {0};
   copys(&munged,"214 qmail-fixsmtpio home page: ");
   cats(&munged, HOMEPAGE);
-  cats(&munged, "\r\n");
   cat(&munged,response);
   copy(response,&munged);
+}
+
+void munge_quit(stralloc *response) {
+  copys(response,"221 ");
+  cat(response,&smtpgreeting);
 }
 
 int verb_matches(char *s,stralloc *sa) {
@@ -202,6 +202,7 @@ void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
       if (0 == str_diff(MODIFY_INTERNALLY,fr->response)) {
         if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
         if (verb_matches("help",verb)) munge_help(line);
+        if (verb_matches("quit",verb)) munge_quit(line);
       } else {
         copys(line,fr->response);
       }
@@ -497,6 +498,9 @@ filter_rule *load_filter_rules() {
   int i;
 
   if (chdir(auto_qmail) == -1) die_control();
+  if (control_init() == -1) die_control();
+  if (control_rldef(&smtpgreeting,"control/smtpgreeting",1,(char *) 0) != 1)
+    die_control();
   switch (control_readfile(&lines,"control/fixsmtpio",0)) {
     case -1: die_control();
     case  0: return rules;
