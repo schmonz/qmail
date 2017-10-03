@@ -1,10 +1,13 @@
 #include <fnmatch.h>
 #include "alloc.h"
+#include "auto_qmail.h"
 #include "case.h"
+#include "control.h"
 #include "env.h"
 #include "error.h"
 #include "fd.h"
 #include "readwrite.h"
+#include "scan.h"
 #include "select.h"
 #include "str.h"
 #include "stralloc.h"
@@ -13,8 +16,6 @@
 
 #define GREETING_PSEUDOVERB "greeting"
 #define TIMEOUT_PSEUDOVERB "timeout"
-#define IGNORE_REQUEST "noop "
-#define SMTP_UNIMPLEMENTED "502 unimplemented (#5.5.1)\r\n"
 #define MODIFY_INTERNALLY "&qmail-fixsmtpio"
 #define AUTHUSER "AUTHUSER"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
@@ -33,6 +34,8 @@ void dieerrflush(char *s) {
 }
 
 void die_usage() { dieerrflush("usage: qmail-fixsmtpio prog [ arg ... ]"); }
+void die_control(){dieerrflush("unable to read controls"); }
+void die_format(){ dieerrflush("unable to parse controls"); }
 void die_pipe()  { dieerrflush("unable to open pipe"); }
 void die_fork()  { dieerrflush("unable to fork"); }
 void die_read()  { dieerrflush("unable to read"); }
@@ -69,20 +72,6 @@ filter_rule *add_rule(filter_rule *next,
   fr->response = response;
   next = fr;
   return next;
-}
-
-filter_rule *load_filter_rules() {
-  filter_rule *rules = 0;
-  rules = add_rule(rules,0,"help",0,"*",0,MODIFY_INTERNALLY);
-  rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"2*",0,MODIFY_INTERNALLY);
-  rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"4*",14,0);
-  rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"5*",15,0);
-  rules = add_rule(rules,AUTHUSER,TIMEOUT_PSEUDOVERB,0,"*",16,"");
-  rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?AUTH*",0,"");
-  rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?STARTTLS",0,"");
-  rules = add_rule(rules,AUTHUSER,"auth",IGNORE_REQUEST,"*",0,SMTP_UNIMPLEMENTED);
-  rules = add_rule(rules,AUTHUSER,"starttls",IGNORE_REQUEST,"*",0,SMTP_UNIMPLEMENTED);
-  return rules;
 }
 
 int exitcode = 0;
@@ -131,17 +120,13 @@ int accepted_data(stralloc *response) {
 void munge_greeting(stralloc *response) {
   char *x;
 
-  if (starts(response,"4")) exitcode = 14;
-  else if (starts(response,"5")) exitcode = 15;
-  else {
-    copys(response,"235 ok");
-    if ((x = env_get(AUTHUSER))) {
-      cats(response,", ");
-      cats(response,x);
-      cats(response,",");
-    }
-    cats(response," go ahead (#2.0.0)\r\n");
+  copys(response,"235 ok");
+  if ((x = env_get(AUTHUSER))) {
+    cats(response,", ");
+    cats(response,x);
+    cats(response,",");
   }
+  cats(response," go ahead (#2.0.0)\r\n");
 }
 
 void munge_help(stralloc *response) {
@@ -183,26 +168,31 @@ void reformat_multiline_response(stralloc *response) {
   change_last_line_fourth_char_to_space(response);
 }
 
+int is_entire_line(stralloc *sa) {
+  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
+}
+
 void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
   stralloc line0 = {0};
   copy(&line0,line);
   if (!stralloc_0(&line0)) die_nomem();
 
   for (filter_rule *fr = rules; fr; fr = fr->next) {
-    if ((!fr->env) || (fr->env && env_get(fr->env))) {
-      if (fr->response && verb_matches(fr->event,verb)) {
-        if (0 == fnmatch(fr->response_line_glob,line0.s,0)) {
-          if (!str_diffn(fr->response,MODIFY_INTERNALLY,sizeof MODIFY_INTERNALLY)) {
-            if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
-            if (verb_matches("help",verb)) munge_help(line);
-          } else {
-            copys(line,fr->response);
-            if (verb_matches(TIMEOUT_PSEUDOVERB,verb)) exitcode = fr->exitcode;
-          }
-        }
+    if (fr->env && !env_get(fr->env)) continue;
+    if (!verb_matches(fr->event,verb)) continue;
+
+    if (0 == fnmatch(fr->response_line_glob,line0.s,0)) {
+      if (fr->exitcode) exitcode = fr->exitcode;
+      if (!fr->response) continue;
+      if (0 == str_diff(MODIFY_INTERNALLY,fr->response)) {
+        if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
+        if (verb_matches("help",verb)) munge_help(line);
+      } else {
+        copys(line,fr->response);
       }
     }
   }
+  if (line->len) if (!is_entire_line(line)) cats(line,"\r\n");
 }
 
 void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
@@ -220,10 +210,6 @@ void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
 
   reformat_multiline_response(&munged);
   copy(response,&munged);
-}
-
-int is_entire_line(stralloc *sa) {
-  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
 int could_be_final_response_line(stralloc *line) {
@@ -450,6 +436,62 @@ void prepare_for_handling(stralloc *to,stralloc *from) {
   blank(from);
 }
 
+char *get_next_field(int *start,stralloc *line) {
+  stralloc temp = {0};
+  for (int i = *start; i < line->len; i++) {
+    if (!stralloc_append(&temp,i + line->s)) die_nomem();
+    if (line->s[i] == ':' || i == line->len - 1) {
+      *start = i + 1;
+      temp.s[temp.len - 1] = '\0';
+      return temp.s;
+    }
+  }
+  return 0;
+}
+
+filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
+  int pos = 0;
+  char *env                = get_next_field(&pos,line);
+  char *event              = get_next_field(&pos,line);
+  char *request_prepend    = get_next_field(&pos,line);
+  char *response_line_glob = get_next_field(&pos,line);
+  char *exitcode_str       = get_next_field(&pos,line);
+  char *response           = get_next_field(&pos,line);
+  int exitcode;
+
+  if (0 == str_len(env))                env = 0;
+  if (0 == str_len(event))              die_format();
+  if (0 == str_len(request_prepend))    request_prepend = 0;
+  if (0 == str_len(response_line_glob)) die_format();
+  if (0 == str_len(exitcode_str))       exitcode = 0;
+  else if (!scan_ulong(exitcode_str,&exitcode)) die_format();
+  if (!response || 0 == str_len(response))
+    ;
+
+  return add_rule(rules,env,event,request_prepend,response_line_glob,exitcode,response);
+}
+
+filter_rule *load_filter_rules() {
+  stralloc lines = {0}, line = {0};
+  filter_rule *rules = 0;
+
+  if (chdir(auto_qmail) == -1) die_control();
+  switch (control_readfile(&lines,"control/fixsmtpio",0)) {
+    case -1: die_control();
+    case  0: return rules;
+  }
+
+  for (int i = 0; i < lines.len; i++) {
+    if (!stralloc_append(&line,i + lines.s)) die_nomem();
+    if (lines.s[i] == '\0' || i == lines.len - 1) {
+      rules = load_filter_rule(rules,&line);
+      blank(&line);
+    }
+  }
+
+  return rules;
+}
+
 void read_and_process_until_either_end_closes(int from_client,int to_server,
                                               int from_server,int to_client,
                                               filter_rule *rules) {
@@ -467,6 +509,8 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (response_needs_handling(&rr))
       handle_server_response(to_client,rules,&rr,&want_data,&in_data);
+
+    if (exitcode) break;
 
     want_to_read(from_client,from_server);
     if (!can_read_something(from_client,from_server)) continue;
