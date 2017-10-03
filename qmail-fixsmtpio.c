@@ -137,6 +137,16 @@ void munge_greeting(stralloc *response) {
   }
 }
 
+void munge_helo(stralloc *response) {
+  copys(response,"250 ");
+  cat(response,&smtpgreeting);
+}
+
+void munge_ehlo(stralloc *response,int lineno) {
+  if (lineno) return;
+  munge_helo(response);
+}
+
 void munge_help(stralloc *response) {
   stralloc munged = {0};
   copys(&munged,"214 qmail-fixsmtpio home page: ");
@@ -186,7 +196,8 @@ int is_entire_line(stralloc *sa) {
   return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
-void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
+void munge_response_line(stralloc *line,int lineno,
+                         filter_rule *rules,stralloc *verb) {
   stralloc line0 = {0};
   filter_rule *fr;
   copy(&line0,line);
@@ -201,6 +212,8 @@ void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
       if (!fr->response) continue;
       if (0 == str_diff(MODIFY_INTERNALLY,fr->response)) {
         if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
+        if (verb_matches("ehlo",verb)) munge_ehlo(line,lineno);
+        if (verb_matches("helo",verb)) munge_helo(line);
         if (verb_matches("help",verb)) munge_help(line);
         if (verb_matches("quit",verb)) munge_quit(line);
       } else {
@@ -214,12 +227,13 @@ void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
 void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
   stralloc munged = {0};
   stralloc line = {0};
+  int lineno = 0;
   int i;
 
   for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
-      munge_response_line(&line,rules,verb);
+      munge_response_line(&line,lineno++,rules,verb);
       cat(&munged,&line);
       blank(&line);
     }
@@ -544,7 +558,7 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&partial_request,from_client,buf,sizeof buf)) {
-        munge_response_line(&partial_request,rules,&client_eof);
+        munge_response_line(&partial_request,0,rules,&client_eof);
         break;
       }
       if (is_entire_line(&partial_request))
