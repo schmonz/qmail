@@ -85,7 +85,11 @@ The rule applies to every matching line of the server response.
 is a numeric code with which
 .B qmail-fixsmtpio
 is to immediately exit.
-If empty, the program exits 0 when the client or server disconnects.
+If empty, it exits when it normally would.
+If no rules override it,
+.B qmail-fixsmtpio
+exits with the same code as
+.IR prog .
 
 .B response
 (optional)
