@@ -150,7 +150,8 @@ int verb_matches(char *s,stralloc *sa) {
 
 void change_every_line_fourth_char_to_dash(stralloc *multiline) {
   int pos = 0;
-  for (int i = 0; i < multiline->len; i++) {
+  int i;
+  for (i = 0; i < multiline->len; i++) {
     if (multiline->s[i] == '\n') pos = -1;
     if (pos == 3) multiline->s[i] = '-';
     pos++;
@@ -159,7 +160,8 @@ void change_every_line_fourth_char_to_dash(stralloc *multiline) {
 
 void change_last_line_fourth_char_to_space(stralloc *multiline) {
   int pos = 0;
-  for (int i = multiline->len - 2; i >= 0; i--) {
+  int i;
+  for (i = multiline->len - 2; i >= 0; i--) {
     if (multiline->s[i] == '\n') {
       pos = i + 1;
       break;
@@ -179,10 +181,11 @@ int is_entire_line(stralloc *sa) {
 
 void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
   stralloc line0 = {0};
+  filter_rule *fr;
   copy(&line0,line);
   if (!stralloc_0(&line0)) die_nomem();
 
-  for (filter_rule *fr = rules; fr; fr = fr->next) {
+  for (fr = rules; fr; fr = fr->next) {
     if (fr->env && !env_get(fr->env)) continue;
     if (!verb_matches(fr->event,verb)) continue;
 
@@ -203,8 +206,9 @@ void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
 void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
   stralloc munged = {0};
   stralloc line = {0};
+  int i;
 
-  for (int i = 0; i < response->len; i++) {
+  for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
       munge_response_line(&line,rules,verb);
@@ -224,8 +228,9 @@ int could_be_final_response_line(stralloc *line) {
 int is_entire_response(stralloc *response) {
   stralloc lastline = {0};
   int pos = 0;
+  int i;
   if (!is_entire_line(response)) return 0;
-  for (int i = response->len - 2; i >= 0; i--) {
+  for (i = response->len - 2; i >= 0; i--) {
     if (response->s[i] == '\n') {
       pos = i + 1;
       break;
@@ -350,11 +355,13 @@ void construct_proxy_request(stralloc *proxy_request,
                              stralloc *verb,stralloc *arg,
                              stralloc *client_request,
                              int *want_data,int *in_data) {
+  filter_rule *fr;
+
   if (*in_data) {
     copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
-    for (filter_rule *fr = rules; fr; fr = fr->next)
+    for (fr = rules; fr; fr = fr->next)
       if (fr->request_prepend && verb_matches(fr->event,verb))
         if ((!fr->env) || (fr->env && env_get(fr->env)))
           cats(proxy_request,fr->request_prepend);
@@ -443,7 +450,8 @@ void prepare_for_handling(stralloc *to,stralloc *from) {
 
 char *get_next_field(int *start,stralloc *line) {
   stralloc temp = {0};
-  for (int i = *start; i < line->len; i++) {
+  int i;
+  for (i = *start; i < line->len; i++) {
     if (!stralloc_append(&temp,i + line->s)) die_nomem();
     if (line->s[i] == ':' || i == line->len - 1) {
       *start = i + 1;
@@ -479,6 +487,7 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
 filter_rule *load_filter_rules() {
   stralloc lines = {0}, line = {0};
   filter_rule *rules = 0;
+  int i;
 
   if (chdir(auto_qmail) == -1) die_control();
   switch (control_readfile(&lines,"control/fixsmtpio",0)) {
@@ -486,7 +495,7 @@ filter_rule *load_filter_rules() {
     case  0: return rules;
   }
 
-  for (int i = 0; i < lines.len; i++) {
+  for (i = 0; i < lines.len; i++) {
     if (!stralloc_append(&line,i + lines.s)) die_nomem();
     if (lines.s[i] == '\0' || i == lines.len - 1) {
       rules = load_filter_rule(rules,&line);

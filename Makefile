@@ -1135,8 +1135,8 @@ qmail-control.9 conf-break conf-spawn
 	> qmail-control.5
 
 qmail-fixsmtpio: \
-load qmail-fixsmtpio.o auto_qmail.o control.o substdio.a str.a error.a fd.a sig.a stralloc.a alloc.a getln.a wait.a case.a env.a getln.a open.a fs.a
-	./load qmail-fixsmtpio auto_qmail.o control.o substdio.a str.a error.a fd.a sig.a stralloc.a alloc.a wait.a case.a env.a getln.a open.a fs.a
+load qmail-fixsmtpio.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio.o: \
 compile qmail-fixsmtpio.c alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
