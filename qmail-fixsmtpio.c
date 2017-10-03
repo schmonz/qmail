@@ -20,6 +20,7 @@
 #define AUTHUSER "AUTHUSER"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
 #define PIPE_READ_SIZE SUBSTDIO_INSIZE
+#define USE_CHILD_EXITCODE -1
 
 void die() { _exit(1); }
 
@@ -77,7 +78,7 @@ filter_rule *add_rule(filter_rule *next,
   return next;
 }
 
-int exitcode = 0;
+int exitcode = USE_CHILD_EXITCODE;
 
 void cat(stralloc *to,stralloc *from) {
   if (!stralloc_cat(to,from)) die_nomem();
@@ -513,7 +514,7 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
     if (response_needs_handling(&rr))
       handle_server_response(to_client,rules,&rr,&want_data,&in_data);
 
-    if (exitcode) break;
+    if (exitcode != USE_CHILD_EXITCODE && exitcode) break;
 
     want_to_read(from_client,from_server);
     if (!can_read_something(from_client,from_server)) continue;
@@ -541,7 +542,8 @@ void teardown_and_exit(int child,int from_server,int to_server) {
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
-  _exit(exitcode);
+  if (exitcode == USE_CHILD_EXITCODE) exit(wait_exitcode(wstat));
+  else _exit(exitcode);
 }
 
 void be_parent(int from_client,int to_client,
