@@ -418,6 +418,7 @@ void doprotocol(struct protocol p) {
 
 int main(int argc,char **argv) {
   char *protocol;
+  int i;
 
   sig_alarmcatch(die);
   sig_pipeignore();
@@ -428,7 +429,7 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  for (int i = 0; p[i].name; ++i)
+  for (i = 0; p[i].name; ++i)
     if (case_equals(p[i].name,protocol))
       doprotocol(p[i]);
   die_usage();
