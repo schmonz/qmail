@@ -64,6 +64,7 @@ int main(int argc,char **argv) {
   int exitcode;
   int opt;
   int tries;
+  int i;
 
   tries = 0;
   while ((opt = getopt(argc,argv,"t:")) != opteof) {
@@ -80,7 +81,7 @@ int main(int argc,char **argv) {
 
   if (!*argv) die_usage();
 
-  for (int i = 1; keep_trying(i,tries); i++) {
+  for (i = 1; keep_trying(i,tries); i++) {
     exitcode = try(i,argv);
     if (stop_trying(exitcode)) _exit(exitcode);
   }
