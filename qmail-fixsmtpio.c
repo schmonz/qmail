@@ -150,7 +150,8 @@ void munge_ehlo(stralloc *response,int lineno) {
 void munge_help(stralloc *response) {
   stralloc munged = {0};
   copys(&munged,"214 qmail-fixsmtpio home page: ");
-  cats(&munged, HOMEPAGE);
+  cats(&munged,HOMEPAGE);
+  cats(&munged,"\r\n");
   cat(&munged,response);
   copy(response,&munged);
 }
