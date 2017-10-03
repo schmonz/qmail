@@ -38,6 +38,9 @@ void die_control(){dieerrflush("unable to read controls"); }
 void die_format(){ dieerrflush("unable to parse controls"); }
 void die_pipe()  { dieerrflush("unable to open pipe"); }
 void die_fork()  { dieerrflush("unable to fork"); }
+void die_exec()  { dieerrflush("unable to exec"); }
+void die_wait()  { dieerrflush("unable to wait for child"); }
+void die_crash() { dieerrflush("aack, child crashed"); }
 void die_read()  { dieerrflush("unable to read"); }
 void die_write() { dieerrflush("unable to write"); }
 void die_nomem() { dieerrflush("out of memory"); }
@@ -255,7 +258,7 @@ void setup_child(int from_proxy,int to_server,
 
 void exec_child_and_never_return(char **argv) {
   execvp(*argv,argv);
-  die();
+  die_exec();
 }
 
 void be_child(int from_proxy,int to_proxy,
@@ -535,8 +538,8 @@ void teardown_and_exit(int child,int from_server,int to_server) {
   close(from_server);
   close(to_server);
 
-  if (wait_pid(&wstat,child) == -1) die();
-  if (wait_crashed(wstat)) die();
+  if (wait_pid(&wstat,child) == -1) die_wait();
+  if (wait_crashed(wstat)) die_crash();
 
   _exit(exitcode);
 }
