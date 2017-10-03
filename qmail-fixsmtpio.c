@@ -124,14 +124,21 @@ int accepted_data(stralloc *response) {
 
 void munge_greeting(stralloc *response) {
   char *x;
+  stralloc greeting = {0};
 
-  copys(response,"235 ok");
   if ((x = env_get(AUTHUSER))) {
-    cats(response,", ");
+    copys(response,"235 ok, ");
     cats(response,x);
     cats(response,",");
+    cats(response," go ahead (#2.0.0)\r\n");
+  } else {
+    if (control_init() == -1) die_control();
+    if (control_rldef(&greeting,"control/smtpgreeting",1,(char *) 0) != 1)
+      die_control();
+    copys(response,"220 ");
+    cat(response,&greeting);
+    cats(response,"\r\n");
   }
-  cats(response," go ahead (#2.0.0)\r\n");
 }
 
 void munge_help(stralloc *response) {
