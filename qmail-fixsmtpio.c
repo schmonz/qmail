@@ -78,8 +78,8 @@ filter_rule *load_filter_rules() {
   rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"4*",14,0);
   rules = add_rule(rules,AUTHUSER,GREETING_PSEUDOVERB,0,"5*",15,0);
   rules = add_rule(rules,AUTHUSER,TIMEOUT_PSEUDOVERB,0,"*",16,"");
-  //rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?AUTH*",0,"");
-  //rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?STARTTLS",0,"");
+  rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?AUTH*",0,"");
+  rules = add_rule(rules,AUTHUSER,"ehlo",0,"250?STARTTLS",0,"");
   rules = add_rule(rules,AUTHUSER,"auth",IGNORE_REQUEST,"*",0,SMTP_UNIMPLEMENTED);
   rules = add_rule(rules,AUTHUSER,"starttls",IGNORE_REQUEST,"*",0,SMTP_UNIMPLEMENTED);
   return rules;
@@ -153,34 +153,6 @@ void munge_help(stralloc *response) {
   copy(response,&munged);
 }
 
-void munge_ehlo(stralloc *response) {
-  stralloc munged = {0};
-  stralloc line = {0};
-  stralloc subline = {0};
-
-  char *block_these[] = {
-    "AUTH ",
-    0,
-  };
-
-  for (int i = 0; i < response->len; i++) {
-    if (!stralloc_append(&line,i + response->s)) die_nomem();
-    if (response->s[i] == '\n' || i == response->len - 1) {
-      copyb(&subline,line.s + 4,line.len - 4);
-      int keep = 1;
-      char *s;
-      for (int j = 0; (s = block_these[j]); j++)
-        if (starts(&line,"250"))
-          if (starts(&subline,s))
-            keep = 0;
-      if (keep) cat(&munged,&line);
-      blank(&line);
-      blank(&subline);
-    }
-  }
-  copy(response,&munged);
-}
-
 int verb_matches(char *s,stralloc *sa) {
   if (!sa->len) return 0;
   return !case_diffb(s,sa->len,sa->s);
@@ -211,27 +183,43 @@ void reformat_multiline_response(stralloc *response) {
   change_last_line_fourth_char_to_space(response);
 }
 
-void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
-  stralloc resp0 = {0};
-  copy(&resp0,response);
-  if (!stralloc_0(&resp0)) die_nomem();
+void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
+  stralloc line0 = {0};
+  copy(&line0,line);
+  if (!stralloc_0(&line0)) die_nomem();
+
   for (filter_rule *fr = rules; fr; fr = fr->next) {
     if ((!fr->env) || (fr->env && env_get(fr->env))) {
       if (fr->response && verb_matches(fr->event,verb)) {
-        if (0 == fnmatch(fr->response_line_glob,resp0.s,0)) {
+        if (0 == fnmatch(fr->response_line_glob,line0.s,0)) {
           if (!str_diffn(fr->response,MODIFY_INTERNALLY,sizeof MODIFY_INTERNALLY)) {
-            if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(response);
-            if (verb_matches("help",verb)) munge_help(response);
-            if (verb_matches("ehlo",verb)) munge_ehlo(response);
+            if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
+            if (verb_matches("help",verb)) munge_help(line);
           } else {
-            copys(response,fr->response);
+            copys(line,fr->response);
             if (verb_matches(TIMEOUT_PSEUDOVERB,verb)) exitcode = fr->exitcode;
           }
         }
       }
     }
   }
-  reformat_multiline_response(response);
+}
+
+void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
+  stralloc munged = {0};
+  stralloc line = {0};
+
+  for (int i = 0; i < response->len; i++) {
+    if (!stralloc_append(&line,i + response->s)) die_nomem();
+    if (response->s[i] == '\n' || i == response->len - 1) {
+      munge_response_line(&line,rules,verb);
+      cat(&munged,&line);
+      blank(&line);
+    }
+  }
+
+  reformat_multiline_response(&munged);
+  copy(response,&munged);
 }
 
 int is_entire_line(stralloc *sa) {
