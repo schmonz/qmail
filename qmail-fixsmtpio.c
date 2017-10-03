@@ -542,7 +542,7 @@ void teardown_and_exit(int child,int from_server,int to_server) {
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
-  if (exitcode == USE_CHILD_EXITCODE) exit(wait_exitcode(wstat));
+  if (exitcode == USE_CHILD_EXITCODE) _exit(wait_exitcode(wstat));
   else _exit(exitcode);
 }
 
