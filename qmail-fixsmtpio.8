@@ -24,7 +24,7 @@ It can also be used to change the behavior of a public SMTP service.
 
 By default,
 .B qmail-fixsmtpio
-should not change observable behavior (modulo EXIT CODES, below).
+should not change observable behavior.
 If you observe that it does, please report the bug.
 .SH "EXIT CODES"
 On most any failure,
@@ -34,23 +34,13 @@ and
 exit 1, which is the same code
 .B checkpassword
 uses for incorrect passwords.
+To communicate status back to
+.BR qmail-authup ,
+configure
 .B qmail-fixsmtpio
-almost always exits 0 instead, to avoid confusing
-.BR qmail-authup .
-
-Exceptions:
-.TP
-.B 14
-.I prog
-sent a greeting starting with 4xx.
-.TP
-.B 15
-.I prog
-sent a greeting starting with 5xx.
-.TP
-.B 16
-.I prog
-timed out.
+to exit with unique codes for certain errors,
+and with 0 otherwise.
+See EXAMPLES.
 
 .SH "ENVIRONMENT VARIABLES"
 Most filter rules typically apply iff
@@ -118,8 +108,8 @@ If no such routine exists, the response is sent as is.
  # always prepend authutils link to HELP message
  :help::*::&qmail-fixsmtpio
 
- # if we've already authenticated, replace greeting
- AUTHUSER:greeting::2*::&qmail-fixsmtpio
+ # if client closes the connection, tell qmail-authup to be happy
+ AUTHUSER:clienteof::*:0
 
  # if server greets us unhappily, notify qmail-authup
  AUTHUSER:greeting::4*:14
@@ -127,6 +117,9 @@ If no such routine exists, the response is sent as is.
 
  # if server times out, hide message (qmail-authup has its own)
  AUTHUSER:timeout::*:16:
+
+ # if we've already authenticated, replace greeting
+ AUTHUSER:greeting::2*::&qmail-fixsmtpio
 
  # don't advertise AUTH or STARTTLS
  AUTHUSER:ehlo::250?AUTH*::

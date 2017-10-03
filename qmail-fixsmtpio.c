@@ -16,6 +16,7 @@
 
 #define GREETING_PSEUDOVERB "greeting"
 #define TIMEOUT_PSEUDOVERB "timeout"
+#define CLIENTEOF_PSEUDOVERB "clienteof"
 #define MODIFY_INTERNALLY "&qmail-fixsmtpio"
 #define AUTHUSER "AUTHUSER"
 #define HOMEPAGE "https://schmonz.com/qmail/authutils"
@@ -186,7 +187,7 @@ void munge_response_line(stralloc *line,filter_rule *rules,stralloc *verb) {
     if (!verb_matches(fr->event,verb)) continue;
 
     if (0 == fnmatch(fr->response_line_glob,line0.s,0)) {
-      if (fr->exitcode) exitcode = fr->exitcode;
+      if (fr->exitcode != USE_CHILD_EXITCODE) exitcode = fr->exitcode;
       if (!fr->response) continue;
       if (0 == str_diff(MODIFY_INTERNALLY,fr->response)) {
         if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
@@ -467,7 +468,7 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   if (0 == str_len(event))              die_format();
   if (0 == str_len(request_prepend))    request_prepend = 0;
   if (0 == str_len(response_line_glob)) die_format();
-  if (0 == str_len(exitcode_str))       exitcode = 0;
+  if (0 == str_len(exitcode_str))       exitcode = USE_CHILD_EXITCODE;
   else if (!scan_ulong(exitcode_str,&exitcode)) die_format();
   if (!response || 0 == str_len(response))
     ;
@@ -502,8 +503,10 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
   char buf[PIPE_READ_SIZE];
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
+  stralloc client_eof = {0};
   request_response rr;
 
+  copys(&client_eof,CLIENTEOF_PSEUDOVERB);
   request_response_init(&rr);
   copys(rr.client_verb,GREETING_PSEUDOVERB);
 
@@ -514,13 +517,16 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
     if (response_needs_handling(&rr))
       handle_server_response(to_client,rules,&rr,&want_data,&in_data);
 
-    if (exitcode != USE_CHILD_EXITCODE && exitcode) break;
+    if (exitcode != USE_CHILD_EXITCODE) break;
 
     want_to_read(from_client,from_server);
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(&partial_request,from_client,buf,sizeof buf)) break;
+      if (!safeappend(&partial_request,from_client,buf,sizeof buf)) {
+        munge_response_line(&partial_request,rules,&client_eof);
+        break;
+      }
       if (is_entire_line(&partial_request))
         prepare_for_handling(rr.client_request,&partial_request);
     }
