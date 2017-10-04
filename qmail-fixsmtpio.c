@@ -404,7 +404,7 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
   copy(proxy_response,server_response);
-  if (!request_received && !verb->len) copys(verb,TIMEOUT_PSEUDOVERB);
+  if (!*in_data && !request_received && !verb->len) copys(verb,TIMEOUT_PSEUDOVERB);
   munge_response(proxy_response,rules,verb);
 }
 
