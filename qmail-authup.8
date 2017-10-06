@@ -42,6 +42,13 @@ or
 .B qmail-pop3d
 under the UID of the authenticated user.
 
+If
+.B QMAILQUEUE
+is set, the designated
+.B qmail-queue
+wrapper will also run as the authenticated user.
+This can be useful for filtering.
+
 .B qmail-authup
 expects descriptor 0 to read from the network
 and descriptor 1 to write to the network.
@@ -69,19 +76,8 @@ should be used only within
 a secure network.
 Otherwise an eavesdropper can steal passwords.
 .SH "ENVIRONMENT VARIABLES"
-Child processes can see the authenticated user in
+The authenticated user is available to child processes as
 .BR AUTHUSER .
-
-If supported by
-.B qmail-smtpd
-or
-.BR ofmipd ,
-setting
-.B QMAILQUEUE
-will designate a
-.B qmail-queue
-wrapper.
-It will run as the authenticated user.
 .SH "CONTROL FILES"
 .TP 5
 .I smtpgreeting / pop3greeting
