@@ -363,6 +363,7 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
 }
 
 void logit(char logprefix,stralloc *sa) {
+  if (!env_get("FIXSMTPIODEBUG")) return;
   substdio_putflush(&sserr,&logprefix,1);
   substdio_putsflush(&sserr,": ");
   substdio_putflush(&sserr,sa->s,sa->len);
