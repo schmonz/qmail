@@ -333,7 +333,7 @@ void smtp_auth(char *arg) {
 }
 
 void smtp_help() {
-  smtp_out("214 qmail-authup home page: https://schmonz.com/qmail/authutils");
+  smtp_out("214 qmail-authup home page: https://schmonz.com/qmail/acceptutils");
 }
 
 struct commands pop3commands[] = {

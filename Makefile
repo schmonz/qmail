@@ -4,6 +4,9 @@ SHELL=/bin/sh
 
 default: it
 
+acceptutils: \
+qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
+
 addresses.0: \
 addresses.5
 	nroff -man addresses.5 > addresses.0
@@ -19,9 +22,6 @@ compile alloc.c alloc.h error.h
 alloc_re.o: \
 compile alloc_re.c alloc.h byte.h
 	./compile alloc_re.c
-
-authutils: \
-qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
 
 auto-ccld.sh: \
 conf-cc conf-ld warn-auto.sh

@@ -19,7 +19,7 @@
 #define CLIENTEOF_PSEUDOVERB "clienteof"
 #define MODIFY_INTERNALLY "&qmail-fixsmtpio"
 #define AUTHUSER "AUTHUSER"
-#define HOMEPAGE "https://schmonz.com/qmail/authutils"
+#define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
 #define PIPE_READ_SIZE SUBSTDIO_INSIZE
 #define USE_CHILD_EXITCODE -1
 
