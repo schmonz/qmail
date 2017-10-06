@@ -96,7 +96,16 @@ void authup_die(const char *name) {
   e[i].die();
 }
 
-void die_usage() { puts("usage: qmail-authup <smtp|pop3> prog\n"); flush(); die(); }
+char sserrbuf[128];
+substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
+
+void errflush(char *s) {
+  substdio_puts(&sserr,s);
+  substdio_puts(&sserr,"\n");
+  substdio_flush(&sserr);
+}
+
+void die_usage() { errflush("usage: qmail-authup <smtp|pop3> prog"); die(); }
 
 void smtp_err_authoriz() { smtp_out("530 qmail-authup authentication required (#5.7.1)"); }
 void pop3_err_authoriz() { pop3_err("qmail-authup authorization first"); }
@@ -143,6 +152,11 @@ void exit_according_to_child_exit(int exitcode) {
   _exit(0);
 }
 
+void logtry(char *username) {
+  substdio_puts(&sserr,"qmail-authup: login attempt by ");
+  errflush(username);
+}
+
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
@@ -151,13 +165,14 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   close(3);
   if (pipe(pi) == -1) authup_die("pipe");
   if (pi[0] != 3) authup_die("pipe");
-  switch(child = fork()) {
+  switch((child = fork())) {
     case -1:
       authup_die("fork");
     case 0:
       close(pi[1]);
       sig_pipedefault();
       if (!stralloc_0(username)) authup_die("nomem");
+      logtry(username->s);
       if (!env_put2("AUTHUSER",username->s)) authup_die("nomem");
       execvp(*childargs,childargs);
       _exit(1);
@@ -398,8 +413,7 @@ int should_greet() {
   char *x;
   int r;
 
-  x = env_get("REUP");
-  if (!x) return 1;
+  if (!(x = env_get("REUP"))) return 1;
   if (!scan_ulong(x,&r)) return 1;
   if (r > 1) return 0;
   return 1;
