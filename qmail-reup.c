@@ -22,18 +22,28 @@ void die_usage() { errflush("usage: qmail-reup [ -t tries ] prog"); die(); }
 void die_fork()  { errflush("qmail-reup unable to fork"); die(); }
 void die_nomem() { errflush("qmail-reup out of memory"); die(); }
 
+void logtry(char *try,char *progname) {
+  substdio_puts(&sserr,"qmail-reup: try ");
+  substdio_puts(&sserr,try);
+  substdio_puts(&sserr,": ");
+  substdio_puts(&sserr,progname);
+  substdio_puts(&sserr,"\n");
+  substdio_flush(&sserr);
+}
+
 int try(int attempt,char **childargs) {
   int child;
   int wstat;
   char reup[FMT_ULONG];
 
-  switch (child = fork()) {
+  switch ((child = fork())) {
     case -1:
       die_fork();
       break;
     case 0:
       str_copy(reup + fmt_ulong(reup,attempt),"");
       if (!env_put2("REUP",reup)) die_nomem();
+      logtry(reup,*childargs);
       execvp(*childargs,childargs);
       die();
   }
@@ -53,7 +63,10 @@ int keep_trying(int attempt,int max) {
 int stop_trying(int exitcode) {
   switch (exitcode) {
     case 0:
+      errflush("qmail-reup: success");
+      return 1;
     case 12:
+      errflush("qmail-reup: permanent failure");
       return 1;
     default:
       return 0;
@@ -86,5 +99,6 @@ int main(int argc,char **argv) {
     if (stop_trying(exitcode)) _exit(exitcode);
   }
 
+  errflush("qmail-reup: no more tries");
   _exit(exitcode);
 }
