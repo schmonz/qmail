@@ -14,28 +14,42 @@
 #include "substdio.h"
 #include "wait.h"
 
-#define GREETING_PSEUDOVERB "greeting"
-#define TIMEOUT_PSEUDOVERB "timeout"
-#define CLIENTEOF_PSEUDOVERB "clienteof"
-#define MODIFY_INTERNALLY "&qmail-fixsmtpio"
-#define AUTHUSER "AUTHUSER"
-#define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
-#define PIPE_READ_SIZE SUBSTDIO_INSIZE
-#define USE_CHILD_EXITCODE -1
+#define HOMEPAGE             "https://schmonz.com/qmail/acceptutils"
+#define PROGNAME             "qmail-fixsmtpio"
+
+#define MUNGE_INTERNALLY     "&" PROGNAME
+#define PSEUDOVERB_GREETING  "greeting"
+#define PSEUDOVERB_TIMEOUT   "timeout"
+#define PSEUDOVERB_CLIENTEOF "clienteof"
+
+#define USE_CHILD_EXITCODE   -1
+
+#define PIPE_READ_SIZE       SUBSTDIO_INSIZE
 
 void die() { _exit(1); }
 
 char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void dieerrflush(char *s) {
-  substdio_putsflush(&sserr,"qmail-fixsmtpio: ");
+void errflush(char *s) {
+  substdio_putsflush(&sserr,PROGNAME ": ");
   substdio_putsflush(&sserr,s);
   substdio_putsflush(&sserr,"\n");
-  die();
 }
 
-void die_usage() { dieerrflush("usage: qmail-fixsmtpio prog [ arg ... ]"); }
+void dieerrflush(char *s) { errflush(s); die(); }
+
+/*
+void die_format(stralloc *line,char *s) {
+  errflush("unable to parse control/fixsmtpio: ");
+  substdio_putsflush(&sserr,s);
+  substdio_putsflush(&sserr,": ");
+  substdio_putflush(&sserr,line->s,line->len);
+  substdio_putsflush(&sserr,"\n");
+}
+*/
+
+void die_usage() { dieerrflush("usage: " PROGNAME " prog [ arg ... ]"); }
 void die_control(){dieerrflush("unable to read controls"); }
 void die_format(){ dieerrflush("unable to parse controls"); }
 void die_pipe()  { dieerrflush("unable to open pipe"); }
@@ -68,7 +82,8 @@ typedef struct filter_rule {
 
 filter_rule *add_rule(filter_rule *next,
                       char *env,char *event,char *request_prepend,
-                      char *response_line_glob,int exitcode,char *response) {
+                      char *response_line_glob,int exitcode,
+                      char *response) {
   filter_rule *fr = (filter_rule *)alloc(sizeof(filter_rule));
   if (!fr) die_nomem();
   fr->next = next;
@@ -79,7 +94,6 @@ filter_rule *add_rule(filter_rule *next,
   return next;
 }
 
-stralloc smtpgreeting = {0};
 int exitcode = USE_CHILD_EXITCODE;
 
 void cat(stralloc *to,stralloc *from) {
@@ -123,42 +137,27 @@ int accepted_data(stralloc *response) {
   return starts(response,"354 ");
 }
 
-void munge_greeting(stralloc *response) {
-  char *x;
-
-  if ((x = env_get(AUTHUSER))) {
-    copys(response,"235 ok, ");
-    cats(response,x);
-    cats(response,",");
-    cats(response," go ahead (#2.0.0)");
-  } else {
-    copys(response,"220 ");
-    cat(response,&smtpgreeting);
-  }
+void munge_greeting(stralloc *response,int lineno,stralloc *greeting) {
+  copys(response,"220 "); cat(response,greeting);
 }
 
-void munge_helo(stralloc *response) {
-  copys(response,"250 ");
-  cat(response,&smtpgreeting);
+void munge_helo(stralloc *response,int lineno,stralloc *greeting) {
+  copys(response,"250 "); cat(response,greeting);
 }
 
-void munge_ehlo(stralloc *response,int lineno) {
-  if (lineno) return;
-  munge_helo(response);
+void munge_ehlo(stralloc *response,int lineno,stralloc *greeting) {
+  if (lineno) return; munge_helo(response,lineno,greeting);
 }
 
-void munge_help(stralloc *response) {
+void munge_help(stralloc *response,int lineno,stralloc *greeting) {
   stralloc munged = {0};
-  copys(&munged,"214 qmail-fixsmtpio home page: ");
-  cats(&munged,HOMEPAGE);
-  cats(&munged,"\r\n");
+  copys(&munged,"214 " PROGNAME " home page: " HOMEPAGE "\r\n");
   cat(&munged,response);
   copy(response,&munged);
 }
 
-void munge_quit(stralloc *response) {
-  copys(response,"221 ");
-  cat(response,&smtpgreeting);
+void munge_quit(stralloc *response,int lineno,stralloc *greeting) {
+  copys(response,"221 "); cat(response,greeting);
 }
 
 int verb_matches(char *s,stralloc *sa) {
@@ -197,7 +196,46 @@ int is_entire_line(stralloc *sa) {
   return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
-void munge_response_line(stralloc *line,int lineno,
+struct munge_command {
+  char *event;
+  void (*munger)();
+};
+
+struct munge_command m[] = {
+  { PSEUDOVERB_GREETING, munge_greeting }
+, { "ehlo", munge_ehlo }
+, { "helo", munge_helo }
+, { "help", munge_help }
+, { "quit", munge_quit }
+, { 0, 0 }
+};
+
+void *munge_line_fn(stralloc *verb) {
+  int i;
+  for (i = 0; m[i].event; ++i)
+    if (verb_matches(m[i].event,verb))
+      return m[i].munger;
+  return 0;
+}
+
+void munge_line_internally(stralloc *line,int lineno,
+                           stralloc *greeting,stralloc *verb) {
+
+  void (*munger)() = munge_line_fn(verb);
+  if (munger) munger(line,lineno,greeting);
+  // XXX else we should have died at parse time. log this shit!
+  // XXX die at parse time
+}
+
+int string_matches_glob(char *glob,char *string) {
+  return 0 == fnmatch(glob,string,0);
+}
+
+int want_munge_internally(char *response) {
+  return 0 == str_diff(MUNGE_INTERNALLY,response);
+}
+
+void munge_response_line(stralloc *line,int lineno,stralloc *greeting,
                          filter_rule *rules,stralloc *verb) {
   stralloc line0 = {0};
   filter_rule *fr;
@@ -205,27 +243,24 @@ void munge_response_line(stralloc *line,int lineno,
   if (!stralloc_0(&line0)) die_nomem();
 
   for (fr = rules; fr; fr = fr->next) {
-    if (fr->env && !env_get(fr->env)) continue;
     if (!verb_matches(fr->event,verb)) continue;
+    if (fr->env && !env_get(fr->env)) continue;
 
-    if (0 == fnmatch(fr->response_line_glob,line0.s,0)) {
+    if (string_matches_glob(fr->response_line_glob,line0.s)) {
       if (fr->exitcode != USE_CHILD_EXITCODE) exitcode = fr->exitcode;
       if (!fr->response) continue;
-      if (0 == str_diff(MODIFY_INTERNALLY,fr->response)) {
-        if (verb_matches(GREETING_PSEUDOVERB,verb)) munge_greeting(line);
-        if (verb_matches("ehlo",verb)) munge_ehlo(line,lineno);
-        if (verb_matches("helo",verb)) munge_helo(line);
-        if (verb_matches("help",verb)) munge_help(line);
-        if (verb_matches("quit",verb)) munge_quit(line);
-      } else {
+      if (want_munge_internally(fr->response))
+        munge_line_internally(line,lineno,greeting,verb);
+      else
         copys(line,fr->response);
-      }
     }
   }
   if (line->len) if (!is_entire_line(line)) cats(line,"\r\n");
 }
 
-void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
+void munge_response(stralloc *response,
+                    stralloc *greeting,filter_rule *rules,
+                    stralloc *verb) {
   stralloc munged = {0};
   stralloc line = {0};
   int lineno = 0;
@@ -234,7 +269,7 @@ void munge_response(stralloc *response,filter_rule *rules,stralloc *verb) {
   for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
-      munge_response_line(&line,lineno++,rules,verb);
+      munge_response_line(&line,lineno++,greeting,rules,verb);
       cat(&munged,&line);
       blank(&line);
     }
@@ -349,17 +384,18 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   int i;
   for (i = 0; i < request->len; i++)
     if (request->s[i] == ' ') break;
+
   i++;
 
   if (i > request->len) {
     copy(verb,request);
+    strip_last_eol(verb);
     blank(arg);
   } else {
     copyb(verb,request->s,i-1);
     copyb(arg,request->s+i,request->len-i);
+    strip_last_eol(arg);
   }
-  strip_last_eol(verb);
-  strip_last_eol(arg);
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -395,6 +431,7 @@ void construct_proxy_request(stralloc *proxy_request,
 }
 
 void construct_proxy_response(stralloc *proxy_response,
+                              stralloc *greeting,
                               filter_rule *rules,
                               stralloc *verb,stralloc *arg,
                               stralloc *server_response,
@@ -405,8 +442,8 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
   copy(proxy_response,server_response);
-  if (!*in_data && !request_received && !verb->len) copys(verb,TIMEOUT_PSEUDOVERB);
-  munge_response(proxy_response,rules,verb);
+  if (!*in_data && !request_received && !verb->len) copys(verb,PSEUDOVERB_TIMEOUT);
+  munge_response(proxy_response,greeting,rules,verb);
 }
 
 void request_response_init(request_response *rr) {
@@ -445,11 +482,13 @@ void handle_client_request(int to_server,filter_rule *rules,
   }
 }
 
-void handle_server_response(int to_client,filter_rule *rules,
+void handle_server_response(int to_client,
+                            stralloc *greeting,filter_rule *rules,
                             request_response *rr,
                             int *want_data,int *in_data) {
   logit('5',rr->server_response);
-  construct_proxy_response(rr->proxy_response,rules,
+  construct_proxy_response(rr->proxy_response,
+                           greeting,rules,
                            rr->client_verb,rr->client_arg,
                            rr->server_response,
                            rr->client_request->len,
@@ -522,19 +561,12 @@ filter_rule *reverse_backwards_rules_to_match_file_order(filter_rule *rules) {
   return rules_in_file_order;
 }
 
-filter_rule *load_filter_rules() {
+filter_rule *load_filter_rules(char *configfile) {
   stralloc lines = {0}, line = {0};
   filter_rule *backwards_rules = 0;
   int i;
 
-  if (chdir(auto_qmail) == -1) die_control();
-  if (control_init() == -1) die_control();
-  if (control_rldef(&smtpgreeting,"control/smtpgreeting",1,(char *) 0) != 1)
-    die_control();
-  switch (control_readfile(&lines,"control/fixsmtpio",0)) {
-    case -1: die_control();
-    case  0: return backwards_rules;
-  }
+  if (control_readfile(&lines,configfile,0) == -1) die_control();
 
   for (i = 0; i < lines.len; i++) {
     if (!stralloc_append(&line,i + lines.s)) die_nomem();
@@ -549,6 +581,7 @@ filter_rule *load_filter_rules() {
 
 void read_and_process_until_either_end_closes(int from_client,int to_server,
                                               int from_server,int to_client,
+                                              stralloc *greeting,
                                               filter_rule *rules) {
   char buf[PIPE_READ_SIZE];
   int want_data = 0, in_data = 0;
@@ -556,25 +589,18 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
   stralloc client_eof = {0};
   request_response rr;
 
-  copys(&client_eof,CLIENTEOF_PSEUDOVERB);
+  copys(&client_eof,PSEUDOVERB_CLIENTEOF);
   request_response_init(&rr);
-  copys(rr.client_verb,GREETING_PSEUDOVERB);
+
+  copys(rr.client_verb,PSEUDOVERB_GREETING);
 
   for (;;) {
-    if (request_needs_handling(&rr))
-      handle_client_request(to_server,rules,&rr,&want_data,&in_data);
-
-    if (response_needs_handling(&rr))
-      handle_server_response(to_client,rules,&rr,&want_data,&in_data);
-
-    if (exitcode != USE_CHILD_EXITCODE) break;
-
     want_to_read(from_client,from_server);
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
       if (!safeappend(&partial_request,from_client,buf,sizeof buf)) {
-        munge_response_line(&partial_request,0,rules,&client_eof);
+        munge_response_line(&partial_request,0,greeting,rules,&client_eof);
         break;
       }
       if (is_entire_line(&partial_request))
@@ -586,6 +612,14 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
       if (is_entire_response(&partial_response))
         prepare_for_handling(rr.server_response,&partial_response);
     }
+
+    if (request_needs_handling(&rr))
+      handle_client_request(to_server,rules,&rr,&want_data,&in_data);
+
+    if (response_needs_handling(&rr))
+      handle_server_response(to_client,greeting,rules,&rr,&want_data,&in_data);
+
+    if (exitcode != USE_CHILD_EXITCODE) break;
   }
 }
 
@@ -605,35 +639,52 @@ void teardown_and_exit(int child,int from_server,int to_server) {
 void be_parent(int from_client,int to_client,
                int from_proxy,int to_proxy,
                int from_server,int to_server,
-               int child,filter_rule *rules) {
+               stralloc *greeting,filter_rule *rules,
+               int child) {
   setup_parent(from_proxy,to_proxy);
   read_and_process_until_either_end_closes(from_client,to_server,
                                            from_server,to_client,
-                                           rules);
+                                           greeting,rules);
   teardown_and_exit(child,from_server,to_server);
 }
 
+void load_smtp_greeting(stralloc *greeting,char *configfile) {
+  if (control_init() == -1) die_control();
+  if (control_rldef(greeting,configfile,1,(char *) 0) != 1) die_control();
+}
+
+void cd_var_qmail() {
+  if (chdir(auto_qmail) == -1) die_control();
+}
+
 int main(int argc,char **argv) {
+  stralloc greeting = {0};
+  filter_rule *rules;
   int from_client;
-  int from_proxy, to_server;
-  int from_server, to_proxy;
+  int from_fixsmtpio, to_server;
+  int from_server, to_fixsmtpio;
   int to_client;
   int child;
 
   argv++; if (!*argv) die_usage();
 
+  cd_var_qmail();
+  load_smtp_greeting(&greeting,"control/smtpgreeting");
+  rules = load_filter_rules("control/fixsmtpio");
+
   from_client = 0;
-  mypipe(&from_proxy,&to_server);
-  mypipe(&from_server,&to_proxy);
+  mypipe(&from_fixsmtpio,&to_server);
+  mypipe(&from_server,&to_fixsmtpio);
   to_client = 1;
 
   if ((child = fork()))
     be_parent(from_client,to_client,
-              from_proxy,to_proxy,
+              from_fixsmtpio,to_fixsmtpio,
               from_server,to_server,
-              child,load_filter_rules());
+              &greeting,rules,
+              child);
   else if (child == 0)
-    be_child(from_proxy,to_proxy,
+    be_child(from_fixsmtpio,to_fixsmtpio,
              from_server,to_server,
              argv);
   else
