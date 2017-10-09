@@ -14,30 +14,31 @@
 #include "substdio.h"
 #include "wait.h"
 
-#define HOMEPAGE             "https://schmonz.com/qmail/acceptutils"
-#define PROGNAME             "qmail-fixsmtpio"
+#define HOMEPAGE                 "https://schmonz.com/qmail/acceptutils"
+#define PROGNAME                 "qmail-fixsmtpio"
 
-#define MUNGE_INTERNALLY     "&" PROGNAME
-#define PSEUDOVERB_GREETING  "greeting"
-#define PSEUDOVERB_TIMEOUT   "timeout"
-#define PSEUDOVERB_CLIENTEOF "clienteof"
+#define MUNGE_INTERNALLY         "&" PROGNAME
+#define PSEUDOVERB_GREETING      "greeting"
+#define PSEUDOVERB_TIMEOUT       "timeout"
+#define PSEUDOVERB_CLIENTEOF     "clienteof"
 
-#define USE_CHILD_EXITCODE_LATER -1
+#define RESPONSELINE_NOCHANGE     0
+#define RESPONSELINE_REMOVE      ""
+#define EXITCODE_USE_CHILD_LATER -1
 
-#define PIPE_READ_SIZE       SUBSTDIO_INSIZE
+#define PIPE_READ_SIZE            SUBSTDIO_INSIZE
 
 void die() { _exit(1); }
 
 char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void errflush(char *s) {
+void dieerrflush(char *s) {
   substdio_putsflush(&sserr,PROGNAME ": ");
   substdio_putsflush(&sserr,s);
   substdio_putsflush(&sserr,"\n");
+  die();
 }
-
-void dieerrflush(char *s) { errflush(s); die(); }
 
 void die_format(stralloc *line,char *s) {
   substdio_putsflush(&sserr,PROGNAME ": unable to parse control/fixsmtpio: ");
@@ -203,7 +204,7 @@ int string_matches_glob(char *glob,char *string) {
 }
 
 int want_munge_internally(char *response) {
-  if (!response) return 0;
+  if (RESPONSELINE_NOCHANGE == response) return 0;
   return 0 == str_diff(MUNGE_INTERNALLY,response);
 }
 
@@ -218,7 +219,7 @@ int filter_rule_applies(filter_rule *rule,stralloc *verb) {
 }
 
 void munge_exitcode(int *exitcode,filter_rule *rule) {
-  if (rule->exitcode != USE_CHILD_EXITCODE_LATER) *exitcode = rule->exitcode;
+  if (rule->exitcode != EXITCODE_USE_CHILD_LATER) *exitcode = rule->exitcode;
 }
 
 void munge_response_line(stralloc *line,int lineno,int *exitcode,
@@ -434,7 +435,7 @@ void request_response_init(request_response *rr) {
   blank(&proxy_request);   rr->proxy_request   = &proxy_request;
   blank(&server_response); rr->server_response = &server_response;
   blank(&proxy_response);  rr->proxy_response  = &proxy_response;
-                           rr->proxy_exitcode  = USE_CHILD_EXITCODE_LATER;
+                           rr->proxy_exitcode  = EXITCODE_USE_CHILD_LATER;
 }
 
 void handle_client_eof(stralloc *line,int lineno,int *exitcode,
@@ -509,12 +510,12 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   if (0 == str_len(event))              die_format(line,"no event specified");
   if (0 == str_len(request_prepend))    request_prepend = 0;
   if (0 == str_len(response_line_glob)) die_format(line,"no glob specified");
-  if (0 == str_len(exitcode_str))       exitcode = USE_CHILD_EXITCODE_LATER;
+  if (0 == str_len(exitcode_str))       exitcode = EXITCODE_USE_CHILD_LATER;
   else if (!scan_ulong(exitcode_str,&exitcode))
     die_format(line,"non-integer exitcode specified");
-  if (!response) {
+  if (RESPONSELINE_NOCHANGE == response) {
     ;
-  } else if (0 == str_len(response)) {
+  } else if (0 == str_diff(RESPONSELINE_REMOVE,response)) {
     ;
   } else {
     if (want_munge_internally(response)) {
@@ -567,7 +568,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              stralloc *greeting,
                                              filter_rule *rules) {
   char buf[PIPE_READ_SIZE];
-  int exitcode = USE_CHILD_EXITCODE_LATER;
+  int exitcode = EXITCODE_USE_CHILD_LATER;
   int want_data = 0, in_data = 0;
   request_response rr;
 
@@ -595,7 +596,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       }
     }
 
-    if (exitcode != USE_CHILD_EXITCODE_LATER) break;
+    if (exitcode != EXITCODE_USE_CHILD_LATER) break;
   }
 
   return exitcode;
@@ -610,7 +611,7 @@ void teardown_and_exit(int exitcode,int child,int from_server,int to_server) {
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
-  if (exitcode == USE_CHILD_EXITCODE_LATER) _exit(wait_exitcode(wstat));
+  if (exitcode == EXITCODE_USE_CHILD_LATER) _exit(wait_exitcode(wstat));
   else _exit(exitcode);
 }
 
