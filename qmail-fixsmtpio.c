@@ -39,19 +39,17 @@ void errflush(char *s) {
 
 void dieerrflush(char *s) { errflush(s); die(); }
 
-/*
 void die_format(stralloc *line,char *s) {
-  errflush("unable to parse control/fixsmtpio: ");
+  substdio_putsflush(&sserr,PROGNAME ": unable to parse control/fixsmtpio: ");
   substdio_putsflush(&sserr,s);
   substdio_putsflush(&sserr,": ");
   substdio_putflush(&sserr,line->s,line->len);
   substdio_putsflush(&sserr,"\n");
+  die();
 }
-*/
 
 void die_usage() { dieerrflush("usage: " PROGNAME " prog [ arg ... ]"); }
 void die_control(){dieerrflush("unable to read controls"); }
-void die_format(){ dieerrflush("unable to parse controls"); }
 void die_pipe()  { dieerrflush("unable to open pipe"); }
 void die_fork()  { dieerrflush("unable to fork"); }
 void die_exec()  { dieerrflush("unable to exec"); }
@@ -198,7 +196,6 @@ void munge_line_internally(stralloc *line,int lineno,
                            stralloc *greeting,stralloc *verb) {
   void (*munger)() = munge_line_fn(verb);
   if (munger) munger(line,lineno,greeting);
-  // XXX else we should have died at parse time. log this shit!
 }
 
 int string_matches_glob(char *glob,char *string) {
@@ -509,14 +506,24 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   int exitcode;
 
   if (0 == str_len(env))                env = 0;
-  if (0 == str_len(event))              die_format();
+  if (0 == str_len(event))              die_format(line,"no event specified");
   if (0 == str_len(request_prepend))    request_prepend = 0;
-  if (0 == str_len(response_line_glob)) die_format();
+  if (0 == str_len(response_line_glob)) die_format(line,"no glob specified");
   if (0 == str_len(exitcode_str))       exitcode = USE_CHILD_EXITCODE_LATER;
-  else if (!scan_ulong(exitcode_str,&exitcode)) die_format();
-  if (!response || 0 == str_len(response))
+  else if (!scan_ulong(exitcode_str,&exitcode))
+    die_format(line,"non-integer exitcode specified");
+  if (!response) {
     ;
-  // XXX validating non-null, non-empty response goes here
+  } else if (0 == str_len(response)) {
+    ;
+  } else {
+    if (want_munge_internally(response)) {
+      stralloc event_stralloc = {0};
+      copys(&event_stralloc,event);
+      if (!munge_line_fn(&event_stralloc))
+      die_format(&event_stralloc,"no internal routine available");
+    }
+  }
 
   return prepend_rule(rules,
                       env,event,request_prepend,
