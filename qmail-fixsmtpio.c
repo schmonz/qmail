@@ -97,46 +97,21 @@ filter_rule *prepend_rule(filter_rule *next,
   return next;
 }
 
-void cat(stralloc *to,stralloc *from) {
-  if (!stralloc_cat(to,from)) die_nomem();
-}
-
-void catb(stralloc *to,char *buf,int len) {
-  if (!stralloc_catb(to,buf,len)) die_nomem();
-}
-
-void cats(stralloc *to,char *from) {
-  if (!stralloc_cats(to,from)) die_nomem();
-}
-
-void copy(stralloc *to,stralloc *from) {
-  if (!stralloc_copy(to,from)) die_nomem();
-}
-
-void copyb(stralloc *to,char *buf,int len) {
-  if (!stralloc_copyb(to,buf,len)) die_nomem();
-}
-
-void copys(stralloc *to,char *from) {
-  if (!stralloc_copys(to,from)) die_nomem();
-}
-
-int starts(stralloc *haystack,char *needle) {
-  return stralloc_starts(haystack,needle);
-}
-
-void blank(stralloc *sa) {
-  copys(sa,"");
-}
+void cat(stralloc *to,stralloc *from) { if (!stralloc_cat(to,from)) die_nomem(); }
+void catb(stralloc *to,char *buf,int len) { if (!stralloc_catb(to,buf,len)) die_nomem(); }
+void cats(stralloc *to,char *from) { if (!stralloc_cats(to,from)) die_nomem(); }
+void copy(stralloc *to,stralloc *from) { if (!stralloc_copy(to,from)) die_nomem(); }
+void copyb(stralloc *to,char *buf,int len) { if (!stralloc_copyb(to,buf,len)) die_nomem(); }
+void copys(stralloc *to,char *from) { if (!stralloc_copys(to,from)) die_nomem(); }
+int starts(stralloc *haystack,char *needle) { return stralloc_starts(haystack,needle); }
+void blank(stralloc *sa) { copys(sa,""); }
 
 void strip_last_eol(stralloc *sa) {
   if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
   if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
 }
 
-int accepted_data(stralloc *response) {
-  return starts(response,"354 ");
-}
+int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
 void munge_greeting(stralloc *response,int lineno,stralloc *greeting) {
   copys(response,"220 "); cat(response,greeting);
@@ -231,6 +206,7 @@ int string_matches_glob(char *glob,char *string) {
 }
 
 int want_munge_internally(char *response) {
+  if (!response) return 0;
   return 0 == str_diff(MUNGE_INTERNALLY,response);
 }
 
@@ -250,8 +226,8 @@ void munge_exitcode(int *exitcode,filter_rule *rule) {
 
 void munge_response_line(stralloc *line,int lineno,int *exitcode,
                          stralloc *greeting,filter_rule *rules,stralloc *verb) {
-  stralloc line0 = {0};
   filter_rule *rule;
+  stralloc line0 = {0};
 
   copy(&line0,line);
   if (!stralloc_0(&line0)) die_nomem();
@@ -260,10 +236,9 @@ void munge_response_line(stralloc *line,int lineno,int *exitcode,
     if (!filter_rule_applies(rule,verb)) continue;
     if (!string_matches_glob(rule->response_line_glob,line0.s)) continue;
     munge_exitcode(exitcode,rule);
-    if (!rule->response) continue;
     if (want_munge_internally(rule->response))
       munge_line_internally(line,lineno,greeting,verb);
-    else
+    else if (rule->response)
       copys(line,rule->response);
   }
   if (line->len) if (!is_entire_line(line)) cats(line,"\r\n");
@@ -309,13 +284,8 @@ int is_entire_response(stralloc *response) {
   return could_be_final_response_line(&lastline);
 }
 
-void use_as_stdin(int fd) {
-  if (fd_move(0,fd) == -1) die_pipe();
-}
-
-void use_as_stdout(int fd) {
-  if (fd_move(1,fd) == -1) die_pipe();
-}
+void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
+void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
 
 void mypipe(int *from,int *to) {
   int pi[2];
@@ -351,20 +321,15 @@ void setup_parent(int from_me,int to_me) {
 
 fd_set fds;
 
+int max(int a,int b) { return a > b ? a : b; }
+
 void want_to_read(int fd1,int fd2) {
   FD_ZERO(&fds);
   FD_SET(fd1,&fds);
   FD_SET(fd2,&fds);
 }
 
-int can_read(int fd) {
-  return FD_ISSET(fd,&fds);
-}
-
-int max(int a,int b) {
-  if (a > b) return a;
-  return b;
-}
+int can_read(int fd) { return FD_ISSET(fd,&fds); }
 
 int can_read_something(int fd1,int fd2) {
   int ready;
@@ -453,7 +418,8 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
   copy(proxy_response,server_response);
-  if (!*in_data && !request_received && !verb->len) copys(verb,PSEUDOVERB_TIMEOUT);
+  if (!*in_data && !request_received && !verb->len)
+    copys(verb,PSEUDOVERB_TIMEOUT);
   munge_response(proxy_response,proxy_exitcode,greeting,rules,verb);
 }
 
