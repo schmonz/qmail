@@ -22,7 +22,7 @@
 #define PSEUDOVERB_TIMEOUT   "timeout"
 #define PSEUDOVERB_CLIENTEOF "clienteof"
 
-#define USE_CHILD_EXITCODE   -1
+#define USE_CHILD_EXITCODE_LATER -1
 
 #define PIPE_READ_SIZE       SUBSTDIO_INSIZE
 
@@ -68,6 +68,7 @@ typedef struct request_response {
   stralloc *proxy_request;
   stralloc *server_response;
   stralloc *proxy_response;
+  int       proxy_exitcode;
 } request_response;
 
 typedef struct filter_rule {
@@ -76,25 +77,25 @@ typedef struct filter_rule {
   char *event;
   char *request_prepend;
   char *response_line_glob;
-  int exitcode;
+  int   exitcode;
   char *response;
 } filter_rule;
 
-filter_rule *add_rule(filter_rule *next,
-                      char *env,char *event,char *request_prepend,
-                      char *response_line_glob,int exitcode,
-                      char *response) {
-  filter_rule *fr = (filter_rule *)alloc(sizeof(filter_rule));
-  if (!fr) die_nomem();
-  fr->next = next;
-  fr->env = env; fr->event = event; fr->request_prepend = request_prepend;
-  fr->response_line_glob = response_line_glob; fr->exitcode = exitcode;
-  fr->response = response;
-  next = fr;
+filter_rule *prepend_rule(filter_rule *next,
+                          char *env,char *event,char *request_prepend,
+                          char *response_line_glob,int exitcode,char *response) {
+  filter_rule *rule;
+  if (!(rule = (filter_rule *)alloc(sizeof(filter_rule)))) die_nomem();
+  rule->next               = next;
+  rule->env                = env;
+  rule->event              = event;
+  rule->request_prepend    = request_prepend;
+  rule->response_line_glob = response_line_glob;
+  rule->exitcode           = exitcode;
+  rule->response           = response;
+  next = rule;
   return next;
 }
-
-int exitcode = USE_CHILD_EXITCODE;
 
 void cat(stralloc *to,stralloc *from) {
   if (!stralloc_cat(to,from)) die_nomem();
@@ -220,11 +221,9 @@ void *munge_line_fn(stralloc *verb) {
 
 void munge_line_internally(stralloc *line,int lineno,
                            stralloc *greeting,stralloc *verb) {
-
   void (*munger)() = munge_line_fn(verb);
   if (munger) munger(line,lineno,greeting);
   // XXX else we should have died at parse time. log this shit!
-  // XXX die at parse time
 }
 
 int string_matches_glob(char *glob,char *string) {
@@ -235,30 +234,42 @@ int want_munge_internally(char *response) {
   return 0 == str_diff(MUNGE_INTERNALLY,response);
 }
 
-void munge_response_line(stralloc *line,int lineno,stralloc *greeting,
-                         filter_rule *rules,stralloc *verb) {
+int envvar_exists_if_needed(char *envvar) {
+  if (envvar && env_get(envvar)) return 1;
+  else if (envvar) return 0;
+  return 1;
+}
+
+int filter_rule_applies(filter_rule *rule,stralloc *verb) {
+  return (verb_matches(rule->event,verb) && envvar_exists_if_needed(rule->env));
+}
+
+void munge_exitcode(int *exitcode,filter_rule *rule) {
+  if (rule->exitcode != USE_CHILD_EXITCODE_LATER) *exitcode = rule->exitcode;
+}
+
+void munge_response_line(stralloc *line,int lineno,int *exitcode,
+                         stralloc *greeting,filter_rule *rules,stralloc *verb) {
   stralloc line0 = {0};
-  filter_rule *fr;
+  filter_rule *rule;
+
   copy(&line0,line);
   if (!stralloc_0(&line0)) die_nomem();
 
-  for (fr = rules; fr; fr = fr->next) {
-    if (!verb_matches(fr->event,verb)) continue;
-    if (fr->env && !env_get(fr->env)) continue;
-
-    if (string_matches_glob(fr->response_line_glob,line0.s)) {
-      if (fr->exitcode != USE_CHILD_EXITCODE) exitcode = fr->exitcode;
-      if (!fr->response) continue;
-      if (want_munge_internally(fr->response))
-        munge_line_internally(line,lineno,greeting,verb);
-      else
-        copys(line,fr->response);
-    }
+  for (rule = rules; rule; rule = rule->next) {
+    if (!filter_rule_applies(rule,verb)) continue;
+    if (!string_matches_glob(rule->response_line_glob,line0.s)) continue;
+    munge_exitcode(exitcode,rule);
+    if (!rule->response) continue;
+    if (want_munge_internally(rule->response))
+      munge_line_internally(line,lineno,greeting,verb);
+    else
+      copys(line,rule->response);
   }
   if (line->len) if (!is_entire_line(line)) cats(line,"\r\n");
 }
 
-void munge_response(stralloc *response,
+void munge_response(stralloc *response,int *exitcode,
                     stralloc *greeting,filter_rule *rules,
                     stralloc *verb) {
   stralloc munged = {0};
@@ -269,7 +280,7 @@ void munge_response(stralloc *response,
   for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
-      munge_response_line(&line,lineno++,greeting,rules,verb);
+      munge_response_line(&line,lineno++,exitcode,greeting,rules,verb);
       cat(&munged,&line);
       blank(&line);
     }
@@ -313,12 +324,12 @@ void mypipe(int *from,int *to) {
   *to = pi[1];
 }
 
-void setup_child(int from_proxy,int to_server,
-                 int from_server,int to_proxy) {
+void setup_child(int from_me,int to_server,
+                 int from_server,int to_me) {
   close(from_server);
   close(to_server);
-  use_as_stdin(from_proxy);
-  use_as_stdout(to_proxy);
+  use_as_stdin(from_me);
+  use_as_stdout(to_me);
 }
 
 void exec_child_and_never_return(char **argv) {
@@ -326,16 +337,16 @@ void exec_child_and_never_return(char **argv) {
   die_exec();
 }
 
-void be_child(int from_proxy,int to_proxy,
+void be_child(int from_me,int to_me,
               int from_server,int to_server,
               char **argv) {
-  setup_child(from_proxy,to_server,from_server,to_proxy);
+  setup_child(from_me,to_server,from_server,to_me);
   exec_child_and_never_return(argv);
 }
 
-void setup_parent(int from_proxy,int to_proxy) {
-  close(from_proxy);
-  close(to_proxy);
+void setup_parent(int from_me,int to_me) {
+  close(from_me);
+  close(to_me);
 }
 
 fd_set fds;
@@ -415,16 +426,15 @@ void construct_proxy_request(stralloc *proxy_request,
                              stralloc *verb,stralloc *arg,
                              stralloc *client_request,
                              int *want_data,int *in_data) {
-  filter_rule *fr;
+  filter_rule *rule;
 
   if (*in_data) {
     copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
-    for (fr = rules; fr; fr = fr->next)
-      if (fr->request_prepend && verb_matches(fr->event,verb))
-        if ((!fr->env) || (fr->env && env_get(fr->env)))
-          cats(proxy_request,fr->request_prepend);
+    for (rule = rules; rule; rule = rule->next)
+      if (rule->request_prepend && filter_rule_applies(rule,verb))
+        cats(proxy_request,rule->request_prepend);
     if (verb_matches("data",verb)) *want_data = 1;
     cat(proxy_request,client_request);
   }
@@ -436,6 +446,7 @@ void construct_proxy_response(stralloc *proxy_response,
                               stralloc *verb,stralloc *arg,
                               stralloc *server_response,
                               int request_received,
+                              int *proxy_exitcode,
                               int *want_data,int *in_data) {
   if (*want_data) {
     *want_data = 0;
@@ -443,23 +454,24 @@ void construct_proxy_response(stralloc *proxy_response,
   }
   copy(proxy_response,server_response);
   if (!*in_data && !request_received && !verb->len) copys(verb,PSEUDOVERB_TIMEOUT);
-  munge_response(proxy_response,greeting,rules,verb);
+  munge_response(proxy_response,proxy_exitcode,greeting,rules,verb);
 }
 
 void request_response_init(request_response *rr) {
-  static stralloc client_request = {0},
-                  client_verb = {0},
-                  client_arg = {0},
-                  proxy_request = {0},
+  static stralloc client_request  = {0},
+                  client_verb     = {0},
+                  client_arg      = {0},
+                  proxy_request   = {0},
                   server_response = {0},
-                  proxy_response = {0};
+                  proxy_response  = {0};
 
-  blank(&client_request); rr->client_request = &client_request;
-  blank(&client_verb); rr->client_verb = &client_verb;
-  blank(&client_arg); rr->client_arg = &client_arg;
-  blank(&proxy_request); rr->proxy_request = &proxy_request;
+  blank(&client_request);  rr->client_request  = &client_request;
+  blank(&client_verb);     rr->client_verb     = &client_verb;
+  blank(&client_arg);      rr->client_arg      = &client_arg;
+  blank(&proxy_request);   rr->proxy_request   = &proxy_request;
   blank(&server_response); rr->server_response = &server_response;
-  blank(&proxy_response); rr->proxy_response = &proxy_response;
+  blank(&proxy_response);  rr->proxy_response  = &proxy_response;
+                           rr->proxy_exitcode  = USE_CHILD_EXITCODE_LATER;
 }
 
 void handle_client_request(int to_server,filter_rule *rules,
@@ -482,20 +494,24 @@ void handle_client_request(int to_server,filter_rule *rules,
   }
 }
 
-void handle_server_response(int to_client,
-                            stralloc *greeting,filter_rule *rules,
-                            request_response *rr,
-                            int *want_data,int *in_data) {
+int handle_server_response(int to_client,
+                           stralloc *greeting,filter_rule *rules,
+                           request_response *rr,
+                           int *want_data,int *in_data) {
+  int exitcode;
   logit('5',rr->server_response);
   construct_proxy_response(rr->proxy_response,
                            greeting,rules,
                            rr->client_verb,rr->client_arg,
                            rr->server_response,
                            rr->client_request->len,
+                           &rr->proxy_exitcode,
                            want_data,in_data);
   logit('6',rr->proxy_response);
   safewrite(to_client,rr->proxy_response);
+  exitcode = rr->proxy_exitcode;
   request_response_init(rr);
+  return exitcode;
 }
 
 int request_needs_handling(request_response *rr) {
@@ -539,12 +555,15 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   if (0 == str_len(event))              die_format();
   if (0 == str_len(request_prepend))    request_prepend = 0;
   if (0 == str_len(response_line_glob)) die_format();
-  if (0 == str_len(exitcode_str))       exitcode = USE_CHILD_EXITCODE;
+  if (0 == str_len(exitcode_str))       exitcode = USE_CHILD_EXITCODE_LATER;
   else if (!scan_ulong(exitcode_str,&exitcode)) die_format();
   if (!response || 0 == str_len(response))
     ;
+  // XXX validating non-null, non-empty response goes here
 
-  return add_rule(rules,env,event,request_prepend,response_line_glob,exitcode,response);
+  return prepend_rule(rules,
+                      env,event,request_prepend,
+                      response_line_glob,exitcode,response);
 }
 
 filter_rule *reverse_backwards_rules_to_match_file_order(filter_rule *rules) {
@@ -579,11 +598,12 @@ filter_rule *load_filter_rules(char *configfile) {
   return reverse_backwards_rules_to_match_file_order(backwards_rules);
 }
 
-void read_and_process_until_either_end_closes(int from_client,int to_server,
-                                              int from_server,int to_client,
-                                              stralloc *greeting,
-                                              filter_rule *rules) {
+int read_and_process_until_either_end_closes(int from_client,int to_server,
+                                             int from_server,int to_client,
+                                             stralloc *greeting,
+                                             filter_rule *rules) {
   char buf[PIPE_READ_SIZE];
+  int exitcode = USE_CHILD_EXITCODE_LATER;
   int want_data = 0, in_data = 0;
   stralloc partial_request = {0}, partial_response = {0};
   stralloc client_eof = {0};
@@ -600,7 +620,7 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&partial_request,from_client,buf,sizeof buf)) {
-        munge_response_line(&partial_request,0,greeting,rules,&client_eof);
+        munge_response_line(&partial_request,0,&exitcode,greeting,rules,&client_eof);
         break;
       }
       if (is_entire_line(&partial_request))
@@ -617,13 +637,15 @@ void read_and_process_until_either_end_closes(int from_client,int to_server,
       handle_client_request(to_server,rules,&rr,&want_data,&in_data);
 
     if (response_needs_handling(&rr))
-      handle_server_response(to_client,greeting,rules,&rr,&want_data,&in_data);
+      exitcode = handle_server_response(to_client,greeting,rules,&rr,&want_data,&in_data);
 
-    if (exitcode != USE_CHILD_EXITCODE) break;
+    if (exitcode != USE_CHILD_EXITCODE_LATER) break;
   }
+
+  return exitcode;
 }
 
-void teardown_and_exit(int child,int from_server,int to_server) {
+void teardown_and_exit(int exitcode,int child,int from_server,int to_server) {
   int wstat;
 
   close(from_server);
@@ -632,20 +654,22 @@ void teardown_and_exit(int child,int from_server,int to_server) {
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
-  if (exitcode == USE_CHILD_EXITCODE) _exit(wait_exitcode(wstat));
+  if (exitcode == USE_CHILD_EXITCODE_LATER) _exit(wait_exitcode(wstat));
   else _exit(exitcode);
 }
 
 void be_parent(int from_client,int to_client,
-               int from_proxy,int to_proxy,
+               int from_me,int to_me,
                int from_server,int to_server,
                stralloc *greeting,filter_rule *rules,
                int child) {
-  setup_parent(from_proxy,to_proxy);
-  read_and_process_until_either_end_closes(from_client,to_server,
-                                           from_server,to_client,
-                                           greeting,rules);
-  teardown_and_exit(child,from_server,to_server);
+  int exitcode;
+
+  setup_parent(from_me,to_me);
+  exitcode = read_and_process_until_either_end_closes(from_client,to_server,
+                                                      from_server,to_client,
+                                                      greeting,rules);
+  teardown_and_exit(exitcode,child,from_server,to_server);
 }
 
 void load_smtp_greeting(stralloc *greeting,char *configfile) {
@@ -661,8 +685,8 @@ int main(int argc,char **argv) {
   stralloc greeting = {0};
   filter_rule *rules;
   int from_client;
-  int from_fixsmtpio, to_server;
-  int from_server, to_fixsmtpio;
+  int from_me, to_server;
+  int from_server, to_me;
   int to_client;
   int child;
 
@@ -673,18 +697,18 @@ int main(int argc,char **argv) {
   rules = load_filter_rules("control/fixsmtpio");
 
   from_client = 0;
-  mypipe(&from_fixsmtpio,&to_server);
-  mypipe(&from_server,&to_fixsmtpio);
+  mypipe(&from_me,&to_server);
+  mypipe(&from_server,&to_me);
   to_client = 1;
 
   if ((child = fork()))
     be_parent(from_client,to_client,
-              from_fixsmtpio,to_fixsmtpio,
+              from_me,to_me,
               from_server,to_server,
               &greeting,rules,
               child);
   else if (child == 0)
-    be_child(from_fixsmtpio,to_fixsmtpio,
+    be_child(from_me,to_me,
              from_server,to_server,
              argv);
   else
