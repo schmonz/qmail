@@ -464,7 +464,6 @@ int handle_server_response(int to_client,
                            stralloc *greeting,filter_rule *rules,
                            request_response *rr,
                            int *want_data,int *in_data) {
-  int exitcode;
   logit('5',rr->server_response);
   construct_proxy_response(rr->proxy_response,
                            greeting,rules,
@@ -475,22 +474,7 @@ int handle_server_response(int to_client,
                            want_data,in_data);
   logit('6',rr->proxy_response);
   safewrite(to_client,rr->proxy_response);
-  exitcode = rr->proxy_exitcode;
-  request_response_init(rr);
-  return exitcode;
-}
-
-int request_needs_handling(request_response *rr) {
-  return rr->client_request->len && !rr->proxy_request->len;
-}
-
-int response_needs_handling(request_response *rr) {
-  return rr->server_response->len && !rr->proxy_response->len;
-}
-
-void prepare_for_handling(stralloc *to,stralloc *from) {
-  copy(to,from);
-  blank(from);
+  return rr->proxy_exitcode;
 }
 
 char *get_next_field(int *start,stralloc *line) {
@@ -571,7 +555,6 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   char buf[PIPE_READ_SIZE];
   int exitcode = USE_CHILD_EXITCODE_LATER;
   int want_data = 0, in_data = 0;
-  stralloc partial_request = {0}, partial_response = {0};
   stralloc client_eof = {0};
   request_response rr;
 
@@ -585,25 +568,21 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(&partial_request,from_client,buf,sizeof buf)) {
-        munge_response_line(&partial_request,0,&exitcode,greeting,rules,&client_eof);
+      if (!safeappend(rr.client_request,from_client,buf,sizeof buf)) {
+        munge_response_line(rr.client_request,0,&exitcode,greeting,rules,&client_eof);
         break;
       }
-      if (is_entire_line(&partial_request))
-        prepare_for_handling(rr.client_request,&partial_request);
+      if (is_entire_line(rr.client_request))
+        handle_client_request(to_server,rules,&rr,&want_data,&in_data);
     }
 
     if (can_read(from_server)) {
-      if (!safeappend(&partial_response,from_server,buf,sizeof buf)) break;
-      if (is_entire_response(&partial_response))
-        prepare_for_handling(rr.server_response,&partial_response);
+      if (!safeappend(rr.server_response,from_server,buf,sizeof buf)) break;
+      if (is_entire_response(rr.server_response)) {
+        exitcode = handle_server_response(to_client,greeting,rules,&rr,&want_data,&in_data);
+        request_response_init(&rr);
+      }
     }
-
-    if (request_needs_handling(&rr))
-      handle_client_request(to_server,rules,&rr,&want_data,&in_data);
-
-    if (response_needs_handling(&rr))
-      exitcode = handle_server_response(to_client,greeting,rules,&rr,&want_data,&in_data);
 
     if (exitcode != USE_CHILD_EXITCODE_LATER) break;
   }
