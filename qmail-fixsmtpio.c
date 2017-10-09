@@ -513,7 +513,7 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   if (0 == str_len(response_line_glob)) die_format(line,"no glob specified");
   if (0 == str_len(exitcode_str))       exitcode = EXITCODE_USE_CHILD_LATER;
   else if (!scan_ulong(exitcode_str,&exitcode))
-    die_format(line,"non-integer exitcode specified");
+    die_format(line,"exitcode specified, not in range");
   if (RESPONSELINE_NOCHANGE == response) {
     ;
   } else if (0 == str_diff(RESPONSELINE_REMOVE,response)) {
@@ -523,7 +523,7 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
       stralloc event_stralloc = {0};
       copys(&event_stralloc,event);
       if (!munge_line_fn(&event_stralloc))
-      die_format(line,"no internal routine available");
+      die_format(line,"internal routine specified, none available");
     }
   }
 
