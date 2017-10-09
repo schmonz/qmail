@@ -440,6 +440,13 @@ void request_response_init(request_response *rr) {
                            rr->proxy_exitcode  = USE_CHILD_EXITCODE_LATER;
 }
 
+void handle_client_eof(stralloc *line,int lineno,int *exitcode,
+                       stralloc *greeting,filter_rule *rules) {
+  stralloc client_eof = {0};
+  copys(&client_eof,PSEUDOVERB_CLIENTEOF);
+  munge_response_line(line,lineno,exitcode,greeting,rules,&client_eof);
+}
+
 void handle_client_request(int to_server,filter_rule *rules,
                            request_response *rr,
                            int *want_data,int *in_data) {
@@ -555,12 +562,9 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   char buf[PIPE_READ_SIZE];
   int exitcode = USE_CHILD_EXITCODE_LATER;
   int want_data = 0, in_data = 0;
-  stralloc client_eof = {0};
   request_response rr;
 
-  copys(&client_eof,PSEUDOVERB_CLIENTEOF);
   request_response_init(&rr);
-
   copys(rr.client_verb,PSEUDOVERB_GREETING);
 
   for (;;) {
@@ -569,7 +573,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(rr.client_request,from_client,buf,sizeof buf)) {
-        munge_response_line(rr.client_request,0,&exitcode,greeting,rules,&client_eof);
+        handle_client_eof(rr.client_request,0,&exitcode,greeting,rules);
         break;
       }
       if (is_entire_line(rr.client_request))
