@@ -489,7 +489,8 @@ char *get_next_field(int *start,stralloc *line) {
     if (!stralloc_append(&temp,i + line->s)) die_nomem();
     if (line->s[i] == ':' || i == line->len - 1) {
       *start = i + 1;
-      temp.s[temp.len - 1] = '\0';
+      if (temp.len > 0 && temp.s[temp.len - 1] == ':') temp.len--;
+      if (!stralloc_0(&temp)) die_nomem();
       return temp.s;
     }
   }
@@ -522,7 +523,7 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
       stralloc event_stralloc = {0};
       copys(&event_stralloc,event);
       if (!munge_line_fn(&event_stralloc))
-      die_format(&event_stralloc,"no internal routine available");
+      die_format(line,"no internal routine available");
     }
   }
 
