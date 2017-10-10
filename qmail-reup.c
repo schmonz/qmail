@@ -7,23 +7,30 @@
 #include "substdio.h"
 #include "wait.h"
 
+#define PROGNAME "qmail-reup"
+
 void die() { _exit(1); }
 
 char sserrbuf[128];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 void errflush(char *s) {
+  substdio_puts(&sserr,PROGNAME ": ");
   substdio_puts(&sserr,s);
-  substdio_puts(&sserr,"\n");
-  substdio_flush(&sserr);
+  substdio_putsflush(&sserr,"\n");
 }
 
-void die_usage() { errflush("usage: qmail-reup [ -t tries ] prog"); die(); }
-void die_fork()  { errflush("qmail-reup unable to fork"); die(); }
-void die_nomem() { errflush("qmail-reup out of memory"); die(); }
+void dieerrflush(char *s) {
+  errflush(s);
+  die();
+}
+
+void die_usage() { dieerrflush("usage: " PROGNAME " [ -t tries ] prog"); }
+void die_fork()  { dieerrflush("unable to fork"); }
+void die_nomem() { dieerrflush("out of memory"); }
 
 void logtry(char *try,char *progname) {
-  substdio_puts(&sserr,"qmail-reup: try ");
+  substdio_puts(&sserr,PROGNAME ": try ");
   substdio_puts(&sserr,try);
   substdio_puts(&sserr,": ");
   substdio_puts(&sserr,progname);
@@ -39,17 +46,16 @@ int try(int attempt,char **childargs) {
   switch ((child = fork())) {
     case -1:
       die_fork();
-      break;
     case 0:
       str_copy(reup + fmt_ulong(reup,attempt),"");
       if (!env_put2("REUP",reup)) die_nomem();
       logtry(reup,*childargs);
       execvp(*childargs,childargs);
-      die();
+      die(); // log something I guess
   }
 
-  if (wait_pid(&wstat,child) == -1) die();
-  if (wait_crashed(wstat)) die();
+  if (wait_pid(&wstat,child) == -1) die(); //die why? log something
+  if (wait_crashed(wstat)) die(); //die why? log something
 
   return wait_exitcode(wstat);
 }
@@ -63,10 +69,10 @@ int keep_trying(int attempt,int max) {
 int stop_trying(int exitcode) {
   switch (exitcode) {
     case 0:
-      errflush("qmail-reup: success");
+      errflush("success");
       return 1;
     case 12:
-      errflush("qmail-reup: permanent failure");
+      errflush("permanent failure");
       return 1;
     default:
       return 0;
@@ -99,6 +105,6 @@ int main(int argc,char **argv) {
     if (stop_trying(exitcode)) _exit(exitcode);
   }
 
-  errflush("qmail-reup: no more tries");
+  errflush("no more tries");
   _exit(exitcode);
 }
