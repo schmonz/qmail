@@ -11,7 +11,7 @@
 
 void die() { _exit(1); }
 
-char sserrbuf[128];
+char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 void errflush(char *s) {

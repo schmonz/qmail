@@ -36,7 +36,7 @@ int safewrite(int fd,char *buf,int len) {
   return r;
 }
 
-char ssoutbuf[128];
+char ssoutbuf[SUBSTDIO_OUTSIZE];
 substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
 
 void puts(char *s) { substdio_puts(&ssout,s); }
@@ -99,7 +99,7 @@ void authup_die(const char *name) {
   e[i].die();
 }
 
-char sserrbuf[128];
+char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 void errflush(char *s) {
@@ -124,7 +124,7 @@ int saferead(int fd,char *buf,int len) {
   return r;
 }
 
-char ssinbuf[128];
+char ssinbuf[SUBSTDIO_INSIZE];
 substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
 
 stralloc greeting = {0};
@@ -163,8 +163,8 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
   int pi[2];
+  char upbuf[SUBSTDIO_OUTSIZE];
   substdio ssup;
-  char upbuf[128];
  
   close(3);
   if (pipe(pi) == -1) authup_die("pipe");
@@ -179,7 +179,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
       logtry(username->s);
       if (!env_put2("AUTHUSER",username->s)) authup_die("nomem");
       execvp(*childargs,childargs);
-      die();
+      authup_die("fork");
   }
   close(pi[0]);
   substdio_fdbuf(&ssup,write,pi[1],upbuf,sizeof upbuf);

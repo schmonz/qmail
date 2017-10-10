@@ -26,8 +26,6 @@
 #define RESPONSELINE_REMOVE      ""
 #define EXITCODE_USE_CHILD_LATER -1
 
-#define PIPE_READ_SIZE            SUBSTDIO_INSIZE
-
 void die() { _exit(1); }
 
 char sserrbuf[SUBSTDIO_OUTSIZE];
@@ -569,7 +567,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              int from_server,int to_client,
                                              stralloc *greeting,
                                              filter_rule *rules) {
-  char buf[PIPE_READ_SIZE];
+  char buf[SUBSTDIO_INSIZE];
   int exitcode = EXITCODE_USE_CHILD_LATER;
   int want_data = 0, in_data = 0;
   request_response rr;
