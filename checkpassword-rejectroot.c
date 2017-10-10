@@ -14,7 +14,7 @@ void errflush(char *s) {
 
 void die() { _exit(1); }
 void die_usage() { errflush("usage: checkpassword-rejectroot prog"); die(); }
-void die_root() { errflush("ROOT LOGIN SUCCEEDED, TERMINATING "); die(); }
+void die_root() { errflush("ROOT LOGIN SUCCEEDED, TERMINATING"); die(); }
 
 int main(int argc,char **argv) {
   char **childargs;
