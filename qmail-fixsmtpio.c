@@ -555,6 +555,7 @@ filter_rule *load_filter_rules(char *configfile) {
   for (i = 0; i < lines.len; i++) {
     if (!stralloc_append(&line,i + lines.s)) die_nomem();
     if (lines.s[i] == '\0' || i == lines.len - 1) {
+      logit('0',&line);
       backwards_rules = load_filter_rule(backwards_rules,&line);
       blank(&line);
     }
