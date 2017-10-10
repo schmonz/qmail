@@ -34,17 +34,17 @@ char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 void dieerrflush(char *s) {
-  substdio_putsflush(&sserr,PROGNAME ": ");
-  substdio_putsflush(&sserr,s);
+  substdio_puts(&sserr,PROGNAME ": ");
+  substdio_puts(&sserr,s);
   substdio_putsflush(&sserr,"\n");
   die();
 }
 
 void die_format(stralloc *line,char *s) {
-  substdio_putsflush(&sserr,PROGNAME ": unable to parse control/fixsmtpio: ");
-  substdio_putsflush(&sserr,s);
-  substdio_putsflush(&sserr,": ");
-  substdio_putflush(&sserr,line->s,line->len);
+  substdio_puts(&sserr,PROGNAME ": unable to parse control/fixsmtpio: ");
+  substdio_puts(&sserr,s);
+  substdio_puts(&sserr,": ");
+  substdio_put(&sserr,line->s,line->len);
   substdio_putsflush(&sserr,"\n");
   die();
 }
@@ -374,10 +374,11 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
 
 void logit(char logprefix,stralloc *sa) {
   if (!env_get("FIXSMTPIODEBUG")) return;
-  substdio_putflush(&sserr,&logprefix,1);
-  substdio_putsflush(&sserr,": ");
-  substdio_putflush(&sserr,sa->s,sa->len);
-  if (!is_entire_line(sa)) substdio_putsflush(&sserr,"\r\n");
+  substdio_put(&sserr,&logprefix,1);
+  substdio_puts(&sserr,": ");
+  substdio_put(&sserr,sa->s,sa->len);
+  if (!is_entire_line(sa)) substdio_puts(&sserr,"\r\n");
+  substdio_flush(&sserr);
 }
 
 void safewrite(int fd,stralloc *sa) {
