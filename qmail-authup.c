@@ -15,7 +15,7 @@
 #include "readwrite.h"
 #include "timeoutread.h"
 #include "timeoutwrite.h"
-#include "base64.h"
+#include "acceptutils_base64.h"
 #include "case.h"
 #include "env.h"
 #include "control.h"

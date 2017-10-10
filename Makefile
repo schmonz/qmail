@@ -7,6 +7,10 @@ default: it
 acceptutils: \
 qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
 
+acceptutils_base64.o: \
+compile acceptutils_base64.c acceptutils_base64.h
+	./compile acceptutils_base64.c
+
 addresses.0: \
 addresses.5
 	nroff -man addresses.5 > addresses.0
@@ -96,10 +100,6 @@ auto-str conf-qmail
 auto_qmail.o: \
 compile auto_qmail.c
 	./compile auto_qmail.c
-
-base64.o: \
-compile base64.c base64.h
-	./compile base64.c
 
 auto_spawn.c: \
 auto-int conf-spawn
@@ -1090,17 +1090,17 @@ substdio.h open.h byte.h str.h headerbody.h hfield.h env.h exit.h
 	./compile qbiff.c
 
 qmail-authup: \
-load qmail-authup.o auto_qmail.o base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+load qmail-authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
 case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
 fs.a socket.lib
-	./load qmail-authup auto_qmail.o base64.o commands.o control.o timeoutread.o timeoutwrite.o \
+	./load qmail-authup auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o \
 	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 	substdio.a error.a str.a fs.a  `cat socket.lib`
 
 qmail-authup.o: \
 compile qmail-authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
-readwrite.h timeoutread.h timeoutwrite.h base64.h case.h env.h control.h \
+readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h env.h control.h \
 error.h scan.h auto_qmail.h
 	./compile qmail-authup.c
 

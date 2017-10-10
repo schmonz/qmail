@@ -385,7 +385,7 @@ forgeries.0
 man
 setup
 check
-base64.o
+acceptutils_base64.o
 qmail-authup
 qmail-authup.o
 checkpassword-rejectroot
