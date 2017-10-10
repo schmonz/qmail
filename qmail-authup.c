@@ -21,6 +21,9 @@
 #include "control.h"
 #include "error.h"
 
+#define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
+#define PROGNAME "qmail-authup"
+
 static int timeout = 1200;
 
 void die() { _exit(1); }
@@ -71,13 +74,13 @@ struct authup_error e[] = {
 
 void pop3_auth_error(struct authup_error ae) {
   puts("-ERR");
-  puts(" qmail-authup ");
+  puts(" " PROGNAME " ");
   puts(ae.message);
 }
 
 void smtp_auth_error(struct authup_error ae) {
   puts(ae.smtpcode);
-  puts(" qmail-authup ");
+  puts(" " PROGNAME " ");
   puts(ae.message);
   puts(" (#");
   puts(ae.smtperror);
@@ -100,18 +103,18 @@ char sserrbuf[128];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
 void errflush(char *s) {
+  substdio_puts(&sserr,PROGNAME ": ");
   substdio_puts(&sserr,s);
-  substdio_puts(&sserr,"\n");
-  substdio_flush(&sserr);
+  substdio_putsflush(&sserr,"\n");
 }
 
-void die_usage() { errflush("usage: qmail-authup <smtp|pop3> prog"); die(); }
+void die_usage() { errflush("usage: " PROGNAME " <smtp|pop3> prog"); die(); }
 
-void smtp_err_authoriz() { smtp_out("530 qmail-authup authentication required (#5.7.1)"); }
-void pop3_err_authoriz() { pop3_err("qmail-authup authorization first"); }
+void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
+void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
 
-void pop3_err_syntax()   { pop3_err("qmail-authup syntax error"); }
-void pop3_err_wantuser() { pop3_err("qmail-authup USER first"); }
+void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
+void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
 
 int saferead(int fd,char *buf,int len) {
   int r;
@@ -124,14 +127,12 @@ int saferead(int fd,char *buf,int len) {
 char ssinbuf[128];
 substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
 
-stralloc hostname = {0};
+stralloc greeting = {0};
 char **childargs;
-substdio ssup;
-char upbuf[128];
 
 void pop3_okay() { puts("+OK \r\n"); flush(); }
 void pop3_quit() { pop3_okay(); _exit(0); }
-void smtp_quit() { puts("221 "); smtp_out(hostname.s); _exit(0); }
+void smtp_quit() { puts("221 "); smtp_out(greeting.s); _exit(0); }
 
 int is_checkpassword_failure(int exitcode) {
   return (exitcode == 1 || exitcode == 2 || exitcode == 111);
@@ -153,14 +154,17 @@ void exit_according_to_child_exit(int exitcode) {
 }
 
 void logtry(char *username) {
-  substdio_puts(&sserr,"qmail-authup: login attempt by ");
-  errflush(username);
+  substdio_puts(&sserr,PROGNAME ": login attempt by ");
+  substdio_puts(&sserr,username);
+  substdio_putsflush(&sserr,"\n");
 }
 
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
   int pi[2];
+  substdio ssup;
+  char upbuf[128];
  
   close(3);
   if (pipe(pi) == -1) authup_die("pipe");
@@ -175,7 +179,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
       logtry(username->s);
       if (!env_put2("AUTHUSER",username->s)) authup_die("nomem");
       execvp(*childargs,childargs);
-      _exit(1);
+      die();
   }
   close(pi[0]);
   substdio_fdbuf(&ssup,write,pi[1],upbuf,sizeof upbuf);
@@ -214,7 +218,7 @@ void pop3_greet() {
   *s++ = 0;
   puts("+OK <");
   puts(unique);
-  puts(hostname.s);
+  puts(greeting.s);
   puts(">\r\n");
   flush();
 }
@@ -237,7 +241,7 @@ void pop3_pass(char *arg) {
 
   if (!stralloc_copys(&timestamp,"<")) authup_die("nomem");
   if (!stralloc_cats(&timestamp,unique)) authup_die("nomem");
-  if (!stralloc_cats(&timestamp,hostname.s)) authup_die("nomem");
+  if (!stralloc_cats(&timestamp,greeting.s)) authup_die("nomem");
   if (!stralloc_cats(&timestamp,">")) authup_die("nomem");
 
   checkpassword(&username,&password,&timestamp);
@@ -245,19 +249,19 @@ void pop3_pass(char *arg) {
 
 void smtp_greet() {
   puts("220 ");
-  puts(hostname.s);
+  puts(greeting.s);
   puts(" ESMTP\r\n");
   flush();
 }
 
 void smtp_helo(char *arg) {
   puts("250 ");
-  smtp_out(hostname.s);
+  smtp_out(greeting.s);
 }
 
 void smtp_ehlo(char *arg) {
   puts("250-");
-  puts(hostname.s);
+  puts(greeting.s);
   puts("\r\n250-AUTH LOGIN PLAIN");
   puts("\r\n250-AUTH=LOGIN PLAIN");
   smtp_out("\r\n250-PIPELINING\r\n250 8BITMIME");
@@ -348,7 +352,11 @@ void smtp_auth(char *arg) {
 }
 
 void smtp_help() {
-  smtp_out("214 qmail-authup home page: https://schmonz.com/qmail/acceptutils");
+  smtp_out("214 " PROGNAME " home page: " HOMEPAGE);
+}
+
+void smtp_noop() {
+  smtp_out("250 ok");
 }
 
 struct commands pop3commands[] = {
@@ -360,11 +368,12 @@ struct commands pop3commands[] = {
 };
 
 struct commands smtpcommands[] = {
-  { "ehlo", smtp_ehlo, 0 }
-, { "helo", smtp_helo, 0 }
-, { "auth", smtp_auth, flush }
-, { "help", smtp_help, 0 }
+  { "auth", smtp_auth, flush }
 , { "quit", smtp_quit, 0 }
+, { "helo", smtp_helo, 0 }
+, { "ehlo", smtp_ehlo, 0 }
+, { "help", smtp_help, 0 }
+, { "noop", smtp_noop, 0 }
 , { 0, smtp_err_authoriz, 0 }
 };
 
@@ -390,10 +399,10 @@ int control_readgreeting(char *p) {
   if (!stralloc_cats(&file,"greeting")) authup_die("nomem");
   if (!stralloc_0(&file)) authup_die("nomem");
 
-  retval = control_rldef(&hostname,file.s,1,(char *) 0);
+  retval = control_rldef(&greeting,file.s,1,(char *) 0);
   if (retval != 1) retval = -1;
 
-  if (!stralloc_0(&hostname)) authup_die("nomem");
+  if (!stralloc_0(&greeting)) authup_die("nomem");
 
   return retval;
 }
