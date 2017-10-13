@@ -482,6 +482,7 @@ int handle_server_response(int to_client,
 }
 
 char *get_next_field(int *start,stralloc *line) {
+  char *field;
   stralloc temp = {0};
   int i;
   for (i = *start; i < line->len; i++) {
@@ -490,10 +491,21 @@ char *get_next_field(int *start,stralloc *line) {
       *start = i + 1;
       if (temp.len > 0 && temp.s[temp.len - 1] == ':') temp.len--;
       if (!stralloc_0(&temp)) die_nomem();
-      return temp.s;
+      if (!(field = (char *)alloc(temp.len))) die_nomem();
+      str_copy(field,temp.s);
+      return field;
     }
   }
   return 0;
+}
+
+void free_if_non_null(char *env,char *event,char *request_prepend,
+                      char *response_line_glob,char *response) {
+  if (env) alloc_free(env);
+  if (event) alloc_free(event);
+  if (request_prepend) alloc_free(request_prepend);
+  if (response_line_glob) alloc_free(response_line_glob);
+  if (response) alloc_free(response);
 }
 
 filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
@@ -511,8 +523,11 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
   if (0 == str_len(request_prepend))    request_prepend = 0;
   if (0 == str_len(response_line_glob)) die_format(line,"no glob specified");
   if (0 == str_len(exitcode_str))       exitcode = EXITCODE_USE_CHILD_LATER;
-  else if (!scan_ulong(exitcode_str,&exitcode))
-    die_format(line,"exitcode specified, not in range");
+  else if (!scan_ulong(exitcode_str,&exitcode)) {
+    alloc_free(exitcode_str);
+    free_if_non_null(env,event,request_prepend,response_line_glob,response);
+    die_format(line,"exitcode specified out of range");
+  }
   if (RESPONSELINE_NOCHANGE == response) {
     ;
   } else if (0 == str_diff(RESPONSELINE_REMOVE,response)) {
@@ -521,8 +536,10 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
     if (want_munge_internally(response)) {
       stralloc event_stralloc = {0};
       copys(&event_stralloc,event);
-      if (!munge_line_fn(&event_stralloc))
-      die_format(line,"internal routine specified, none available");
+      if (!munge_line_fn(&event_stralloc)) {
+        free_if_non_null(env,event,request_prepend,response_line_glob,response);
+        die_format(line,"internal routine specified, none available");
+      }
     }
   }
 
@@ -543,6 +560,18 @@ filter_rule *reverse_backwards_rules_to_match_file_order(filter_rule *rules) {
   }
 
   return rules_in_file_order;
+}
+
+void unload_filter_rules(filter_rule *rules) {
+  filter_rule *temp;
+
+  while (rules) {
+    temp = rules;
+    rules = rules->next;
+    free_if_non_null(temp->env,temp->event,temp->request_prepend,
+                     temp->response_line_glob,temp->response);
+    alloc_free(temp);
+  }
 }
 
 filter_rule *load_filter_rules(char *configfile) {
@@ -603,11 +632,14 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   return exitcode;
 }
 
-void teardown_and_exit(int exitcode,int child,int from_server,int to_server) {
+void teardown_and_exit(int exitcode,int child,filter_rule *rules,
+                       int from_server,int to_server) {
   int wstat;
 
   close(from_server);
   close(to_server);
+
+  unload_filter_rules(rules);
 
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
@@ -627,7 +659,7 @@ void be_parent(int from_client,int to_client,
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules);
-  teardown_and_exit(exitcode,child,from_server,to_server);
+  teardown_and_exit(exitcode,child,rules,from_server,to_server);
 }
 
 void load_smtp_greeting(stralloc *greeting,char *configfile) {
