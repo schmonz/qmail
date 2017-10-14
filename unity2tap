@@ -1,0 +1,25 @@
+#!/usr/bin/env perl
+
+use warnings;
+use strict;
+
+sub main {
+    my ($test_program) = @_;
+    my $i = 0;
+    open(my $fh, "-|", $test_program);
+    while (<$fh>) {
+        next if /^[0-9]+ Tests [0-9]+ Failures [0-9]+ Ignored/;
+        next if /^-----------------------$/;
+        next if /^FAIL$/;
+        next if /^OK$/;
+        next if /^$/;
+
+        $i++;
+        s/^(.+):PASS$/ok $i $1/g;
+        s/^(.+):FAIL: (.+)$/not ok $i $1 ($2)/g;
+        print;
+    }
+    print "1..$i\n";
+}
+
+main(@ARGV);

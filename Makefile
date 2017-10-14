@@ -6,7 +6,7 @@ default: it
 
 acceptutils-tests: \
 qmail-fixsmtpio-tests
-	./qmail-fixsmtpio-tests
+	@prove -v unity2tap :: ./qmail-fixsmtpio-tests
 
 acceptutils: \
 qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
