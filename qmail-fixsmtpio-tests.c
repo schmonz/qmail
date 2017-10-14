@@ -2,25 +2,29 @@
 
 #include "qmail-fixsmtpio.c"
 
-void setUp(void) {
-  // set stuff up here
-}
+void test_parse_config_clienteof(void) {
+  stralloc config          = {0};
+  int pos                  = 0;
 
-void tearDown(void) {
-  // clean stuff up here
-}
+  copys(&config,"AUTHUSER:clienteof::*:0");
 
-void test_function_should_doBlahAndBlah(void) {
-  //test stuff
-}
+  char *env                = get_next_field(&pos,&config);
+  char *event              = get_next_field(&pos,&config);
+  char *request_prepend    = get_next_field(&pos,&config);
+  char *response_line_glob = get_next_field(&pos,&config);
+  char *exitcode_str       = get_next_field(&pos,&config);
+  char *response           = get_next_field(&pos,&config);
 
-void test_function_should_doAlsoDoBlah(void) {
-  TEST_ASSERT(1 == 0);
+  TEST_ASSERT_EQUAL_STRING( "AUTHUSER", env);
+  TEST_ASSERT_EQUAL_STRING("clienteof", event);
+  TEST_ASSERT_EQUAL_STRING(         "", request_prepend);
+  TEST_ASSERT_EQUAL_STRING(        "*", response_line_glob);
+  TEST_ASSERT_EQUAL_STRING(        "0", exitcode_str);
+  TEST_ASSERT_NULL(	                    response);
 }
 
 int main(void) {
   UNITY_BEGIN();
-  RUN_TEST(test_function_should_doBlahAndBlah);
-  RUN_TEST(test_function_should_doAlsoDoBlah);
+  RUN_TEST(test_parse_config_clienteof);
   return UNITY_END();
 }

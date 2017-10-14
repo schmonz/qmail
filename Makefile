@@ -4,9 +4,12 @@ SHELL=/bin/sh
 
 default: it
 
+runtests: \
+acceptutils-tests
+	@prove -v unity2tap :: ./qmail-fixsmtpio-tests
+
 acceptutils-tests: \
 qmail-fixsmtpio-tests
-	@prove -v unity2tap :: ./qmail-fixsmtpio-tests
 
 acceptutils: \
 qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
