@@ -24,9 +24,15 @@
 #define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
 #define PROGNAME "qmail-authup"
 
+#define EXITCODE_CHECKPASSWORD_UNACCEPTABLE   1
+#define EXITCODE_CHECKPASSWORD_MISUSED        2
+#define EXITCODE_CHECKPASSWORD_TEMPFAIL     111
+#define EXITCODE_FIXSMTPIO_TIMEOUT           16
+#define EXITCODE_FIXSMTPIO_PARSEFAIL         18
+
 static int timeout = 1200;
 
-void die() { _exit(1); }
+void die()         { _exit( 1); }
 void die_noretry() { _exit(12); }
 
 int safewrite(int fd,char *buf,int len) {
@@ -134,23 +140,23 @@ void pop3_okay() { puts("+OK \r\n"); flush(); }
 void pop3_quit() { pop3_okay(); _exit(0); }
 void smtp_quit() { puts("221 "); smtp_out(greeting.s); _exit(0); }
 
-int is_checkpassword_failure(int exitcode) {
-  return (exitcode == 1 || exitcode == 2 || exitcode == 111);
-}
-
-int is_smtpio_timeout(int exitcode) {
-  return exitcode == 16;
-}
-
 stralloc username = {0};
 stralloc password = {0};
 stralloc timestamp = {0};
 
 void exit_according_to_child_exit(int exitcode) {
-  if (is_checkpassword_failure(exitcode)) authup_die("badauth");
-  if (is_smtpio_timeout(exitcode)) authup_die("alarm");
-
-  _exit(0);
+  switch (exitcode) {
+    case EXITCODE_CHECKPASSWORD_UNACCEPTABLE:
+    case EXITCODE_CHECKPASSWORD_MISUSED:
+    case EXITCODE_CHECKPASSWORD_TEMPFAIL:
+      authup_die("badauth");
+    case EXITCODE_FIXSMTPIO_TIMEOUT:
+      authup_die("alarm");
+    case EXITCODE_FIXSMTPIO_PARSEFAIL:
+      authup_die("control");
+    default:
+      _exit(0);
+  }
 }
 
 void logtry(char *username) {
