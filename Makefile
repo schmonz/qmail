@@ -4,6 +4,10 @@ SHELL=/bin/sh
 
 default: it
 
+acceptutils-tests: \
+qmail-fixsmtpio-tests
+	./qmail-fixsmtpio-tests
+
 acceptutils: \
 qmail-reup qmail-authup checkpassword-rejectroot qmail-fixsmtpio
 
@@ -1137,13 +1141,25 @@ qmail-control.9 conf-break conf-spawn
 	| sed s}SPAWN}"`head -1 conf-spawn`"}g \
 	> qmail-control.5
 
+qmail-fixsmtpio-tests: \
+load qmail-fixsmtpio-tests.o unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio-tests unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+
+qmail-fixsmtpio-tests.o: \
+compile qmail-fixsmtpio-tests.c unity.h select.h qmail-fixsmtpio.c
+	./compile qmail-fixsmtpio-tests.c
+
 qmail-fixsmtpio: \
-load qmail-fixsmtpio.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load qmail-fixsmtpio auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load qmail-fixsmtpio.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio.o: \
 compile qmail-fixsmtpio.c alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
 	./compile qmail-fixsmtpio.c
+
+qmail-fixsmtpio-main.o: \
+compile qmail-fixsmtpio-main.c
+	./compile qmail-fixsmtpio-main.c
 
 qmail-getpw: \
 load qmail-getpw.o case.a substdio.a error.a str.a fs.a auto_break.o \
@@ -2173,6 +2189,10 @@ tryulong32.c compile load uint32.h1 uint32.h2
 	./tryulong32 ) >/dev/null 2>&1 \
 	&& cat uint32.h2 || cat uint32.h1 ) > uint32.h
 	rm -f tryulong32.o tryulong32
+
+unity.o: \
+compile unity.c
+	./compile unity.c
 
 wait.a: \
 makelib wait_pid.o wait_nohang.o

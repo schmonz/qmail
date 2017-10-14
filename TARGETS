@@ -394,3 +394,7 @@ qmail-reup
 qmail-reup.o
 qmail-fixsmtpio
 qmail-fixsmtpio.o
+unity.o
+qmail-fixsmtpio-main.o
+qmail-fixsmtpio-tests
+qmail-fixsmtpio-tests.o

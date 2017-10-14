@@ -671,7 +671,7 @@ void cd_var_qmail() {
   if (chdir(auto_qmail) == -1) die_control();
 }
 
-int main(int argc,char **argv) {
+int startup(int argc,char **argv) {
   stralloc greeting = {0};
   filter_rule *rules;
   int from_client;
@@ -704,3 +704,4 @@ int main(int argc,char **argv) {
   else
     die_fork();
 }
+
