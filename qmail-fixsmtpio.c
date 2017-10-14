@@ -203,7 +203,7 @@ int string_matches_glob(char *glob,char *string) {
 
 int want_munge_internally(char *response) {
   if (RESPONSELINE_NOCHANGE == response) return 0;
-  return 0 == str_diff(MUNGE_INTERNALLY,response);
+  return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
 }
 
 int envvar_exists_if_needed(char *envvar) {
