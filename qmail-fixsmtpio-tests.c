@@ -1,6 +1,6 @@
 #include "unity.h"
 
-#include "qmail-fixsmtpio.c"
+#include "qmail-fixsmtpio.h"
 
 void test_parse_config_clienteof(void) {
   stralloc config          = {0};

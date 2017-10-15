@@ -1,30 +1,4 @@
-#include <fnmatch.h>
-#include "alloc.h"
-#include "auto_qmail.h"
-#include "case.h"
-#include "control.h"
-#include "env.h"
-#include "error.h"
-#include "fd.h"
-#include "readwrite.h"
-#include "scan.h"
-#include "select.h"
-#include "str.h"
-#include "stralloc.h"
-#include "substdio.h"
-#include "wait.h"
-
-#define HOMEPAGE                 "https://schmonz.com/qmail/acceptutils"
-#define PROGNAME                 "qmail-fixsmtpio"
-
-#define MUNGE_INTERNALLY         "&" PROGNAME
-#define PSEUDOVERB_GREETING      "greeting"
-#define PSEUDOVERB_TIMEOUT       "timeout"
-#define PSEUDOVERB_CLIENTEOF     "clienteof"
-
-#define RESPONSELINE_NOCHANGE     0
-#define RESPONSELINE_REMOVE      ""
-#define EXITCODE_USE_CHILD_LATER -1
+#include "qmail-fixsmtpio.h"
 
 void die() { _exit(1); }
 
@@ -671,7 +645,7 @@ void cd_var_qmail() {
   if (chdir(auto_qmail) == -1) die_control();
 }
 
-int startup(int argc,char **argv) {
+void startup(int argc,char **argv) {
   stralloc greeting = {0};
   filter_rule *rules;
   int from_client;
@@ -704,4 +678,3 @@ int startup(int argc,char **argv) {
   else
     die_fork();
 }
-

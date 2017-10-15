@@ -393,6 +393,7 @@ checkpassword-rejectroot.o
 qmail-reup
 qmail-reup.o
 qmail-fixsmtpio
+qmail-fixsmtpio.h
 qmail-fixsmtpio.o
 unity.o
 qmail-fixsmtpio-main.o

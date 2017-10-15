@@ -1145,19 +1145,23 @@ qmail-control.9 conf-break conf-spawn
 	> qmail-control.5
 
 qmail-fixsmtpio-tests: \
-load qmail-fixsmtpio-tests.o unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load qmail-fixsmtpio-tests unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio-tests.o: \
-compile qmail-fixsmtpio-tests.c unity.h select.h qmail-fixsmtpio.c
+compile qmail-fixsmtpio-tests.c unity.h qmail-fixsmtpio.h
 	./compile qmail-fixsmtpio-tests.c
 
 qmail-fixsmtpio: \
 load qmail-fixsmtpio.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 	./load qmail-fixsmtpio qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
+qmail-fixsmtpio.h: \
+select.h
+	cat qmail-fixsmtpio.h1 > qmail-fixsmtpio.h
+
 qmail-fixsmtpio.o: \
-compile qmail-fixsmtpio.c alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
+compile qmail-fixsmtpio.c qmail-fixsmtpio.h alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
 	./compile qmail-fixsmtpio.c
 
 qmail-fixsmtpio-main.o: \
