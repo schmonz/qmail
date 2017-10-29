@@ -124,7 +124,9 @@ As a special case, if
 .B response
 is set to "&qmail-fixsmtpio",
 the replacement string is computed by an internal routine for that event.
-(If no such internal routine exists, the response is sent as is.)
+(If no such internal routine exists,
+.B qmail-fixsmtpio
+emits an error and exits.)
 An internal response-munging routine exists for
 .B HELP
 that prepends this program's home page

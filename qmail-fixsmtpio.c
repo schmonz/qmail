@@ -176,8 +176,11 @@ int string_matches_glob(char *glob,char *string) {
 }
 
 int want_munge_internally(char *response) {
-  if (RESPONSELINE_NOCHANGE == response) return 0;
   return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
+}
+
+int want_munge_from_config(char *response) {
+  return 0 != str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
 }
 
 int envvar_exists_if_needed(char *envvar) {
@@ -208,7 +211,7 @@ void munge_response_line(stralloc *line,int lineno,int *exitcode,
     munge_exitcode(exitcode,rule);
     if (want_munge_internally(rule->response))
       munge_line_internally(line,lineno,greeting,verb);
-    else if (rule->response)
+    else if (want_munge_from_config(rule->response))
       copys(line,rule->response);
   }
   if (line->len) if (!is_entire_line(line)) cats(line,"\r\n");
@@ -502,9 +505,10 @@ filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
     free_if_non_null(env,event,request_prepend,response_line_glob,response);
     die_format(line,"exitcode specified out of range");
   }
-  if (RESPONSELINE_NOCHANGE == response) {
-    ;
-  } else if (0 == str_diff(RESPONSELINE_REMOVE,response)) {
+  if (!response) {
+    ;//die_format(line,"response was NULL");
+  } else if (0 == str_len(response)) {
+    die_format(line,"response was EMPTY");
     ;
   } else {
     if (want_munge_internally(response)) {

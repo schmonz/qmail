@@ -22,6 +22,5 @@
 #define PSEUDOVERB_TIMEOUT       "timeout"
 #define PSEUDOVERB_CLIENTEOF     "clienteof"
 
-#define RESPONSELINE_NOCHANGE     0
-#define RESPONSELINE_REMOVE      ""
+#define RESPONSELINE_NOCHANGE    "&qmail-leavesmtpio"
 #define EXITCODE_USE_CHILD_LATER -1
