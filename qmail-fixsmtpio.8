@@ -1,20 +1,26 @@
 .TH qmail-fixsmtpio 8
 .SH NAME
-qmail-fixsmtpio \- filter SMTP daemon I/O and exit status
+qmail-fixsmtpio \- filter SMTP I/O and exit status
 .SH SYNOPSIS
 .B qmail-fixsmtpio
 .I prog
 .SH DESCRIPTION
 .B qmail-fixsmtpio
 is an SMTP proxy.
-It wraps a daemon (typically
+It wraps a program like
 .B ofmipd
 or
-.BR qmail-smtpd )
-that expects descriptor 0 to read from the network
-and descriptor 1 to write to the network, but
-that might not have expected to run under something like
-.BR qmail-authup .
+.B qmail-smtpd
+that expects to read from descriptor 0
+and write to descriptor 1,
+but doesn't expect to be continuing a conversation that another
+program started.
+
+.B qmail-fixsmtpio
+is primarily used to modify SMTP responses and exit codes, and
+occasionally to modify requests.
+
+XXX
 
 .B qmail-fixsmtpio
 is most commonly used with
@@ -22,28 +28,42 @@ is most commonly used with
 to accept submitted messages from authenticated users.
 It can also be used to change the behavior of a public SMTP service.
 
-By default,
+By default, until you configure it with filter rules, inserting
 .B qmail-fixsmtpio
-should not change observable behavior.
-If you observe that it does, please report the bug.
+into the command chain should not change any observable behavior.
+If you observe otherwise, please report the bug.
+
+The
+.B "EXIT CODES"
+section is more important than usual.
 .SH "EXIT CODES"
-On most any failure,
+.B checkpassword
+exits 1 for incorrect passwords.
+This happens to be the same code with which
 .B ofmipd
 and
 .B qmail-smtpd
-exit 1, which is the same code
-.B checkpassword
-uses for incorrect passwords.
-To communicate status back to
-.BR qmail-authup ,
-configure
+indicate any error condition whatsoever.
+Since
+.B qmail-authup
+needs to distinguish authentication failures from other kinds,
+it's important that
 .B qmail-fixsmtpio
-to exit with unique codes for certain errors,
-and with 0 otherwise.
-See EXAMPLES.
+be configured to exit with unique codes for each condition.
+See
+.BR EXAMPLES .
+
+.B qmail-fixsmtpio
+exits 18 if its configuration file exists but fails to parse.
+This, too, is as
+.B qmail-authup
+expects.
 
 .SH "ENVIRONMENT VARIABLES"
-Most filter rules typically apply iff
+Typical filter rules (see
+.BR "CONTROL FILES" ,
+below)
+apply if and only if
 .B AUTHUSER
 is set.
 .B qmail-authup
@@ -55,32 +75,36 @@ sets it.
 .I fixsmtpio
 Filter rules in the above format.
 Default: none.
-
 Values may not contain ":", the field separator.
 
-.B env
+.I env
 (optional)
 is an environment variable that must be present for the rule to apply.
 If empty, no environment variable is required.
 
-.B event
+.I event
 (required)
 is an SMTP verb (or "clienteof", "greeting", or "timeout")
-whose requests, responses, or both are to be filtered.
+for which requests, responses, or both are to be filtered.
 This field is matched case-insensitively.
 
-.B request-prepend
+.I request-prepend
 (optional)
 is a string to be prepended to the request before it's seen by the server.
-"NOOP " prevents the server from taking unwanted action.
+Since
+.B NOOP
+is an SMTP verb that servers accept and do nothing interesting with,
+"NOOP" followed by a space prevents the server from taking unwanted action.
 If empty, the request is sent as is.
 
-.B response-line-glob
+.I response-line-glob
 (required)
-is a glob pattern.
+is an
+.BR fnmatch(3) -style
+glob pattern, with no special options set.
 The rule applies to every matching line of the server response.
 
-.B exitcode
+.I exitcode
 (optional)
 is a numeric code with which
 .B qmail-fixsmtpio
@@ -91,48 +115,66 @@ If no rules override it,
 exits with the same code as
 .IR prog .
 
-.B response
+.I response
 (optional)
 is a string that replaces every matching line of the server response.
 If empty, matching lines are removed.
-If
-.I unset
-(by leaving off the ":" after
-.BR exitcode ),
-the response is sent as is.
 
 As a special case, if
 .B response
 is set to "&qmail-fixsmtpio",
 the replacement string is computed by an internal routine for that event.
-If no such routine exists, the response is sent as is.
+(If no such internal routine exists, the response is sent as is.)
+An internal response-munging routine exists for
+.B HELP
+that prepends this program's home page
+in an attempt to direct support requests to
+.BR AUTHOR .
+Internal response-munging routines also exist for "greeting",
+.BR EHLO ,
+.BR HELO,
+and
+.B QUIT
+that cause the response to include
+.IR smtpgreeting ,
+exactly as
+.B qmail-smtpd
+already does, and are therefore primarily useful with
+.BR ofmipd .
+
+As another special case, if
+.B response
+is "&qmail-leavesmtpio",
+the response is sent as is.
+
+Rules are applied in the order written. For instance, if two rules
+match, the later rule modifies the response returned by the
+earlier rule.
+If multiple matching rules for an event set
+.BR exitcode ,
+the last one wins.
+
+Not all rules (alone or in combination) make practical sense.
+An earlier rule can cause a later one to start (or stop) matching.
+Keep your configuration as simple as possible, and test it well.
+
+.TP 5
+.I smtpgreeting
+SMTP greeting message.
+Default:
+.IR me ,
+if that is supplied;
+otherwise
+.B qmail-fixsmtpio
+will refuse to run.
+The first word of
+.I smtpgreeting
+should be the current host's name.
+
 
 .SH "EXAMPLES"
-.EX
- # always prepend acceptutils link to HELP message
- :help::*::&qmail-fixsmtpio
-
- # if client closes the connection, tell qmail-authup to be happy
- AUTHUSER:clienteof::*:0
-
- # if server greets us unhappily, notify qmail-authup
- AUTHUSER:greeting::4*:14
- AUTHUSER:greeting::5*:15
-
- # if server times out, hide message (qmail-authup has its own)
- AUTHUSER:timeout::*:16:
-
- # if we've already authenticated, replace greeting
- AUTHUSER:greeting::2*::&qmail-fixsmtpio
-
- # don't advertise AUTH or STARTTLS
- AUTHUSER:ehlo::250?AUTH*::
- AUTHUSER:ehlo::250?STARTTLS::
-
- # don't allow AUTH or STARTTLS
- AUTHUSER:auth:NOOP :*::502 unimplemented (#5.5.1)
- AUTHUSER:starttls:NOOP :*::502 unimplemented (#5.5.1)
-.EE
+See
+.IR https://schmonz.com/qmail/acceptutils/fixsmtpio.txt .
 
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
@@ -142,4 +184,6 @@ checkpassword(8),
 checkpassword-rejectroot(8),
 qmail-smtpd(8),
 ofmipd(8),
-fnmatch(3).
+fnmatch(3),
+fixcrio(1),
+spamdyke.
