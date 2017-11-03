@@ -11,29 +11,24 @@ It wraps a program like
 .B ofmipd
 or
 .B qmail-smtpd
-that expects to read from descriptor 0
-and write to descriptor 1,
-but doesn't expect to be continuing a conversation that another
-program started.
-
-.B qmail-fixsmtpio
-is primarily used to modify SMTP responses and exit codes, and
-occasionally to modify requests.
-
-XXX
-
-.B qmail-fixsmtpio
-is most commonly used with
+that reads from stdin,
+writes to stdout,
+and assumes it's responsible for the entire conversation.
+When it's not -- typically because
 .B qmail-authup
-to accept submitted messages from authenticated users.
-It can also be used to change the behavior of a public SMTP service.
+has already initiated an authenticated session --
+.B qmail-fixsmtpio
+can be configured to adjust exit codes, SMTP responses,
+and occasionally even requests.
+.B qmail-fixsmtpio
+can also be used to modify a public SMTP service.
 
-By default, until you configure it with filter rules, inserting
+By default, inserting an unconfigured
 .B qmail-fixsmtpio
 into the command chain should not change any observable behavior.
 If you observe otherwise, please report the bug.
 
-The
+In typical usage, the
 .B "EXIT CODES"
 section is more important than usual.
 .SH "EXIT CODES"
@@ -127,21 +122,24 @@ the replacement string is computed by an internal routine for that event.
 (If no such internal routine exists,
 .B qmail-fixsmtpio
 emits an error and exits.)
-An internal response-munging routine exists for
-.B HELP
-that prepends this program's home page
+For
+.BR HELP ,
 in an attempt to direct support requests to
-.BR AUTHOR .
-Internal response-munging routines also exist for "greeting",
+.BR AUTHOR ,
+an internal routine can
+prepend this program's home page.
+Please enable it!
+For "greeting",
 .BR EHLO ,
-.BR HELO,
+.BR HELO ,
 and
-.B QUIT
-that cause the response to include
-.IR smtpgreeting ,
-exactly as
+.BR QUIT ,
+internal routines can include
+.I smtpgreeting
+in the response, just as
 .B qmail-smtpd
-already does, and are therefore primarily useful with
+already does.
+These are therefore primarily useful with
 .BR ofmipd .
 
 As another special case, if
