@@ -42,16 +42,6 @@ typedef struct request_response {
   int       proxy_exitcode;
 } request_response;
 
-typedef struct filter_rule {
-  struct filter_rule *next;
-  char *env;
-  char *event;
-  char *request_prepend;
-  char *response_line_glob;
-  int   exitcode;
-  char *response;
-} filter_rule;
-
 filter_rule *prepend_rule(filter_rule *next,
                           char *env,char *event,char *request_prepend,
                           char *response_line_glob,int exitcode,char *response) {
@@ -464,7 +454,7 @@ char *get_next_field(int *start,stralloc *line) {
   int i;
   for (i = *start; i < line->len; i++) {
     if (!stralloc_append(&temp,i + line->s)) die_nomem();
-    if (line->s[i] == ':' || i == line->len - 1) {
+    if((str_len(temp) > 0) && (line->s[i] == ':' || i == line->len - 1)) {
       *start = i + 1;
       if (temp.len > 0 && temp.s[temp.len - 1] == ':') temp.len--;
       if (!stralloc_0(&temp)) die_nomem();

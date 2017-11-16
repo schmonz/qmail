@@ -1,0 +1,30 @@
+# if client closes the connection, tell qmail-authup to be happy
+AUTHUSER:clienteof::*:0
+
+# if server greets us unhappily, notify qmail-authup
+AUTHUSER:greeting::4*:14
+AUTHUSER:greeting::5*:15
+
+# if server times out, hide message (qmail-authup has its own)
+AUTHUSER:timeout::*:16:
+
+# always (authenticated or not) replace greeting
+:greeting::2*::&qmail-fixsmtpio
+
+# always replace greeting in HELO/EHLO
+:helo::2*::&qmail-fixsmtpio
+:ehlo::2*::&qmail-fixsmtpio
+
+# always prepend acceptutils link to HELP message
+:help::*::&qmail-fixsmtpio
+
+# always replace greeting in QUIT
+:quit::2*::&qmail-fixsmtpio
+
+# don't advertise AUTH or STARTTLS
+AUTHUSER:ehlo::250?AUTH*::
+AUTHUSER:ehlo::250?STARTTLS::
+
+# don't allow AUTH or STARTTLS
+AUTHUSER:auth:NOOP :*::502 unimplemented (#5.5.1)
+AUTHUSER:starttls:NOOP :*::502 unimplemented (#5.5.1)
