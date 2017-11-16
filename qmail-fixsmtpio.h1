@@ -24,3 +24,16 @@
 
 #define RESPONSELINE_NOCHANGE    "&qmail-leavesmtpio"
 #define EXITCODE_USE_CHILD_LATER -1
+
+typedef struct filter_rule {
+  struct filter_rule *next;
+  char *env;
+  char *event;
+  char *request_prepend;
+  char *response_line_glob;
+  int   exitcode;
+  char *response;
+} filter_rule;
+
+char *get_next_field(int *start, stralloc *line);
+filter_rule *load_filter_rules(char *configfile);
