@@ -334,8 +334,10 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   for (i = 0; i < request->len; i++)
     if (request->s[i] == ' ') break;
 
+  // Note: Pull this behaviour out into it's own function (please )
   i++;
 
+  // Note: Test edge case >= vs >
   if (i > request->len) {
     copy(verb,request);
     strip_last_eol(verb);
@@ -458,13 +460,17 @@ int handle_server_response(int to_client,
   return rr->proxy_exitcode;
 }
 
+
+// Note: Probably want to put "const" on params I'm only reading from
+// Amitai says: this API sucks. just have a split() return fixed-size array
+// or return the struct I'm gonna want!
 char *get_next_field(int *start,stralloc *line) {
   char *field;
   stralloc temp = {0};
   int i;
   for (i = *start; i < line->len; i++) {
     if (!stralloc_append(&temp,i + line->s)) die_nomem();
-    if (line->s[i] == ':' || i == line->len - 1) {
+    if (temp.len > 0 && (line->s[i] == ':' || i == line->len - 1)) {
       *start = i + 1;
       if (temp.len > 0 && temp.s[temp.len - 1] == ':') temp.len--;
       if (!stralloc_0(&temp)) die_nomem();
