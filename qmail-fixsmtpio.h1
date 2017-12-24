@@ -17,10 +17,18 @@
 #define HOMEPAGE                 "https://schmonz.com/qmail/acceptutils"
 #define PROGNAME                 "qmail-fixsmtpio"
 
+#define ENV_AUTHUSER             "AUTHUSER"
+#define ENV_ANY                  0
 #define MUNGE_INTERNALLY         "&" PROGNAME
+#define PREPEND_NOTHING          ""
+#define PREPEND_VERB_NOOP        "NOOP "
 #define PSEUDOVERB_GREETING      "greeting"
 #define PSEUDOVERB_TIMEOUT       "timeout"
 #define PSEUDOVERB_CLIENTEOF     "clienteof"
 
 #define RESPONSELINE_NOCHANGE    "&qmail-leavesmtpio"
-#define EXITCODE_USE_CHILD_LATER -1
+#define EXITCODE_NOW_SUCCESS     0
+#define EXITCODE_NOW_TEMPFAIL    14
+#define EXITCODE_NOW_PERMFAIL    15
+#define EXITCODE_NOW_TIMEOUT     17
+#define EXITCODE_LATER_USE_CHILD -1

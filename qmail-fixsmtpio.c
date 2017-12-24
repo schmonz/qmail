@@ -194,7 +194,7 @@ int filter_rule_applies(filter_rule *rule,stralloc *verb) {
 }
 
 void munge_exitcode(int *exitcode,filter_rule *rule) {
-  if (rule->exitcode != EXITCODE_USE_CHILD_LATER) *exitcode = rule->exitcode;
+  if (rule->exitcode != EXITCODE_LATER_USE_CHILD) *exitcode = rule->exitcode;
 }
 
 void munge_response_line(stralloc *line,int lineno,int *exitcode,
@@ -413,7 +413,7 @@ void request_response_init(request_response *rr) {
   blank(&proxy_request);   rr->proxy_request   = &proxy_request;
   blank(&server_response); rr->server_response = &server_response;
   blank(&proxy_response);  rr->proxy_response  = &proxy_response;
-                           rr->proxy_exitcode  = EXITCODE_USE_CHILD_LATER;
+                           rr->proxy_exitcode  = EXITCODE_LATER_USE_CHILD;
 }
 
 void handle_client_eof(stralloc *line,int lineno,int *exitcode,
@@ -460,30 +460,9 @@ int handle_server_response(int to_client,
   return rr->proxy_exitcode;
 }
 
-
-// Note: Probably want to put "const" on params I'm only reading from
-// Amitai says: this API sucks. just have a split() return fixed-size array
-// or return the struct I'm gonna want!
-char *get_next_field(int *start,stralloc *line) {
-  char *field;
-  stralloc temp = {0};
-  int i;
-  for (i = *start; i < line->len; i++) {
-    if (!stralloc_append(&temp,i + line->s)) die_nomem();
-    if (temp.len > 0 && (line->s[i] == ':' || i == line->len - 1)) {
-      *start = i + 1;
-      if (temp.len > 0 && temp.s[temp.len - 1] == ':') temp.len--;
-      if (!stralloc_0(&temp)) die_nomem();
-      if (!(field = (char *)alloc(temp.len))) die_nomem();
-      str_copy(field,temp.s);
-      return field;
-    }
-  }
-  return 0;
-}
-
 void free_if_non_null(char *env,char *event,char *request_prepend,
                       char *response_line_glob,char *response) {
+  return; // XXX
   if (env) alloc_free(env);
   if (event) alloc_free(event);
   if (request_prepend) alloc_free(request_prepend);
@@ -491,59 +470,18 @@ void free_if_non_null(char *env,char *event,char *request_prepend,
   if (response) alloc_free(response);
 }
 
-filter_rule *load_filter_rule(filter_rule *rules,stralloc *line) {
-  int pos = 0;
-  char *env                = get_next_field(&pos,line);
-  char *event              = get_next_field(&pos,line);
-  char *request_prepend    = get_next_field(&pos,line);
-  char *response_line_glob = get_next_field(&pos,line);
-  char *exitcode_str       = get_next_field(&pos,line);
-  char *response           = get_next_field(&pos,line);
-  int exitcode;
-
-  if (0 == str_len(env))                env = 0;
-  if (0 == str_len(event))              die_format(line,"no event specified");
-  if (0 == str_len(request_prepend))    request_prepend = 0;
-  if (0 == str_len(response_line_glob)) die_format(line,"no glob specified");
-  if (0 == str_len(exitcode_str))       exitcode = EXITCODE_USE_CHILD_LATER;
-  else if (!scan_ulong(exitcode_str,&exitcode)) {
-    alloc_free(exitcode_str);
-    free_if_non_null(env,event,request_prepend,response_line_glob,response);
-    die_format(line,"exitcode specified out of range");
-  }
-  if (!response) {
-    ;//die_format(line,"response was NULL");
-  } else if (0 == str_len(response)) {
-    die_format(line,"response was EMPTY");
-    ;
-  } else {
-    if (want_munge_internally(response)) {
-      stralloc event_stralloc = {0};
-      copys(&event_stralloc,event);
-      if (!munge_line_fn(&event_stralloc)) {
-        free_if_non_null(env,event,request_prepend,response_line_glob,response);
-        die_format(line,"internal routine specified, none available");
-      }
-    }
-  }
-
-  return prepend_rule(rules,
-                      env,event,request_prepend,
-                      response_line_glob,exitcode,response);
-}
-
-filter_rule *reverse_backwards_rules_to_match_file_order(filter_rule *rules) {
-  filter_rule *rules_in_file_order = 0;
+filter_rule *reverse_rules(filter_rule *rules) {
+  filter_rule *reversed_rules = 0;
   filter_rule *temp;
 
   while (rules) {
     temp = rules;
     rules = rules->next;
-    temp->next = rules_in_file_order;
-    rules_in_file_order = temp;
+    temp->next = reversed_rules;
+    reversed_rules = temp;
   }
 
-  return rules_in_file_order;
+  return reversed_rules;
 }
 
 void unload_filter_rules(filter_rule *rules) {
@@ -558,23 +496,86 @@ void unload_filter_rules(filter_rule *rules) {
   }
 }
 
-filter_rule *load_filter_rules(char *configfile) {
-  stralloc lines = {0}, line = {0};
+filter_rule *load_filter_rules(void) {
   filter_rule *backwards_rules = 0;
-  int i;
 
-  if (control_readfile(&lines,configfile,0) == -1) die_control();
+  // if client closes the connection, tell qmail-authup to be happy
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             PSEUDOVERB_CLIENTEOF,
+      PREPEND_NOTHING,          "*",
+      EXITCODE_NOW_SUCCESS,     "");
 
-  for (i = 0; i < lines.len; i++) {
-    if (!stralloc_append(&line,i + lines.s)) die_nomem();
-    if (lines.s[i] == '\0' || i == lines.len - 1) {
-      logit('0',&line);
-      backwards_rules = load_filter_rule(backwards_rules,&line);
-      blank(&line);
-    }
-  }
+  // if server greets us unhappily, notify qmail-authup
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             PSEUDOVERB_GREETING,
+      PREPEND_NOTHING,          "4*",
+      EXITCODE_NOW_TEMPFAIL,    0);
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             PSEUDOVERB_GREETING,
+      PREPEND_NOTHING,          "5*",
+      EXITCODE_NOW_PERMFAIL,    0); // XXX LEAVE_RESPONSE_LINE_AS_IS
 
-  return reverse_backwards_rules_to_match_file_order(backwards_rules);
+  // if server times out, hide message (qmail-authup has its own)
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             PSEUDOVERB_TIMEOUT,
+      PREPEND_NOTHING,          "*",
+      EXITCODE_NOW_TIMEOUT,     ""); // XXX REMOVE_RESPONSE_LINE
+
+  // if authenticated, replace greeting
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             PSEUDOVERB_GREETING,
+      PREPEND_NOTHING,          "2*",
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+
+  // implement a new verb that is not very interesting
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_ANY,                  "word",
+      PREPEND_VERB_NOOP,	      "*",
+      EXITCODE_LATER_USE_CHILD, "250 likewise, give my regards to your mother");
+
+  // always replace greeting in HELO/EHLO
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_ANY,                  "helo",
+      PREPEND_NOTHING,          "2*",
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_ANY,                  "ehlo",
+      PREPEND_NOTHING,          "2*",
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+
+  // always prepend acceptutils link to HELP message
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_ANY,                  "help",
+      PREPEND_NOTHING,          "*",
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+
+  // always replace greeting in QUIT
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_ANY,                  "quit",
+      PREPEND_NOTHING,          "2*",
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+
+  // don't advertise AUTH or STARTTLS
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             "ehlo",
+      PREPEND_NOTHING,          "250?AUTH*",
+      EXITCODE_LATER_USE_CHILD, "");
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             "ehlo",
+      PREPEND_NOTHING,          "250?STARTTLS",
+      EXITCODE_LATER_USE_CHILD, "");
+
+  // don't allow AUTH or STARTTLS
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             "auth",
+      PREPEND_VERB_NOOP,        "*",
+      EXITCODE_LATER_USE_CHILD, "502 unimplemented (#5.5.1)");
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_AUTHUSER,             "starttls",
+      PREPEND_VERB_NOOP,        "*",
+      EXITCODE_LATER_USE_CHILD, "502 unimplemented (#5.5.1)");
+
+  return reverse_rules(backwards_rules);
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
@@ -582,7 +583,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              stralloc *greeting,
                                              filter_rule *rules) {
   char buf[SUBSTDIO_INSIZE];
-  int exitcode = EXITCODE_USE_CHILD_LATER;
+  int exitcode = EXITCODE_LATER_USE_CHILD;
   int want_data = 0, in_data = 0;
   request_response rr;
 
@@ -610,7 +611,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       }
     }
 
-    if (exitcode != EXITCODE_USE_CHILD_LATER) break;
+    if (exitcode != EXITCODE_LATER_USE_CHILD) break;
   }
 
   return exitcode;
@@ -628,7 +629,7 @@ void teardown_and_exit(int exitcode,int child,filter_rule *rules,
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
-  if (exitcode == EXITCODE_USE_CHILD_LATER) _exit(wait_exitcode(wstat));
+  if (exitcode == EXITCODE_LATER_USE_CHILD) _exit(wait_exitcode(wstat));
   else _exit(exitcode);
 }
 
@@ -668,7 +669,7 @@ void startup(int argc,char **argv) {
 
   cd_var_qmail();
   load_smtp_greeting(&greeting,"control/smtpgreeting");
-  rules = load_filter_rules("control/fixsmtpio");
+  rules = load_filter_rules();
 
   from_client = 0;
   mypipe(&from_me,&to_server);

@@ -1157,7 +1157,7 @@ load qmail-fixsmtpio.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a sub
 	./load qmail-fixsmtpio qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio.h: \
-select.h
+select.h qmail-fixsmtpio.h1
 	cat qmail-fixsmtpio.h1 > qmail-fixsmtpio.h
 
 qmail-fixsmtpio.o: \
