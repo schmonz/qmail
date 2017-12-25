@@ -334,10 +334,10 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   for (i = 0; i < request->len; i++)
     if (request->s[i] == ' ') break;
 
-  // Note: Pull this behaviour out into it's own function (please )
+  // XXX: Pull this behaviour out into it's own function (please )
   i++;
 
-  // Note: Test edge case >= vs >
+  // XXX: Test edge case >= vs >
   if (i > request->len) {
     copy(verb,request);
     strip_last_eol(verb);
@@ -503,77 +503,91 @@ filter_rule *load_filter_rules(void) {
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_CLIENTEOF,
       PREPEND_NOTHING,          "*",
-      EXITCODE_NOW_SUCCESS,     "");
+      EXITCODE_NOW_SUCCESS,     ""
+  );
 
   // if server greets us unhappily, notify qmail-authup
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_GREETING,
       PREPEND_NOTHING,          "4*",
-      EXITCODE_NOW_TEMPFAIL,    0);
+      EXITCODE_NOW_TEMPFAIL,    0
+  );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_GREETING,
       PREPEND_NOTHING,          "5*",
-      EXITCODE_NOW_PERMFAIL,    0); // XXX LEAVE_RESPONSE_LINE_AS_IS
+      EXITCODE_NOW_PERMFAIL,    0
+  ); // XXX LEAVE_RESPONSE_LINE_AS_IS
 
   // if server times out, hide message (qmail-authup has its own)
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_TIMEOUT,
       PREPEND_NOTHING,          "*",
-      EXITCODE_NOW_TIMEOUT,     ""); // XXX REMOVE_RESPONSE_LINE
+      EXITCODE_NOW_TIMEOUT,     ""
+  ); // XXX REMOVE_RESPONSE_LINE
 
   // if authenticated, replace greeting
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_GREETING,
       PREPEND_NOTHING,          "2*",
-      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY
+  );
 
   // implement a new verb that is not very interesting
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "word",
       PREPEND_VERB_NOOP,        "*",
-      EXITCODE_LATER_USE_CHILD, "250 likewise, give my regards to your mother");
+      EXITCODE_LATER_USE_CHILD, "250 likewise, give my regards to your mother"
+  );
 
   // always replace greeting in HELO/EHLO
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "helo",
       PREPEND_NOTHING,          "2*",
-      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY
+  );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "ehlo",
       PREPEND_NOTHING,          "2*",
-      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY
+  );
 
   // always prepend acceptutils link to HELP message
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "help",
       PREPEND_NOTHING,          "*",
-      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY
+  );
 
   // always replace greeting in QUIT
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "quit",
       PREPEND_NOTHING,          "2*",
-      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY);
+      EXITCODE_LATER_USE_CHILD, MUNGE_INTERNALLY
+  );
 
   // don't advertise AUTH or STARTTLS
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "ehlo",
       PREPEND_NOTHING,          "250?AUTH*",
-      EXITCODE_LATER_USE_CHILD, "");
+      EXITCODE_LATER_USE_CHILD, ""
+  );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "ehlo",
       PREPEND_NOTHING,          "250?STARTTLS",
-      EXITCODE_LATER_USE_CHILD, "");
+      EXITCODE_LATER_USE_CHILD, ""
+  );
 
   // don't allow AUTH or STARTTLS
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "auth",
       PREPEND_VERB_NOOP,        "*",
-      EXITCODE_LATER_USE_CHILD, "502 unimplemented (#5.5.1)");
+      EXITCODE_LATER_USE_CHILD, "502 unimplemented (#5.5.1)"
+  );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "starttls",
       PREPEND_VERB_NOOP,        "*",
-      EXITCODE_LATER_USE_CHILD, "502 unimplemented (#5.5.1)");
+      EXITCODE_LATER_USE_CHILD, "502 unimplemented (#5.5.1)"
+  );
 
   return reverse_rules(backwards_rules);
 }
