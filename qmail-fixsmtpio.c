@@ -530,7 +530,7 @@ filter_rule *load_filter_rules(void) {
   // implement a new verb that is not very interesting
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "word",
-      PREPEND_VERB_NOOP,	      "*",
+      PREPEND_VERB_NOOP,        "*",
       EXITCODE_LATER_USE_CHILD, "250 likewise, give my regards to your mother");
 
   // always replace greeting in HELO/EHLO
