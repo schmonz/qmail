@@ -1153,15 +1153,15 @@ compile qmail-fixsmtpio-tests.c unity.h qmail-fixsmtpio.h
 	./compile qmail-fixsmtpio-tests.c
 
 qmail-fixsmtpio: \
-load qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load qmail-fixsmtpio qmail-fixsmtpio-filter.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio.h: \
 select.h qmail-fixsmtpio.h1
 	cat qmail-fixsmtpio.h1 > qmail-fixsmtpio.h
 
 qmail-fixsmtpio.o: \
-compile qmail-fixsmtpio.c qmail-fixsmtpio.h qmail-fixsmtpio-filter.h alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
+compile qmail-fixsmtpio.c qmail-fixsmtpio.h qmail-fixsmtpio-filter.h qmail-fixsmtpio-proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
 	./compile qmail-fixsmtpio.c
 
 qmail-fixsmtpio-filter.o: \
@@ -1171,6 +1171,10 @@ compile qmail-fixsmtpio-filter.c qmail-fixsmtpio-filter.h
 qmail-fixsmtpio-main.o: \
 compile qmail-fixsmtpio-main.c
 	./compile qmail-fixsmtpio-main.c
+
+qmail-fixsmtpio-proxy.o: \
+compile qmail-fixsmtpio-proxy.c qmail-fixsmtpio-proxy.h
+	./compile qmail-fixsmtpio-proxy.c
 
 qmail-getpw: \
 load qmail-getpw.o case.a substdio.a error.a str.a fs.a auto_break.o \
