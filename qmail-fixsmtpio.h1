@@ -27,8 +27,8 @@
 #define PSEUDOVERB_CLIENTEOF     "clienteof"
 
 #define RESPONSELINE_NOCHANGE    "&qmail-leavesmtpio"
-#define EXITCODE_NOW_SUCCESS     0
-#define EXITCODE_NOW_TEMPFAIL    14
-#define EXITCODE_NOW_PERMFAIL    15
-#define EXITCODE_NOW_TIMEOUT     17
-#define EXITCODE_LATER_USE_CHILD -1
+#define EXIT_NOW_SUCCESS         0
+#define EXIT_NOW_TEMPFAIL        14
+#define EXIT_NOW_PERMFAIL        15
+#define EXIT_NOW_TIMEOUT         17
+#define EXIT_LATER_NORMALLY      -1
