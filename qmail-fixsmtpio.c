@@ -12,15 +12,6 @@ void dieerrflush(char *s) {
   die();
 }
 
-void die_format(stralloc *line,char *s) {
-  substdio_puts(&sserr,PROGNAME ": unable to parse control/fixsmtpio: ");
-  substdio_puts(&sserr,s);
-  substdio_puts(&sserr,": ");
-  substdio_put(&sserr,line->s,line->len);
-  substdio_putsflush(&sserr,"\n");
-  die();
-}
-
 void die_usage() { dieerrflush("usage: " PROGNAME " prog [ arg ... ]"); }
 void die_control(){dieerrflush("unable to read controls"); }
 void die_pipe()  { dieerrflush("unable to open pipe"); }
