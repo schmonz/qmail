@@ -1,0 +1,5 @@
+c++ -s -L/opt/pkg/lib -lstdc++ -lCppUTest -lCppUTestExt
+
+cc
+
+This will be used to link .o files into an executable.

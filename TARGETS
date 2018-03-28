@@ -400,3 +400,8 @@ qmail-fixsmtpio-tests
 qmail-fixsmtpio-tests.o
 qmail-fixsmtpio-filter.o
 qmail-fixsmtpio-proxy.o
+auto-cppld.sh
+compile-cpp
+load-cpp
+make-compile-cpp
+make-load-cpp
