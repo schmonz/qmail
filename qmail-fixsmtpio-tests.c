@@ -1,5 +1,3 @@
-#include "unity.h"
-
 #include "qmail-fixsmtpio.h"
 
 void test_nothing_interesting(void) {

@@ -3,10 +3,11 @@
 SHELL=/bin/sh
 
 default: it
+all: default
 
 runtests: \
 acceptutils-tests
-	@prove -v unity2tap :: ./qmail-fixsmtpio-tests
+	@echo "YOUR TESTS FAIL BECAUSE YOU HAVE NONE"
 
 acceptutils-tests: \
 qmail-fixsmtpio-tests
@@ -1145,11 +1146,11 @@ qmail-control.9 conf-break conf-spawn
 	> qmail-control.5
 
 qmail-fixsmtpio-tests: \
-load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o unity.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio-tests.o: \
-compile qmail-fixsmtpio-tests.c unity.h qmail-fixsmtpio.h
+compile qmail-fixsmtpio-tests.c qmail-fixsmtpio.h
 	./compile qmail-fixsmtpio-tests.c
 
 qmail-fixsmtpio: \
@@ -2204,10 +2205,6 @@ tryulong32.c compile load uint32.h1 uint32.h2
 	./tryulong32 ) >/dev/null 2>&1 \
 	&& cat uint32.h2 || cat uint32.h1 ) > uint32.h
 	rm -f tryulong32.o tryulong32
-
-unity.o: \
-compile unity.c
-	./compile unity.c
 
 wait.a: \
 makelib wait_pid.o wait_nohang.o
