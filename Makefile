@@ -42,13 +42,6 @@ conf-cc conf-ld warn-auto.sh
 	echo LD=\'`head -1 conf-ld`\' \
 	) > auto-ccld.sh
 
-auto-cppld.sh: \
-conf-cpp conf-ld-cpp warn-auto.sh
-	( cat warn-auto.sh; \
-	echo CC=\'`head -1 conf-cpp`\'; \
-	echo LD=\'`head -1 conf-ld-cpp`\' \
-	) > auto-cppld.sh
-
 auto-gid: \
 load auto-gid.o substdio.a error.a str.a fs.a
 	./load auto-gid substdio.a error.a str.a fs.a 
@@ -348,12 +341,6 @@ make-compile warn-auto.sh systype
 	( cat warn-auto.sh; ./make-compile "`cat systype`" ) > \
 	compile
 	chmod 755 compile
-
-compile-cpp: \
-make-compile-cpp warn-auto.sh systype
-	( cat warn-auto.sh; ./make-compile-cpp "`cat systype`" ) > \
-	compile-cpp
-	chmod 755 compile-cpp
 
 condredirect: \
 load condredirect.o qmail.o strerr.a fd.a sig.a wait.a seek.a env.a \
@@ -851,11 +838,6 @@ make-load warn-auto.sh systype
 	( cat warn-auto.sh; ./make-load "`cat systype`" ) > load
 	chmod 755 load
 
-load-cpp: \
-make-load-cpp warn-auto.sh systype
-	( cat warn-auto.sh; ./make-load-cpp "`cat systype`" ) > load-cpp
-	chmod 755 load-cpp
-
 lock.a: \
 makelib lock_ex.o lock_exnb.o lock_un.o
 	./makelib lock.a lock_ex.o lock_exnb.o lock_un.o
@@ -949,20 +931,10 @@ make-compile.sh auto-ccld.sh
 	cat auto-ccld.sh make-compile.sh > make-compile
 	chmod 755 make-compile
 
-make-compile-cpp: \
-make-compile.sh auto-cppld.sh
-	cat auto-cppld.sh make-compile.sh > make-compile-cpp
-	chmod 755 make-compile-cpp
-
 make-load: \
 make-load.sh auto-ccld.sh
 	cat auto-ccld.sh make-load.sh > make-load
 	chmod 755 make-load
-
-make-load-cpp: \
-make-load.sh auto-cppld.sh
-	cat auto-cppld.sh make-load.sh > make-load-cpp
-	chmod 755 make-load-cpp
 
 make-makelib: \
 make-makelib.sh auto-ccld.sh
@@ -1174,12 +1146,12 @@ qmail-control.9 conf-break conf-spawn
 	> qmail-control.5
 
 qmail-fixsmtpio-tests: \
-load-cpp qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load-cpp qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
 
 qmail-fixsmtpio-tests.o: \
-compile-cpp qmail-fixsmtpio-tests.cpp qmail-fixsmtpio.h
-	./compile-cpp qmail-fixsmtpio-tests.cpp
+compile qmail-fixsmtpio-tests.c qmail-fixsmtpio.h
+	./compile qmail-fixsmtpio-tests.c
 
 qmail-fixsmtpio: \
 load qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o qmail-fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
