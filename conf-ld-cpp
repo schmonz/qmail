@@ -1,4 +1,4 @@
-c++ -s -L/opt/pkg/lib -lstdc++ -lCppUTest -lCppUTestExt
+c++ -L/opt/pkg/lib -lstdc++ -lCppUTest -lCppUTestExt
 
 cc
 

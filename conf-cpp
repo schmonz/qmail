@@ -1,1 +1,1 @@
-c++ -O2 -DBIND_8_COMPAT=1 -I/opt/pkg/include
+c++ -O2 -DFUCKING_CPP_AND_C_TOGETHER=1 -DBIND_8_COMPAT=1 -I/opt/pkg/include
