@@ -298,6 +298,14 @@ check: \
 it man
 	./instcheck
 
+check.h:
+	cat `head -1 conf-check`/include/check.h \
+	| sed 's}<check_stdint\.h>}"check_stdint.h"}g' \
+	> check.h
+
+check_stdint.h:
+	cp `head -1 conf-check`/include/check_stdint.h .
+
 checkpassword-rejectroot: \
 load checkpassword-rejectroot.o substdio.a error.a str.a
 	./load checkpassword-rejectroot substdio.a error.a str.a
@@ -833,6 +841,9 @@ maildir2mbox maildirwatch qail elq pinq idedit install-big install \
 instcheck home home+df proc proc+df binm1 binm1+df binm2 binm2+df \
 binm3 binm3+df
 
+libcheck.a:
+	cp `head -1 conf-check`/lib/libcheck.a .
+
 load: \
 make-load warn-auto.sh systype
 	( cat warn-auto.sh; ./make-load "`cat systype`" ) > load
@@ -1146,11 +1157,11 @@ qmail-control.9 conf-break conf-spawn
 	> qmail-control.5
 
 qmail-fixsmtpio-tests: \
-load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
+	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
 
 qmail-fixsmtpio-tests.o: \
-compile qmail-fixsmtpio-tests.c qmail-fixsmtpio.h
+compile qmail-fixsmtpio-tests.c qmail-fixsmtpio.h check_stdint.h check.h
 	./compile qmail-fixsmtpio-tests.c
 
 qmail-fixsmtpio: \
