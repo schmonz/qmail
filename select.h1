@@ -3,8 +3,6 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
-#ifndef FUCKING_CPP_AND_C_TOGETHER
 extern int select();
-#endif
 
 #endif
