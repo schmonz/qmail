@@ -4,6 +4,7 @@
 #include "qmail-fixsmtpio-filter.h"
 #include "stralloc.h"
 
+
 START_TEST (test_strip_last_eol)
 {
 	stralloc sa = {0};
@@ -18,18 +19,53 @@ START_TEST (test_strip_last_eol)
 	ck_assert_int_eq(1, sa.len);
 	strip_last_eol(&sa);
 	ck_assert_int_eq(0, sa.len);
+
+  stralloc_copys(&sa,"\r");
+	ck_assert_int_eq(1, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(0, sa.len);
+
+  stralloc_copys(&sa,"\r\n");
+	ck_assert_int_eq(2, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(0, sa.len);
+
+  stralloc_copys(&sa,"\n\r");
+	ck_assert_int_eq(2, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(1, sa.len);
+
+  stralloc_copys(&sa,"\r\r");
+	ck_assert_int_eq(2, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(1, sa.len);
+
+  stralloc_copys(&sa,"\n\n");
+	ck_assert_int_eq(2, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(1, sa.len);
+
+  stralloc_copys(&sa,"yo geeps");
+	ck_assert_int_eq(8, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(8, sa.len);
+
+  stralloc_copys(&sa,"yo geeps\r\n");
+	ck_assert_int_eq(10, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(8, sa.len);
+
+  stralloc_copys(&sa,"yo geeps\r\nhow you doin?\r\n");
+	ck_assert_int_eq(25, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(23, sa.len);
+
+  stralloc_copys(&sa,"yo geeps\r\nhow you doin?");
+	ck_assert_int_eq(23, sa.len);
+	strip_last_eol(&sa);
+	ck_assert_int_eq(23, sa.len);
 }
 END_TEST
-
-/*
- * given empty stralloc, return empty stralloc
- * given stralloc consisting of "\r", return empty stralloc
- * given stralloc consisting of "\r\n", return empty stralloc
- * given stralloc consisting of "\n\r", ???
- * given stralloc consisting of "yo geeps", return "yo geeps"
- * given stralloc consisting of "yo geeps\r\n", return "yo geeps"
- * given stralloc consisting of "yo geeps\r\nhow you doin?\r\n", return "yo geeps\r\nhow you doin?"
- */
 
 Suite * fixsmtpio_suite(void)
 {
