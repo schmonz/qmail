@@ -5,13 +5,13 @@
 #include "stralloc.h"
 
 void assert_strip_last_eol(int charsremoved, const char *input) {
-	stralloc sa = {0};
+  stralloc sa = {0};
   stralloc_copys(&sa, input);
   int len = sa.len;
 
-	strip_last_eol(&sa);
+  strip_last_eol(&sa);
 
-	ck_assert_int_eq(len - charsremoved, sa.len);
+  ck_assert_int_eq(len - charsremoved, sa.len);
 }
 
 START_TEST (test_strip_last_eol)
@@ -31,32 +31,32 @@ END_TEST
 
 Suite * fixsmtpio_suite(void)
 {
-	Suite *s;
-	TCase *tc_core;
+  Suite *s;
+  TCase *tc_core;
 
-	s = suite_create("fixsmtpio");
+  s = suite_create("fixsmtpio");
 
-	/* Core test case */
-	tc_core = tcase_create("Core");
+  /* Core test case */
+  tc_core = tcase_create("Core");
 
-	tcase_add_test(tc_core, test_strip_last_eol);
-	suite_add_tcase(s, tc_core);
+  tcase_add_test(tc_core, test_strip_last_eol);
+  suite_add_tcase(s, tc_core);
 
-	return s;
+  return s;
 }
 
 int main(void)
 {
-	int number_failed;
-	Suite *s;
-	SRunner *sr;
+  int number_failed;
+  Suite *s;
+  SRunner *sr;
 
-	s = fixsmtpio_suite();
-	sr = srunner_create(s);
+  s = fixsmtpio_suite();
+  sr = srunner_create(s);
 
-	srunner_run_all(sr, CK_NORMAL);
-	number_failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+  srunner_run_all(sr, CK_NORMAL);
+  number_failed = srunner_ntests_failed(sr);
+  srunner_free(sr);
+  return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
