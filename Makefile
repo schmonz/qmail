@@ -1158,7 +1158,7 @@ qmail-control.9 conf-break conf-spawn
 
 qmail-fixsmtpio-tests: \
 load qmail-fixsmtpio-tests.o qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
-	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
+	./load qmail-fixsmtpio-tests qmail-fixsmtpio.o qmail-fixsmtpio-filter.o qmail-fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a -lpthread -lm
 
 qmail-fixsmtpio-tests.o: \
 compile qmail-fixsmtpio-tests.c qmail-fixsmtpio.h check_stdint.h check.h
