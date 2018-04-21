@@ -7,7 +7,7 @@ all: default
 
 runtests: \
 acceptutils-tests
-	@./qmail-fixsmtpio-tests
+	@prove -v -e '' ./qmail-fixsmtpio-tests
 
 acceptutils-tests: \
 qmail-fixsmtpio-tests
