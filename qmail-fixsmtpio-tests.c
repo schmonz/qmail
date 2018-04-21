@@ -4,66 +4,28 @@
 #include "qmail-fixsmtpio-filter.h"
 #include "stralloc.h"
 
+void assert_strip_last_eol(int charsremoved, const char *input) {
+	stralloc sa = {0};
+  stralloc_copys(&sa, input);
+  int len = sa.len;
+
+	strip_last_eol(&sa);
+
+	ck_assert_int_eq(len - charsremoved, sa.len);
+}
 
 START_TEST (test_strip_last_eol)
 {
-	stralloc sa = {0};
-
-	ck_assert_ptr_eq(0, sa.s);
-	ck_assert_int_eq(0, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_ptr_eq(0, sa.s);
-	ck_assert_int_eq(0, sa.len);
-
-  stralloc_copys(&sa,"\n");
-	ck_assert_int_eq(1, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(0, sa.len);
-
-  stralloc_copys(&sa,"\r");
-	ck_assert_int_eq(1, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(0, sa.len);
-
-  stralloc_copys(&sa,"\r\n");
-	ck_assert_int_eq(2, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(0, sa.len);
-
-  stralloc_copys(&sa,"\n\r");
-	ck_assert_int_eq(2, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(1, sa.len);
-
-  stralloc_copys(&sa,"\r\r");
-	ck_assert_int_eq(2, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(1, sa.len);
-
-  stralloc_copys(&sa,"\n\n");
-	ck_assert_int_eq(2, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(1, sa.len);
-
-  stralloc_copys(&sa,"yo geeps");
-	ck_assert_int_eq(8, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(8, sa.len);
-
-  stralloc_copys(&sa,"yo geeps\r\n");
-	ck_assert_int_eq(10, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(8, sa.len);
-
-  stralloc_copys(&sa,"yo geeps\r\nhow you doin?\r\n");
-	ck_assert_int_eq(25, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(23, sa.len);
-
-  stralloc_copys(&sa,"yo geeps\r\nhow you doin?");
-	ck_assert_int_eq(23, sa.len);
-	strip_last_eol(&sa);
-	ck_assert_int_eq(23, sa.len);
+  assert_strip_last_eol(1, "\n");
+  assert_strip_last_eol(1, "\r");
+  assert_strip_last_eol(2, "\r\n");
+  assert_strip_last_eol(1, "\n\r");
+  assert_strip_last_eol(1, "\r\r");
+  assert_strip_last_eol(1, "\n\n");
+  assert_strip_last_eol(0, "yo geeps");
+  assert_strip_last_eol(2, "yo geeps\r\n");
+  assert_strip_last_eol(2, "yo geeps\r\nhow you doin?\r\n");
+  assert_strip_last_eol(0, "yo geeps\r\nhow you doin?");
 }
 END_TEST
 
