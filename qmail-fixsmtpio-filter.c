@@ -115,8 +115,10 @@ void munge_exitcode(int *exitcode,filter_rule *rule) {
   if (rule->exitcode != EXIT_LATER_NORMALLY) *exitcode = rule->exitcode;
 }
 
-void munge_response_line(stralloc *line,int lineno,int *exitcode,
-                         stralloc *greeting,filter_rule *rules,stralloc *verb) {
+void munge_response_line(int lineno,
+                         stralloc *line,int *exitcode,
+                         stralloc *greeting,filter_rule *rules,
+                         stralloc *verb) {
   filter_rule *rule;
   stralloc line0 = {0};
 
@@ -146,7 +148,7 @@ void munge_response(stralloc *response,int *exitcode,
   for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
-      munge_response_line(&line,lineno++,exitcode,greeting,rules,verb);
+      munge_response_line(lineno++,&line,exitcode,greeting,rules,verb);
       cat(&munged,&line);
       blank(&line);
     }

@@ -17,6 +17,6 @@ extern int filter_rule_applies(filter_rule *,stralloc *);
 extern int verb_matches(char *,stralloc *);
 
 extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,stralloc *);
-extern void munge_response_line(stralloc *,int,int *,stralloc *,filter_rule *,stralloc *);
+extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,stralloc *);
 
 extern void strip_last_eol(stralloc *);
