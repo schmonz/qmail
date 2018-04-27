@@ -1,6 +1,6 @@
-#include "qmail-fixsmtpio.h"
-#include "qmail-fixsmtpio-filter.h"
-#include "qmail-fixsmtpio-proxy.h"
+#include "fixsmtpio.h"
+#include "fixsmtpio-filter.h"
+#include "fixsmtpio-proxy.h"
 
 void die() { _exit(1); }
 

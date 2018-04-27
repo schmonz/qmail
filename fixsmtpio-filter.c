@@ -1,5 +1,5 @@
-#include "qmail-fixsmtpio.h"
-#include "qmail-fixsmtpio-filter.h"
+#include "fixsmtpio.h"
+#include "fixsmtpio-filter.h"
 
 void strip_last_eol(stralloc *sa) {
   if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;

@@ -1,24 +1,24 @@
-.TH qmail-reup 8
+.TH reup 8
 .SH NAME
-qmail-reup \- run a program repeatedly
+reup \- run a program repeatedly
 .SH SYNOPSIS
-.B qmail-reup
+.B reup
 [
 .B \-t \fItries
 ]
 .I prog
 .SH DESCRIPTION
-.B qmail-reup
+.B reup
 is most commonly used to invoke
 .B qmail-authup
 so that a user isn't disconnected immediately on the first authentication failure.
 
-.B qmail-reup
+.B reup
 prints an error message if
 .I prog
 crashes or can't be started.
 .SH "EXIT CODES"
-.B qmail-reup
+.B reup
 stops retrying as soon as
 
 -
@@ -30,10 +30,10 @@ exits 0 (success), or
 exits 12 (permanent failure), or
 
 -
-.B qmail-reup
+.B reup
 reaches its retry limit.
 
-.B qmail-reup
+.B reup
 then exits with the same code as
 .IR prog .
 .SH "ENVIRONMENT VARIABLES"
@@ -52,4 +52,4 @@ Default: 0 (unlimited).
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
 qmail-authup(8),
-qmail-fixsmtpio(8).
+fixsmtpio(8).

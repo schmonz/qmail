@@ -1,4 +1,4 @@
-#include "qmail-fixsmtpio.h"
+#include "fixsmtpio.h"
 
 typedef struct filter_rule {
   struct filter_rule *next;

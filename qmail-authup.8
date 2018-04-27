@@ -19,10 +19,10 @@ or
 as
 
 .EX
-  qmail-reup \\
+  reup \\
     qmail-authup smtp \\
-      checkpassword checkpassword-rejectroot \\
-        qmail-fixsmtpio \\
+      checkpassword dieifuid0 \\
+        fixsmtpio \\
           env RELAYCLIENT="" qmail-smtpd
 .EE
 
@@ -30,7 +30,7 @@ or
 
 .EX
   qmail-authup pop3 \\
-    checkpassword checkpassword-rejectroot \\
+    checkpassword dieifuid0 \\
       qmail-pop3d
 .EE
 
@@ -109,9 +109,9 @@ If you need them, please share your use case with the author.
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
-qmail-reup(8),
-checkpassword-rejectroot(8),
-qmail-fixsmtpio(8),
+reup(8),
+dieifuid0(8),
+fixsmtpio(8),
 stunnel(8),
 qmail-qfilter-ofmipd-queue(8),
 pymsgauth-tag(1),

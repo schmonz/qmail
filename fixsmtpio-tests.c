@@ -1,7 +1,7 @@
 #include "check.h"
 #include <stdlib.h>
 
-#include "qmail-fixsmtpio-filter.h"
+#include "fixsmtpio-filter.h"
 #include "stralloc.h"
 
 void assert_strip_last_eol(const char *input, const char *expected_output) {

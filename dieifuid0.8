@@ -1,13 +1,14 @@
-.TH checkpassword-rejectroot 8
+.TH dieifuid0 8
 .SH NAME
-checkpassword-rejectroot \- refuse to run as root
+dieifuid0 \- refuse to run as root
 .SH SYNOPSIS
-.B checkpassword-rejectroot
+.B dieifuid0
 .I prog
 .SH DESCRIPTION
-.B checkpassword-rejectroot
-is most commonly placed before the usual arguments to
+.B dieifuid0
+is most commonly placed after
 .B checkpassword
+and before its remaining arguments
 to ensure that
 
 - No further commands run as root, and
@@ -16,7 +17,7 @@ to ensure that
 
 .SH "EXIT CODES"
 If run by UID 0,
-.B checkpassword-rejectroot
+.B dieifuid0
 exits 1.
 Otherwise it exits with the same code as
 .IR prog .
@@ -25,4 +26,4 @@ Otherwise it exits with the same code as
 .SH "SEE ALSO"
 checkpassword(8),
 qmail-authup(8),
-qmail-fixsmtpio(8).
+fixsmtpio(8).

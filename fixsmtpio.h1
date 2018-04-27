@@ -15,7 +15,7 @@
 #include "wait.h"
 
 #define HOMEPAGE                 "https://schmonz.com/qmail/acceptutils"
-#define PROGNAME                 "qmail-fixsmtpio"
+#define PROGNAME                 "fixsmtpio"
 
 #define ENV_AUTHUSER             "AUTHUSER"
 #define ENV_ANY                  0
@@ -26,7 +26,7 @@
 #define PSEUDOVERB_TIMEOUT       "timeout"
 #define PSEUDOVERB_CLIENTEOF     "clienteof"
 
-#define RESPONSELINE_NOCHANGE    "&qmail-leavesmtpio"
+#define RESPONSELINE_NOCHANGE    "&leavesmtpio"
 #define EXIT_NOW_SUCCESS         0
 #define EXIT_NOW_TEMPFAIL        14
 #define EXIT_NOW_PERMFAIL        15

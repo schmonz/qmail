@@ -7,7 +7,7 @@
 #include "substdio.h"
 #include "wait.h"
 
-#define PROGNAME "qmail-reup"
+#define PROGNAME "reup"
 
 void die() { _exit(1); }
 

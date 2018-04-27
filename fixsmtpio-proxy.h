@@ -1,4 +1,4 @@
-#include "qmail-fixsmtpio.h"
+#include "fixsmtpio.h"
 
 typedef struct request_response {
   stralloc *client_request;

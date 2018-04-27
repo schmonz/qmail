@@ -1,11 +1,11 @@
-.TH qmail-fixsmtpio 8
+.TH fixsmtpio 8
 .SH NAME
-qmail-fixsmtpio \- filter SMTP I/O and exit status
+fixsmtpio \- filter SMTP I/O and exit status
 .SH SYNOPSIS
-.B qmail-fixsmtpio
+.B fixsmtpio
 .I prog
 .SH DESCRIPTION
-.B qmail-fixsmtpio
+.B fixsmtpio
 is an SMTP proxy.
 It wraps a program like
 .B ofmipd
@@ -17,14 +17,14 @@ and assumes it's responsible for the entire conversation.
 When it's not -- typically because
 .B qmail-authup
 has already initiated an authenticated session --
-.B qmail-fixsmtpio
+.B fixsmtpio
 can be configured to adjust exit codes, SMTP responses,
 and occasionally even requests.
-.B qmail-fixsmtpio
+.B fixsmtpio
 can also be used to modify a public SMTP service.
 
 By default, inserting an unconfigured
-.B qmail-fixsmtpio
+.B fixsmtpio
 into the command chain should not change any observable behavior.
 If you observe otherwise, please report the bug.
 
@@ -43,12 +43,12 @@ Since
 .B qmail-authup
 needs to distinguish authentication failures from other kinds,
 it's important that
-.B qmail-fixsmtpio
+.B fixsmtpio
 be configured to exit with unique codes for each condition.
 See
 .BR EXAMPLES .
 
-.B qmail-fixsmtpio
+.B fixsmtpio
 exits 18 if its configuration file exists but fails to parse.
 This, too, is as
 .B qmail-authup
@@ -102,11 +102,11 @@ The rule applies to every matching line of the server response.
 .I exitcode
 (optional)
 is a numeric code with which
-.B qmail-fixsmtpio
+.B fixsmtpio
 is to immediately exit.
 If empty, it exits when it normally would.
 If no rules override it,
-.B qmail-fixsmtpio
+.B fixsmtpio
 exits with the same code as
 .IR prog .
 
@@ -117,10 +117,10 @@ If empty, matching lines are removed.
 
 As a special case, if
 .B response
-is set to "&qmail-fixsmtpio",
+is set to "&fixsmtpio",
 the replacement string is computed by an internal routine for that event.
 (If no such internal routine exists,
-.B qmail-fixsmtpio
+.B fixsmtpio
 emits an error and exits.)
 For
 .BR HELP ,
@@ -144,7 +144,7 @@ These are therefore primarily useful with
 
 As another special case, if
 .B response
-is "&qmail-leavesmtpio",
+is "&leavesmtpio",
 the response is sent as is.
 
 Rules are applied in the order written. For instance, if two rules
@@ -165,7 +165,7 @@ Default:
 .IR me ,
 if that is supplied;
 otherwise
-.B qmail-fixsmtpio
+.B fixsmtpio
 will refuse to run.
 The first word of
 .I smtpgreeting
@@ -181,7 +181,7 @@ See
 .SH "SEE ALSO"
 qmail-authup(8),
 checkpassword(8),
-checkpassword-rejectroot(8),
+dieifuid0(8),
 qmail-smtpd(8),
 ofmipd(8),
 fnmatch(3),

@@ -1,5 +1,5 @@
-#include "qmail-fixsmtpio-proxy.h"
-#include "qmail-fixsmtpio-filter.h"
+#include "fixsmtpio-proxy.h"
+#include "fixsmtpio-filter.h"
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
