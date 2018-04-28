@@ -22,7 +22,7 @@
 #include "error.h"
 
 #define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
-#define PROGNAME "qmail-authup"
+#define PROGNAME "authup"
 
 #define EXITCODE_CHECKPASSWORD_UNACCEPTABLE   1
 #define EXITCODE_CHECKPASSWORD_MISUSED        2

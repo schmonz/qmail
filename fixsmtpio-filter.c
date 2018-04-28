@@ -213,14 +213,14 @@ void unload_filter_rules(filter_rule *rules) {
 filter_rule *load_filter_rules(void) {
   filter_rule *backwards_rules = 0;
 
-  // if client closes the connection, tell qmail-authup to be happy
+  // if client closes the connection, tell authup to be happy
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_CLIENTEOF,
       PREPEND_NOTHING,          "*",
       EXIT_NOW_SUCCESS,         ""
   );
 
-  // if server greets us unhappily, notify qmail-authup
+  // if server greets us unhappily, notify authup
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_GREETING,
       PREPEND_NOTHING,          "4*",
@@ -232,7 +232,7 @@ filter_rule *load_filter_rules(void) {
       EXIT_NOW_PERMFAIL,        0
   ); // XXX LEAVE_RESPONSE_LINE_AS_IS
 
-  // if server times out, hide message (qmail-authup has its own)
+  // if server times out, hide message (authup has its own)
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             PSEUDOVERB_TIMEOUT,
       PREPEND_NOTHING,          "*",

@@ -13,7 +13,7 @@ acceptutils-tests: \
 fixsmtpio-tests
 
 acceptutils: \
-reup qmail-authup checknotroot fixsmtpio
+reup authup checknotroot fixsmtpio
 
 acceptutils_base64.o: \
 compile acceptutils_base64.c acceptutils_base64.h
@@ -1108,20 +1108,20 @@ compile qbiff.c readwrite.h stralloc.h gen_alloc.h substdio.h subfd.h \
 substdio.h open.h byte.h str.h headerbody.h hfield.h env.h exit.h
 	./compile qbiff.c
 
-qmail-authup: \
-load qmail-authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+authup: \
+load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
 case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
 fs.a socket.lib
-	./load qmail-authup auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o \
+	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o \
 	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 	substdio.a error.a str.a fs.a  `cat socket.lib`
 
-qmail-authup.o: \
-compile qmail-authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
+authup.o: \
+compile authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
 readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h env.h control.h \
 error.h scan.h auto_qmail.h
-	./compile qmail-authup.c
+	./compile authup.c
 
 qmail-clean: \
 load qmail-clean.o fmtqfn.o now.o getln.a sig.a stralloc.a alloc.a \

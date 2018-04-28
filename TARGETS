@@ -386,8 +386,8 @@ man
 setup
 check
 acceptutils_base64.o
-qmail-authup
-qmail-authup.o
+authup
+authup.o
 checknotroot
 checknotroot.o
 reup

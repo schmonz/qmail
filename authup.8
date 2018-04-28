@@ -1,17 +1,17 @@
-.TH qmail-authup 8
+.TH authup 8
 .SH NAME
-qmail-authup \- read an SMTP or POP3 username and password
+authup \- read an SMTP or POP3 username and password
 .SH SYNOPSIS
-.B qmail-authup
+.B authup
 .I protocol
 .I prog
 .SH DESCRIPTION
-.B qmail-authup
+.B authup
 reads an SMTP or POP3 username and password from the network.
 It then runs
 .IR prog .
 
-.B qmail-authup
+.B authup
 is most commonly invoked from
 .B tcpserver
 or
@@ -20,7 +20,7 @@ as
 
 .EX
   reup \\
-    qmail-authup smtp \\
+    authup smtp \\
       checkpassword checknotroot \\
         fixsmtpio \\
           env RELAYCLIENT="" qmail-smtpd
@@ -29,7 +29,7 @@ as
 or
 
 .EX
-  qmail-authup pop3 \\
+  authup pop3 \\
     checkpassword checknotroot \\
       qmail-pop3d
 .EE
@@ -49,7 +49,7 @@ is set, the designated
 wrapper will also run as the authenticated user.
 This can be useful for filtering.
 
-.B qmail-authup
+.B authup
 expects descriptor 0 to read from the network
 and descriptor 1 to write to the network.
 It reads a username and password from descriptor 0
@@ -63,7 +63,7 @@ and descriptor 3 reading the username, a 0 byte, the password,
 another 0 byte,
 a protocol-specific datum such as a timestamp or challenge,
 and a final 0 byte.
-.B qmail-authup
+.B authup
 then waits for
 .I prog
 to finish.
@@ -71,7 +71,7 @@ It prints an error message if
 .I prog
 crashes or exits nonzero.
 
-.B qmail-authup
+.B authup
 should be used only within
 a secure network.
 Otherwise an eavesdropper can steal passwords.
@@ -86,14 +86,14 @@ Default:
 .IR me ,
 if that is supplied;
 otherwise
-.B qmail-authup
+.B authup
 will refuse to run.
 The first word of the greeting
 should be the current host's name.
 .TP 5
 .I timeoutsmtpd / timeoutpop3d
 Number of seconds
-.B qmail-authup
+.B authup
 will wait for each new buffer of data from the remote SMTP or POP3 client.
 Default: 1200.
 .SH "COMPATIBILITY"
@@ -104,7 +104,7 @@ is available in most SMTP AUTH patches, and
 is available in
 .BR qmail-popup ,
 neither is currently supported by
-.BR qmail-authup .
+.BR authup .
 If you need them, please share your use case with the author.
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>

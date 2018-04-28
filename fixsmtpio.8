@@ -15,7 +15,7 @@ that reads from stdin,
 writes to stdout,
 and assumes it's responsible for the entire conversation.
 When it's not -- typically because
-.B qmail-authup
+.B authup
 has already initiated an authenticated session --
 .B fixsmtpio
 can be configured to adjust exit codes, SMTP responses,
@@ -40,7 +40,7 @@ and
 .B qmail-smtpd
 indicate any error condition whatsoever.
 Since
-.B qmail-authup
+.B authup
 needs to distinguish authentication failures from other kinds,
 it's important that
 .B fixsmtpio
@@ -51,7 +51,7 @@ See
 .B fixsmtpio
 exits 18 if its configuration file exists but fails to parse.
 This, too, is as
-.B qmail-authup
+.B authup
 expects.
 
 .SH "ENVIRONMENT VARIABLES"
@@ -61,7 +61,7 @@ below)
 apply if and only if
 .B AUTHUSER
 is set.
-.B qmail-authup
+.B authup
 sets it.
 
 .SH "CONTROL FILES"
@@ -179,7 +179,7 @@ See
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
-qmail-authup(8),
+authup(8),
 checkpassword(8),
 checknotroot(8),
 qmail-smtpd(8),
