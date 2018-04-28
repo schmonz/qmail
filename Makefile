@@ -13,7 +13,7 @@ acceptutils-tests: \
 fixsmtpio-tests
 
 acceptutils: \
-reup qmail-authup dieifuid0 fixsmtpio
+reup qmail-authup checknotroot fixsmtpio
 
 acceptutils_base64.o: \
 compile acceptutils_base64.c acceptutils_base64.h
@@ -306,13 +306,13 @@ check.h:
 check_stdint.h:
 	cp `head -1 conf-check`/include/check_stdint.h .
 
-dieifuid0: \
-load dieifuid0.o substdio.a error.a str.a
-	./load dieifuid0 substdio.a error.a str.a
+checknotroot: \
+load checknotroot.o substdio.a error.a str.a
+	./load checknotroot substdio.a error.a str.a
 
-dieifuid0.o: \
-compile dieifuid0.c exit.h readwrite.h substdio.h
-	./compile dieifuid0.c
+checknotroot.o: \
+compile checknotroot.c exit.h readwrite.h substdio.h
+	./compile checknotroot.c
 
 chkshsgr: \
 load chkshsgr.o

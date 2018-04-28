@@ -21,7 +21,7 @@ as
 .EX
   reup \\
     qmail-authup smtp \\
-      checkpassword dieifuid0 \\
+      checkpassword checknotroot \\
         fixsmtpio \\
           env RELAYCLIENT="" qmail-smtpd
 .EE
@@ -30,7 +30,7 @@ or
 
 .EX
   qmail-authup pop3 \\
-    checkpassword dieifuid0 \\
+    checkpassword checknotroot \\
       qmail-pop3d
 .EE
 
@@ -110,7 +110,7 @@ If you need them, please share your use case with the author.
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
 reup(8),
-dieifuid0(8),
+checknotroot(8),
 fixsmtpio(8),
 stunnel(8),
 qmail-qfilter-ofmipd-queue(8),

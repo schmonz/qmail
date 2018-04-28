@@ -388,8 +388,8 @@ check
 acceptutils_base64.o
 qmail-authup
 qmail-authup.o
-dieifuid0
-dieifuid0.o
+checknotroot
+checknotroot.o
 reup
 reup.o
 fixsmtpio

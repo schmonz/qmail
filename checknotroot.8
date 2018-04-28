@@ -1,11 +1,11 @@
-.TH dieifuid0 8
+.TH checknotroot 8
 .SH NAME
-dieifuid0 \- refuse to run as root
+checknotroot \- refuse to run as root
 .SH SYNOPSIS
-.B dieifuid0
+.B checknotroot
 .I prog
 .SH DESCRIPTION
-.B dieifuid0
+.B checknotroot
 is most commonly placed after
 .B checkpassword
 and before its remaining arguments
@@ -17,7 +17,7 @@ to ensure that
 
 .SH "EXIT CODES"
 If run by UID 0,
-.B dieifuid0
+.B checknotroot
 exits 1.
 Otherwise it exits with the same code as
 .IR prog .
