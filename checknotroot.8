@@ -1,6 +1,6 @@
 .TH checknotroot 8
 .SH NAME
-checknotroot \- refuse to run as root
+checknotroot \- refuse to run as UID 0
 .SH SYNOPSIS
 .B checknotroot
 .I prog
@@ -11,7 +11,7 @@ is most commonly placed after
 and before its remaining arguments
 to ensure that
 
-- No further commands run as root, and
+- No further commands run as UID 0, and
 
 - If someone guesses the root password, they won't know they did.
 
