@@ -400,6 +400,7 @@ fixsmtpio-tests
 fixsmtpio-tests.o
 fixsmtpio-filter.o
 fixsmtpio-proxy.o
+fixsmtpio-common.o
 check.h
 check_stdint.h
 libcheck.a

@@ -1,4 +1,5 @@
 #include "fixsmtpio.h"
+#include "fixsmtpio-filter.h"
 
 typedef struct request_response {
   stralloc *client_request;
@@ -13,3 +14,5 @@ typedef struct request_response {
 extern substdio sserr;
 
 extern void strip_last_eol(stralloc *);
+
+extern int read_and_process_until_either_end_closes(int,int,int,int,stralloc *,filter_rule *);

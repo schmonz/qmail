@@ -3,14 +3,37 @@
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
+/*
+ NULL: false
+ empty: false
+ non-empty but no "\n" at the end: false
+ non-empty and "\n" at the end: true
+ "\n" at the end and also in the middle: true, as it happens
+ */
 int is_entire_line(stralloc *sa) {
   return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
+/*
+ NULL: false
+ empty: false
+ shorter than 4: false
+ exactly 4 and 4th char is anything but space: false
+ exactly 4 and 4th char is space: true?!? (or should it end with "\r\n"? I think not...)
+ rename: `could be final_server_response_line()`
+ */
 int could_be_final_response_line(stralloc *line) {
   return line->len >= 4 && line->s[3] == ' ';
 }
 
+/*
+  NULL: false
+  empty: false
+  non-empty but no "\r\n" at the end: false
+  two lines, both ending in "\r\n", both with '-' as char 4: false
+  two lines, first with ' ' as char 4, second with '-': false
+  two lines, first with '-' as char 4, second with ' ': true
+ */
 int is_entire_response(stralloc *response) {
   stralloc lastline = {0};
   int pos = 0;
@@ -64,6 +87,12 @@ int safeappend(stralloc *sa,int fd,char *buf,int len) {
   return r;
 }
 
+/*
+  NULL: false
+  empty: false
+  " \r\n": false
+  ".\r\n": true
+ */
 int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
@@ -72,8 +101,9 @@ int is_last_line_of_data(stralloc *r) {
  * line is null
  * line is empty
  * line is non-empty but has no spaces: all verb, no arg
- * line is only spaces: ???
+ * line is only spaces: no verb, no arg (then what???)
  * line has multiple spaces: verb up to the first one, arg for the rest
+ * have one space, but not in the 4th position: we still split on space even though verbs seem to always be 4 chars long
  */
 void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   int i;
@@ -100,6 +130,13 @@ void safewrite(int fd,stralloc *sa) {
   if (write(fd,sa->s,sa->len) == -1) die_write();
 }
 
+/*
+  in_data: whatever client_request is, proxy_request is exactly the same
+  not in_data, a rule says to prepend: proxy request is equal to prepended + client_request
+  not in_data, two rules prepend: proxy request is equal to p1 + p2 + client_request (WILL FAIL)
+
+  not sure whether to test in_data/want_data state changes
+ */
 void construct_proxy_request(stralloc *proxy_request,
                              filter_rule *rules,
                              stralloc *verb,stralloc *arg,
@@ -113,7 +150,7 @@ void construct_proxy_request(stralloc *proxy_request,
   } else {
     for (rule = rules; rule; rule = rule->next)
       if (rule->request_prepend && filter_rule_applies(rule,verb))
-        cats(proxy_request,rule->request_prepend);
+        cats(proxy_request,rule->request_prepend); //XXX if we have stuff already, this is not prepending!!!
     if (verb_matches("data",verb)) *want_data = 1;
     cat(proxy_request,client_request);
   }

@@ -1,3 +1,6 @@
+#ifndef _FIXSMTPIO_FILTER_H_
+#define _FIXSMTPIO_FILTER_H_
+
 #include "fixsmtpio.h"
 
 typedef struct filter_rule {
@@ -17,3 +20,5 @@ extern int verb_matches(char *,stralloc *);
 
 extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,stralloc *);
 extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,stralloc *);
+
+#endif
