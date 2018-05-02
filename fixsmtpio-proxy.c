@@ -156,6 +156,10 @@ void construct_proxy_request(stralloc *proxy_request,
   }
 }
 
+/*
+  not sure whether to test:
+  not want_data, not in_data, no request_received, no verb: it's a timeout
+ */
 void construct_proxy_response(stralloc *proxy_response,
                               stralloc *greeting,
                               filter_rule *rules,
