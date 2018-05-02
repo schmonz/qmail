@@ -3,21 +3,94 @@
 SHELL=/bin/sh
 
 default: it
-all: default
-
-runtests: \
-acceptutils-tests
-	@prove -v -e '' ./fixsmtpio-tests
-
-acceptutils-tests: \
-fixsmtpio-tests
 
 acceptutils: \
 reup authup checknotroot fixsmtpio
 
+acceptutils-tests: \
+fixsmtpio-tests
+
+acceptutils-tests-run: \
+acceptutils-tests
+	@prove -v -e '' ./fixsmtpio-tests
+
 acceptutils_base64.o: \
 compile acceptutils_base64.c acceptutils_base64.h
 	./compile acceptutils_base64.c
+
+authup: \
+load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
+fs.a socket.lib
+	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o \
+	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
+	substdio.a error.a str.a fs.a  `cat socket.lib`
+
+authup.o: \
+compile authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
+substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
+readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h env.h control.h \
+error.h scan.h auto_qmail.h
+	./compile authup.c
+
+check.h:
+	cat `head -1 conf-check`/include/check.h \
+	| sed 's}<check_stdint\.h>}"check_stdint.h"}g' \
+	> check.h
+
+check_stdint.h:
+	cp `head -1 conf-check`/include/check_stdint.h .
+
+checknotroot: \
+load checknotroot.o substdio.a error.a str.a
+	./load checknotroot substdio.a error.a str.a
+
+checknotroot.o: \
+compile checknotroot.c exit.h readwrite.h substdio.h
+	./compile checknotroot.c
+
+fixsmtpio: \
+load fixsmtpio.o fixsmtpio-filter.o fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+	./load fixsmtpio fixsmtpio-filter.o fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+
+fixsmtpio.h: \
+select.h fixsmtpio.h1
+	cat fixsmtpio.h1 > fixsmtpio.h
+
+fixsmtpio.o: \
+compile fixsmtpio.c fixsmtpio.h fixsmtpio-filter.h fixsmtpio-proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
+	./compile fixsmtpio.c
+
+fixsmtpio-filter.o: \
+compile fixsmtpio-filter.c fixsmtpio-filter.h
+	./compile fixsmtpio-filter.c
+
+fixsmtpio-main.o: \
+compile fixsmtpio-main.c
+	./compile fixsmtpio-main.c
+
+fixsmtpio-proxy.o: \
+compile fixsmtpio-proxy.c fixsmtpio-proxy.h
+	./compile fixsmtpio-proxy.c
+
+fixsmtpio-tests: \
+load fixsmtpio-tests.o fixsmtpio.o fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
+	./load fixsmtpio-tests fixsmtpio.o fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a -lpthread -lm
+
+fixsmtpio-tests.o: \
+compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
+	./compile fixsmtpio-tests.c
+
+libcheck.a:
+	cp `head -1 conf-check`/lib/libcheck.a .
+
+reup: \
+load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
+	./load reup wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
+
+reup.o: \
+compile reup.c env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
+	./compile reup.c
 
 addresses.0: \
 addresses.5
@@ -297,22 +370,6 @@ uint32.h substdio.h
 check: \
 it man
 	./instcheck
-
-check.h:
-	cat `head -1 conf-check`/include/check.h \
-	| sed 's}<check_stdint\.h>}"check_stdint.h"}g' \
-	> check.h
-
-check_stdint.h:
-	cp `head -1 conf-check`/include/check_stdint.h .
-
-checknotroot: \
-load checknotroot.o substdio.a error.a str.a
-	./load checknotroot substdio.a error.a str.a
-
-checknotroot.o: \
-compile checknotroot.c exit.h readwrite.h substdio.h
-	./compile checknotroot.c
 
 chkshsgr: \
 load chkshsgr.o
@@ -841,9 +898,6 @@ maildir2mbox maildirwatch qail elq pinq idedit install-big install \
 instcheck home home+df proc proc+df binm1 binm1+df binm2 binm2+df \
 binm3 binm3+df
 
-libcheck.a:
-	cp `head -1 conf-check`/lib/libcheck.a .
-
 load: \
 make-load warn-auto.sh systype
 	( cat warn-auto.sh; ./make-load "`cat systype`" ) > load
@@ -1108,21 +1162,6 @@ compile qbiff.c readwrite.h stralloc.h gen_alloc.h substdio.h subfd.h \
 substdio.h open.h byte.h str.h headerbody.h hfield.h env.h exit.h
 	./compile qbiff.c
 
-authup: \
-load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
-case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
-fs.a socket.lib
-	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o \
-	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
-	substdio.a error.a str.a fs.a  `cat socket.lib`
-
-authup.o: \
-compile authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
-substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
-readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h env.h control.h \
-error.h scan.h auto_qmail.h
-	./compile authup.c
-
 qmail-clean: \
 load qmail-clean.o fmtqfn.o now.o getln.a sig.a stralloc.a alloc.a \
 substdio.a error.a str.a fs.a auto_qmail.o auto_split.o
@@ -1155,38 +1194,6 @@ qmail-control.9 conf-break conf-spawn
 	| sed s}BREAK}"`head -1 conf-break`"}g \
 	| sed s}SPAWN}"`head -1 conf-spawn`"}g \
 	> qmail-control.5
-
-fixsmtpio-tests: \
-load fixsmtpio-tests.o fixsmtpio.o fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
-	./load fixsmtpio-tests fixsmtpio.o fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a -lpthread -lm
-
-fixsmtpio-tests.o: \
-compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
-	./compile fixsmtpio-tests.c
-
-fixsmtpio: \
-load fixsmtpio.o fixsmtpio-filter.o fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load fixsmtpio fixsmtpio-filter.o fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-
-fixsmtpio.h: \
-select.h fixsmtpio.h1
-	cat fixsmtpio.h1 > fixsmtpio.h
-
-fixsmtpio.o: \
-compile fixsmtpio.c fixsmtpio.h fixsmtpio-filter.h fixsmtpio-proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
-	./compile fixsmtpio.c
-
-fixsmtpio-filter.o: \
-compile fixsmtpio-filter.c fixsmtpio-filter.h
-	./compile fixsmtpio-filter.c
-
-fixsmtpio-main.o: \
-compile fixsmtpio-main.c
-	./compile fixsmtpio-main.c
-
-fixsmtpio-proxy.o: \
-compile fixsmtpio-proxy.c fixsmtpio-proxy.h
-	./compile fixsmtpio-proxy.c
 
 qmail-getpw: \
 load qmail-getpw.o case.a substdio.a error.a str.a fs.a auto_break.o \
@@ -1540,14 +1547,6 @@ alloc.h quote.h ip.h ipalloc.h ip.h gen_alloc.h ipme.h ip.h ipalloc.h \
 gen_alloc.h gen_allocdefs.h str.h now.h datetime.h exit.h constmap.h \
 tcpto.h readwrite.h timeoutconn.h timeoutread.h timeoutwrite.h
 	./compile qmail-remote.c
-
-reup: \
-load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
-	./load reup wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
-
-reup.o: \
-compile reup.c env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
-	./compile reup.c
 
 qmail-rspawn: \
 load qmail-rspawn.o spawn.o tcpto_clean.o now.o coe.o sig.a open.a \
