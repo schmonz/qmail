@@ -31,6 +31,38 @@ START_TEST (test_strip_last_eol)
 }
 END_TEST
 
+void _assert_filter_rule(int should_apply, filter_rule *filter_rule, const char *event) {
+  stralloc sa = {0};
+  stralloc_copys(&sa, event);
+
+  int result = filter_rule_applies(filter_rule,&sa);
+
+  ck_assert_int_eq(result, should_apply);
+}
+
+void assert_filter_rule_applies(filter_rule *filter_rule, const char *event) {
+  _assert_filter_rule(1, filter_rule, event);
+}
+
+void assert_filter_rule_does_not_apply(filter_rule *filter_rule, const char *event) {
+  _assert_filter_rule(0, filter_rule, event);
+}
+
+START_TEST (test_filter_rule_applies)
+{
+  filter_rule rule = {
+    0,
+    ENV_ANY,                  "caliente",
+    PREPEND_NOTHING,          "*",
+    EXIT_LATER_NORMALLY,      ""
+  };
+  assert_filter_rule_does_not_apply(&rule, "clienteof");
+
+  rule.event = "clienteof";
+  assert_filter_rule_applies(&rule, "clienteof");
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
@@ -38,10 +70,9 @@ Suite * fixsmtpio_suite(void)
 
   s = suite_create("fixsmtpio");
 
-  /* Core test case */
-  tc_core = tcase_create("Core");
-
+  tc_core = tcase_create("filter");
   tcase_add_test(tc_core, test_strip_last_eol);
+  tcase_add_test(tc_core, test_filter_rule_applies);
   suite_add_tcase(s, tc_core);
 
   return s;
