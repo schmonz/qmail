@@ -37,36 +37,22 @@ void blank(stralloc *sa) { copys(sa,""); }
 void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
 void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
 
-void mypipe(int *from,int *to) {
+void make_pipe(int *from,int *to) {
   int pi[2];
   if (pipe(pi) == -1) die_pipe();
   *from = pi[0];
   *to = pi[1];
 }
 
-void setup_child(int from_me,int to_server,
-                 int from_server,int to_me) {
+void be_proxied(int from_proxy,int to_proxy,
+                int from_server,int to_server,
+                char **argv) {
   close(from_server);
   close(to_server);
-  use_as_stdin(from_me);
-  use_as_stdout(to_me);
-}
-
-void exec_child_and_never_return(char **argv) {
+  use_as_stdin(from_proxy);
+  use_as_stdout(to_proxy);
   execvp(*argv,argv);
   die_exec();
-}
-
-void be_child(int from_me,int to_me,
-              int from_server,int to_server,
-              char **argv) {
-  setup_child(from_me,to_server,from_server,to_me);
-  exec_child_and_never_return(argv);
-}
-
-void setup_parent(int from_me,int to_me) {
-  close(from_me);
-  close(to_me);
 }
 
 void teardown_and_exit(int exitcode,int child,filter_rule *rules,
@@ -85,14 +71,15 @@ void teardown_and_exit(int exitcode,int child,filter_rule *rules,
   else _exit(exitcode);
 }
 
-void be_parent(int from_client,int to_client,
-               int from_me,int to_me,
-               int from_server,int to_server,
-               stralloc *greeting,filter_rule *rules,
-               int child) {
+void be_proxy(int from_client,int to_client,
+              int from_proxy,int to_proxy,
+              int from_server,int to_server,
+              stralloc *greeting,filter_rule *rules,
+              int child) {
   int exitcode;
 
-  setup_parent(from_me,to_me);
+  close(from_proxy);
+  close(to_proxy);
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules);
@@ -111,10 +98,10 @@ void cd_var_qmail() {
 void startup(int argc,char **argv) {
   stralloc greeting = {0};
   filter_rule *rules;
-  int from_client;
-  int from_me, to_server;
-  int from_server, to_me;
-  int to_client;
+  int from_client = 0;
+  int from_proxy, to_server;
+  int from_server, to_proxy;
+  int to_client = 1;
   int child;
 
   argv++; if (!*argv) die_usage();
@@ -123,21 +110,19 @@ void startup(int argc,char **argv) {
   load_smtp_greeting(&greeting,"control/smtpgreeting");
   rules = load_filter_rules();
 
-  from_client = 0;
-  mypipe(&from_me,&to_server);
-  mypipe(&from_server,&to_me);
-  to_client = 1;
+  make_pipe(&from_proxy,&to_server);
+  make_pipe(&from_server,&to_proxy);
 
   if ((child = fork()))
-    be_parent(from_client,to_client,
-              from_me,to_me,
-              from_server,to_server,
-              &greeting,rules,
-              child);
-  else if (child == 0)
-    be_child(from_me,to_me,
+    be_proxy(from_client,to_client,
+             from_proxy,to_proxy,
              from_server,to_server,
-             argv);
+             &greeting,rules,
+             child);
+  else if (child == 0)
+    be_proxied(from_proxy,to_proxy,
+               from_server,to_server,
+               argv);
   else
     die_fork();
 }

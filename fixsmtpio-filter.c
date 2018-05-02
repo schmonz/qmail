@@ -305,4 +305,3 @@ filter_rule *load_filter_rules(void) {
 
   return reverse_rules(backwards_rules);
 }
-
