@@ -1,11 +1,6 @@
 #include "fixsmtpio.h"
 #include "fixsmtpio-filter.h"
 
-void strip_last_eol(stralloc *sa) {
-  if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
-  if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
-}
-
 void munge_greeting(stralloc *response,int lineno,stralloc *greeting) {
   copys(response,"220 "); cat(response,greeting);
 }
@@ -29,11 +24,31 @@ void munge_quit(stralloc *response,int lineno,stralloc *greeting) {
   copys(response,"221 "); cat(response,greeting);
 }
 
+/*
+ * s is NULL
+ * s is not 0-terminated
+ * s is empty
+ * sa is NULL
+ * sa->len is 0
+ * strings differ, don't match
+ * strings same, do match
+ * strings same except case, do match
+ */
 int verb_matches(char *s,stralloc *sa) {
   if (!sa->len) return 0;
   return !case_diffb(s,sa->len,sa->s);
 }
 
+/*
+ * input is null
+ * input is empty
+ * input is less than four chars long
+ * input is exactly four chars long
+ * input is longer than four, but still one line
+ * input is multiple lines, first one long enough, second one not
+ * input is multiple lines, first one short, second one long enough
+ * input is multiple lines, first one long enough, second one not, third one long enough
+ */
 void change_every_line_fourth_char_to_dash(stralloc *multiline) {
   int pos = 0;
   int i;
@@ -44,6 +59,16 @@ void change_every_line_fourth_char_to_dash(stralloc *multiline) {
   }
 }
 
+/*
+ * input is null
+ * input is empty
+ * input is less than four chars long
+ * input is exactly four chars long
+ * input is longer than four, but still one line
+ * input is multiple lines, first one long enough, second one not
+ * input is multiple lines, first one short, second one long enough
+ * input is multiple lines, first one long enough, second one not, third one long enough
+ */
 void change_last_line_fourth_char_to_space(stralloc *multiline) {
   int pos = 0;
   int i;
@@ -83,30 +108,84 @@ void *munge_line_fn(stralloc *verb) {
   return 0;
 }
 
+/*
+ not requests, response lines!
+
+ ("250 word up, kids", 0, "yo.sup.local", "word") -> "250 word up, kids"
+
+ ("250-applesauce",     0, "yo.sup.local", "ehlo") -> "250-yo.sup.local"
+ ("250-STARTSOMETHING", 1, "yo.sup.local", "ehlo") -> "250-STARTSOMETHING"
+ ("250 ENDSOMETHING",   2, "yo.sup.local", "ehlo") -> "250 ENDSOMETHING"
+
+ ("250 applesauce",     0, "yo.sup.local", "helo") -> "250-yo.sup.local"
+
+ ("214 ask your grandmother", 0, "yo.sup.local", "help") -> "214 https://....\r\n214 ask your grandmother\r\n"
+
+ ("221 get outta here", 0, "yo.sup.local", "quit") -> "221 yo.sup.local"
+ */
 void munge_line_internally(stralloc *line,int lineno,
                            stralloc *greeting,stralloc *verb) {
   void (*munger)() = munge_line_fn(verb);
   if (munger) munger(line,lineno,greeting);
 }
 
+/*
+ don't test fnmatch(), document what control/fixsmtpio needs from it
+
+ glob is "*"
+ glob is "4*"
+ glob is "5*"
+ glob is "2*"
+ glob is "250?AUTH*"
+ glob is "250?auth*"
+ glob is "250?STARTTLS"
+
+ string is empty
+ string is "450 tempfail"
+ string is "I have eaten 450 french fries"
+ string is "250-auth login"
+ string is "the anthology contains works by 250 authors"
+
+ maybe this should be regex instead of glob?
+ */
 int string_matches_glob(char *glob,char *string) {
   return 0 == fnmatch(glob,string,0);
 }
 
+/*
+ "&fixsmtpio" -> yes
+ "&leavesmtpio" -> no
+ "" -> no
+ NULL -> no
+ "whatever else" -> no
+ */
 int want_munge_internally(char *response) {
   return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
 }
 
+/*
+ "&leavesmtpio" -> no
+ "&fixsmtpio" -> yes
+ "" -> yes
+ NULL -> yes
+ "whatever else" -> yes
+ */
 int want_munge_from_config(char *response) {
   return 0 != str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
 }
 
+/*
+ "VERY_UNLIKELY_TO_BE_SET": no
+ "": yes
+ NULL: yes
+ */
 int envvar_exists_if_needed(char *envvar) {
   if (envvar && env_get(envvar)) return 1;
   else if (envvar) return 0;
   return 1;
 }
 
+// XXX don't test this directly
 int filter_rule_applies(filter_rule *rule,stralloc *verb) {
   return (verb_matches(rule->event,verb) && envvar_exists_if_needed(rule->env));
 }
@@ -115,6 +194,26 @@ void munge_exitcode(int *exitcode,filter_rule *rule) {
   if (rule->exitcode != EXIT_LATER_NORMALLY) *exitcode = rule->exitcode;
 }
 
+/*
+ already tested:
+ - filter_rule_applies()
+ - string_matches_glob()
+ - want_munge_internally()
+ - munge_line_internally()
+ - want_munge_from_config()
+
+ so just a couple integrated examples. with no rules:
+ (0, "222 sup duuuude", 0, "yo.sup.local", (filter_rule *)0, "ehlo") -> "222 sup duuuude"
+ (1, "222 OUTSTANDING", 0, "yo.sup.local", (filter_rule *)0, "ehlo") -> "222 OUTSTANDING"
+
+ with a couple filter rules that don't apply:
+ (0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo") -> "222 sup duuuude"
+ (1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo") -> "222 OUTSTANDING"
+
+ with a couple more filter rules and some do apply:
+ (0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo") -> "222 yo.sup.local"
+ (1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo") -> ""
+ */
 void munge_response_line(int lineno,
                          stralloc *line,int *exitcode,
                          stralloc *greeting,filter_rule *rules,
@@ -137,6 +236,14 @@ void munge_response_line(int lineno,
   if (line->len) if (!is_entire_line(line)) cats(line,"\r\n");
 }
 
+/*
+ correctly splitting into lines?
+
+ response is NULL
+ response is empty
+ response does not end with a newline
+ response is multiline, first line ends with newline, second line does not
+ */
 void munge_response(stralloc *response,int *exitcode,
                     stralloc *greeting,filter_rule *rules,
                     stralloc *verb) {
@@ -174,16 +281,6 @@ filter_rule *prepend_rule(filter_rule *next,
   return next;
 }
 
-void free_if_non_null(char *env,char *event,char *request_prepend,
-                      char *response_line_glob,char *response) {
-  return; // XXX
-  if (env) alloc_free(env);
-  if (event) alloc_free(event);
-  if (request_prepend) alloc_free(request_prepend);
-  if (response_line_glob) alloc_free(response_line_glob);
-  if (response) alloc_free(response);
-}
-
 filter_rule *reverse_rules(filter_rule *rules) {
   filter_rule *reversed_rules = 0;
   filter_rule *temp;
@@ -196,18 +293,6 @@ filter_rule *reverse_rules(filter_rule *rules) {
   }
 
   return reversed_rules;
-}
-
-void unload_filter_rules(filter_rule *rules) {
-  filter_rule *temp;
-
-  while (rules) {
-    temp = rules;
-    rules = rules->next;
-    free_if_non_null(temp->env,temp->event,temp->request_prepend,
-                     temp->response_line_glob,temp->response);
-    alloc_free(temp);
-  }
 }
 
 filter_rule *load_filter_rules(void) {

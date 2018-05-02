@@ -1,6 +1,7 @@
 #include "check.h"
 #include <stdlib.h>
 
+#include "fixsmtpio-proxy.h"
 #include "fixsmtpio-filter.h"
 #include "stralloc.h"
 
@@ -66,14 +67,17 @@ END_TEST
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_core;
+  TCase *tc_proxy, *tc_filter;
 
   s = suite_create("fixsmtpio");
 
-  tc_core = tcase_create("filter");
-  tcase_add_test(tc_core, test_strip_last_eol);
-  tcase_add_test(tc_core, test_filter_rule_applies);
-  suite_add_tcase(s, tc_core);
+  tc_proxy = tcase_create("proxy");
+  tcase_add_test(tc_proxy, test_strip_last_eol);
+  suite_add_tcase(s, tc_proxy);
+
+  tc_filter = tcase_create("filter");
+  tcase_add_test(tc_filter, test_filter_rule_applies);
+  suite_add_tcase(s, tc_filter);
 
   return s;
 }
@@ -93,4 +97,3 @@ int main(void)
   srunner_free(sr);
   return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-

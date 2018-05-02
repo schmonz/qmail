@@ -62,8 +62,6 @@ void teardown_and_exit(int exitcode,int child,filter_rule *rules,
   close(from_server);
   close(to_server);
 
-  unload_filter_rules(rules);
-
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
@@ -95,7 +93,7 @@ void cd_var_qmail() {
   if (chdir(auto_qmail) == -1) die_control();
 }
 
-void startup(int argc,char **argv) {
+void main_program(int argc,char **argv) {
   stralloc greeting = {0};
   filter_rule *rules;
   int from_client = 0;

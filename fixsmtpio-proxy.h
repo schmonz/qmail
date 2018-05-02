@@ -11,3 +11,5 @@ typedef struct request_response {
 } request_response;
 
 extern substdio sserr;
+
+extern void strip_last_eol(stralloc *);

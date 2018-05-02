@@ -26,6 +26,11 @@ int is_entire_response(stralloc *response) {
   return could_be_final_response_line(&lastline);
 }
 
+void strip_last_eol(stralloc *sa) {
+  if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
+  if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
+}
+
 fd_set fds;
 
 int max(int a,int b) { return a > b ? a : b; }
@@ -63,12 +68,20 @@ int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
 
+/*
+ * line is null
+ * line is empty
+ * line is non-empty but has no spaces: all verb, no arg
+ * line is only spaces: ???
+ * line has multiple spaces: verb up to the first one, arg for the rest
+ */
 void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   int i;
   for (i = 0; i < request->len; i++)
     if (request->s[i] == ' ') break;
 
   // XXX: Pull this behaviour out into it's own function (please )
+  // int pos = find_first_space(request)
   i++;
 
   // XXX: Test edge case >= vs >
@@ -145,7 +158,7 @@ void handle_client_eof(stralloc *line,int lineno,int *exitcode,
                        stralloc *greeting,filter_rule *rules) {
   stralloc client_eof = {0};
   copys(&client_eof,PSEUDOVERB_CLIENTEOF);
-  munge_response_line(line,lineno,exitcode,greeting,rules,&client_eof);
+  munge_response_line(lineno,line,exitcode,greeting,rules,&client_eof);
 }
 
 void logit(char logprefix,stralloc *sa) {

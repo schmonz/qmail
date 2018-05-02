@@ -1,5 +1,5 @@
-extern void startup();
+extern void main_program();
 
 int main(int argc,char **argv) {
-  startup(argc,argv);
+  main_program(argc,argv);
 }
