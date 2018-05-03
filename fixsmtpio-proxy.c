@@ -174,7 +174,7 @@ void construct_proxy_response(stralloc *proxy_response,
   }
   copy(proxy_response,server_response);
   if (!*in_data && !request_received && !verb->len)
-    copys(verb,PSEUDOVERB_TIMEOUT);
+    copys(verb,EVENT_TIMEOUT);
   munge_response(proxy_response,proxy_exitcode,greeting,rules,verb);
 }
 
@@ -198,7 +198,7 @@ void request_response_init(request_response *rr) {
 void handle_client_eof(stralloc *line,int lineno,int *exitcode,
                        stralloc *greeting,filter_rule *rules) {
   stralloc client_eof = {0};
-  copys(&client_eof,PSEUDOVERB_CLIENTEOF);
+  copys(&client_eof,EVENT_CLIENTEOF);
   munge_response_line(lineno,line,exitcode,greeting,rules,&client_eof);
 }
 
@@ -258,7 +258,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   request_response rr;
 
   request_response_init(&rr);
-  copys(rr.client_verb,PSEUDOVERB_GREETING);
+  copys(rr.client_verb,EVENT_GREETING);
 
   for (;;) {
     want_to_read(from_client,from_server);

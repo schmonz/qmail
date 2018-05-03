@@ -92,7 +92,7 @@ struct munge_command {
 };
 
 struct munge_command m[] = {
-  { PSEUDOVERB_GREETING, munge_greeting }
+  { EVENT_GREETING, munge_greeting }
 , { "ehlo", munge_ehlo }
 , { "helo", munge_helo }
 , { "help", munge_help }
@@ -154,7 +154,7 @@ int string_matches_glob(char *glob,char *string) {
 
 /*
  "&fixsmtpio" -> yes
- "&leavesmtpio" -> no
+ "&nofixsmtpio" -> no
  "" -> no
  NULL -> no
  "whatever else" -> no
@@ -164,7 +164,7 @@ int want_munge_internally(char *response) {
 }
 
 /*
- "&leavesmtpio" -> no
+ "&nofixsmtpio" -> no
  "&fixsmtpio" -> yes
  "" -> yes
  NULL -> yes
@@ -300,91 +300,91 @@ filter_rule *load_filter_rules(void) {
 
   // if client closes the connection, tell authup to be happy
   backwards_rules = prepend_rule(backwards_rules,
-      ENV_AUTHUSER,             PSEUDOVERB_CLIENTEOF,
-      PREPEND_NOTHING,          "*",
+      ENV_AUTHUSER,             EVENT_CLIENTEOF,
+      REQUEST_PASSTHRU,         "*",
       EXIT_NOW_SUCCESS,         ""
   );
 
   // if server greets us unhappily, notify authup
   backwards_rules = prepend_rule(backwards_rules,
-      ENV_AUTHUSER,             PSEUDOVERB_GREETING,
-      PREPEND_NOTHING,          "4*",
+      ENV_AUTHUSER,             EVENT_GREETING,
+      REQUEST_PASSTHRU,         "4*",
       EXIT_NOW_TEMPFAIL,        0
   );
   backwards_rules = prepend_rule(backwards_rules,
-      ENV_AUTHUSER,             PSEUDOVERB_GREETING,
-      PREPEND_NOTHING,          "5*",
+      ENV_AUTHUSER,             EVENT_GREETING,
+      REQUEST_PASSTHRU,         "5*",
       EXIT_NOW_PERMFAIL,        0
   ); // XXX LEAVE_RESPONSE_LINE_AS_IS
 
   // if server times out, hide message (authup has its own)
   backwards_rules = prepend_rule(backwards_rules,
-      ENV_AUTHUSER,             PSEUDOVERB_TIMEOUT,
-      PREPEND_NOTHING,          "*",
+      ENV_AUTHUSER,             EVENT_TIMEOUT,
+      REQUEST_PASSTHRU,         "*",
       EXIT_NOW_TIMEOUT,         ""
   ); // XXX REMOVE_RESPONSE_LINE
 
   // if authenticated, replace greeting
   backwards_rules = prepend_rule(backwards_rules,
-      ENV_AUTHUSER,             PSEUDOVERB_GREETING,
-      PREPEND_NOTHING,          "2*",
+      ENV_AUTHUSER,             EVENT_GREETING,
+      REQUEST_PASSTHRU,         "2*",
       EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
   );
 
   // implement a new verb that is not very interesting
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "word",
-      PREPEND_VERB_NOOP,        "*",
+      REQUEST_NOOP,             "*",
       EXIT_LATER_NORMALLY,      "250 likewise, give my regards to your mother"
   );
 
   // always replace greeting in HELO/EHLO
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "helo",
-      PREPEND_NOTHING,          "2*",
+      REQUEST_PASSTHRU,         "2*",
       EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
   );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "ehlo",
-      PREPEND_NOTHING,          "2*",
+      REQUEST_PASSTHRU,         "2*",
       EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
   );
 
   // always prepend acceptutils link to HELP message
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "help",
-      PREPEND_NOTHING,          "*",
+      REQUEST_PASSTHRU,         "*",
       EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
   );
 
   // always replace greeting in QUIT
   backwards_rules = prepend_rule(backwards_rules,
       ENV_ANY,                  "quit",
-      PREPEND_NOTHING,          "2*",
+      REQUEST_PASSTHRU,         "2*",
       EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
   );
 
   // don't advertise AUTH or STARTTLS
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "ehlo",
-      PREPEND_NOTHING,          "250?AUTH*",
+      REQUEST_PASSTHRU,         "250?AUTH*",
       EXIT_LATER_NORMALLY,      ""
   );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "ehlo",
-      PREPEND_NOTHING,          "250?STARTTLS",
+      REQUEST_PASSTHRU,         "250?STARTTLS",
       EXIT_LATER_NORMALLY,      ""
   );
 
   // don't allow AUTH or STARTTLS
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "auth",
-      PREPEND_VERB_NOOP,        "*",
+      REQUEST_NOOP,             "*",
       EXIT_LATER_NORMALLY,      "502 unimplemented (#5.5.1)"
   );
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "starttls",
-      PREPEND_VERB_NOOP,        "*",
+      REQUEST_NOOP,             "*",
       EXIT_LATER_NORMALLY,      "502 unimplemented (#5.5.1)"
   );
 

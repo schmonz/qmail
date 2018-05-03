@@ -54,7 +54,7 @@ START_TEST (test_filter_rule_applies)
   filter_rule rule = {
     0,
     ENV_ANY,                  "caliente",
-    PREPEND_NOTHING,          "*",
+    REQUEST_PASSTHRU          "*",
     EXIT_LATER_NORMALLY,      ""
   };
   assert_filter_rule_does_not_apply(&rule, "clienteof");

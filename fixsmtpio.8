@@ -20,39 +20,40 @@ has already initiated an authenticated session --
 .B fixsmtpio
 can be configured to adjust exit codes, SMTP responses,
 and occasionally even requests.
-.B fixsmtpio
-can also be used to modify a public SMTP service.
 
-By default, inserting an unconfigured
+Until it's been configured,
 .B fixsmtpio
-into the command chain should not change any observable behavior.
-If you observe otherwise, please report the bug.
+changes no observable behavior.
+(If you observe otherwise, please report the bug.)
 
-In typical usage, the
+The
 .B "EXIT CODES"
-section is more important than usual.
+section is especially important for this program.
+Here it is.
 .SH "EXIT CODES"
-.B checkpassword
-exits 1 for incorrect passwords.
-This happens to be the same code with which
-.B ofmipd
-and
-.B qmail-smtpd
-indicate any error condition whatsoever.
-Since
-.B authup
-needs to distinguish authentication failures from other kinds,
-it's important that
+If its configuration file fails to parse,
 .B fixsmtpio
-be configured to exit with unique codes for each condition.
+exits 18.
+.B authup
+understands this.
+
+.B authup
+needs to distinguish authentication failures from other kinds.
+Without
+.BR fixsmtpio ,
+a child exiting 1 could mean either "incorrect
+password" from
+.B checkpassword
+or "any error condition whatsoever" from
+.B ofmipd
+or
+.BR qmail-smtpd .
+With
+.BR fixsmtpio ,
+non-authentication failures can exit with the unique codes understood by
+.BR authup .
 See
 .BR EXAMPLES .
-
-.B fixsmtpio
-exits 18 if its configuration file exists but fails to parse.
-This, too, is as
-.B authup
-expects.
 
 .SH "ENVIRONMENT VARIABLES"
 Typical filter rules (see
@@ -144,7 +145,7 @@ These are therefore primarily useful with
 
 As another special case, if
 .B response
-is "&leavesmtpio",
+is "&nofixsmtpio",
 the response is sent as is.
 
 Rules are applied in the order written. For instance, if two rules
@@ -174,7 +175,7 @@ should be the current host's name.
 
 .SH "EXAMPLES"
 See
-.IR https://schmonz.com/qmail/acceptutils/fixsmtpio.txt .
+.IR https://schmonz.com/qmail/acceptutils .
 
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
