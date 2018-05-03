@@ -14,10 +14,10 @@ void make_pipe(int *from,int *to) {
 }
 
 void be_proxied(int from_proxy,int to_proxy,
-                int from_server,int to_server,
+                int from_proxied,int to_proxied,
                 char **argv) {
-  close(from_server);
-  close(to_server);
+  close(from_proxied);
+  close(to_proxied);
   use_as_stdin(from_proxy);
   use_as_stdout(to_proxy);
   execvp(*argv,argv);
@@ -42,7 +42,7 @@ void be_proxy(int from_client,int to_client,
               int from_proxy,int to_proxy,
               int from_server,int to_server,
               stralloc *greeting,filter_rule *rules,
-              int child) {
+              int proxied) {
   int exitcode;
 
   close(from_proxy);
@@ -50,7 +50,7 @@ void be_proxy(int from_client,int to_client,
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules);
-  teardown_and_exit(exitcode,child,rules,from_server,to_server);
+  teardown_and_exit(exitcode,proxied,rules,from_server,to_server);
 }
 
 void load_smtp_greeting(stralloc *greeting,char *configfile) {
@@ -69,7 +69,7 @@ void main_program(int argc,char **argv) {
   int from_proxy, to_server;
   int from_server, to_proxy;
   int to_client = 1;
-  int child;
+  int proxied;
 
   argv++; if (!*argv) die_usage();
 
@@ -80,13 +80,13 @@ void main_program(int argc,char **argv) {
   make_pipe(&from_proxy,&to_server);
   make_pipe(&from_server,&to_proxy);
 
-  if ((child = fork()))
+  if ((proxied = fork()))
     be_proxy(from_client,to_client,
              from_proxy,to_proxy,
              from_server,to_server,
              &greeting,rules,
-             child);
-  else if (child == 0)
+             proxied);
+  else if (proxied == 0)
     be_proxied(from_proxy,to_proxy,
                from_server,to_server,
                argv);
