@@ -50,6 +50,32 @@ START_TEST (test_is_entire_line)
 }
 END_TEST
 
+
+void assert_could_be_final_response_line(const char *input, int expected)
+{
+  stralloc sa = {0}; stralloc_copys(&sa, input);
+  int actual = could_be_final_response_line(&sa);
+  ck_assert_int_eq(actual, expected); }
+
+
+START_TEST (test_could_be_final_response_line)
+{
+  //assert_could_be_final_response_line(NULL, 0);
+  assert_could_be_final_response_line("", 0);
+  assert_could_be_final_response_line("123", 0);
+  assert_could_be_final_response_line("1234", 0);
+  assert_could_be_final_response_line("123 this is a final line", 1);
+  assert_could_be_final_response_line("123-this is NOT a final line", 0);
+  
+
+  // two surprises, but maybe fine for this function's job:
+  // - "\r\n" can be un-present and it's fine
+  // - it can have nothing after the space and it's fine
+  assert_could_be_final_response_line("123 ", 1);
+  assert_could_be_final_response_line("123\n", 0);
+}
+END_TEST
+
 void _assert_filter_rule(int expected, filter_rule *filter_rule, const char *event) {
   stralloc sa = {0}; stralloc_copys(&sa, event);
 
@@ -91,6 +117,7 @@ Suite * fixsmtpio_suite(void)
   tc_proxy = tcase_create("proxy");
   tcase_add_test(tc_proxy, test_strip_last_eol);
   tcase_add_test(tc_proxy, test_is_entire_line);
+  tcase_add_test(tc_proxy, test_could_be_final_response_line);
   suite_add_tcase(s, tc_proxy);
 
   tc_filter = tcase_create("filter");

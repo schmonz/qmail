@@ -7,14 +7,6 @@ int is_entire_line(stralloc *sa) {
   return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
-/*
- NULL: false
- empty: false
- shorter than 4: false
- exactly 4 and 4th char is anything but space: false
- exactly 4 and 4th char is space: true?!? (or should it end with "\r\n"? I think not...)
- rename: `could be final_server_response_line()`
- */
 int could_be_final_response_line(stralloc *line) {
   return line->len >= 4 && line->s[3] == ' ';
 }
