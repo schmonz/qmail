@@ -6,14 +6,14 @@ checknotroot \- refuse to run as UID 0
 .I prog
 .SH DESCRIPTION
 .B checknotroot
+ensures that another command can never be
+run as UID 0.
+
+.B checknotroot
 is most commonly placed after
 .B checkpassword
-and before its remaining arguments
-to ensure that
-
-- No further commands run as UID 0, and
-
-- If someone guesses the root password, they won't know they did.
+and before its remaining arguments to ensure that if someone guesses the
+root password, they won't know they did.
 
 .SH "EXIT CODES"
 If run by UID 0,
