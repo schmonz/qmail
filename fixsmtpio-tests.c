@@ -6,8 +6,7 @@
 #include "stralloc.h"
 
 void assert_strip_last_eol(const char *input, const char *expected_output) {
-  stralloc sa = {0};
-  stralloc_copys(&sa, input);
+  stralloc sa = {0}; stralloc_copys(&sa, input);
 
   strip_last_eol(&sa);
 
@@ -32,13 +31,31 @@ START_TEST (test_strip_last_eol)
 }
 END_TEST
 
-void _assert_filter_rule(int should_apply, filter_rule *filter_rule, const char *event) {
-  stralloc sa = {0};
-  stralloc_copys(&sa, event);
+void assert_is_entire_line(char *input, int expected) {
+  stralloc sa = {0}; stralloc_copys(&sa, input);
 
-  int result = filter_rule_applies(filter_rule,&sa);
+  int actual = is_entire_line(&sa);
 
-  ck_assert_int_eq(result, should_apply);
+  ck_assert_int_eq(actual, expected);
+}
+
+START_TEST (test_is_entire_line)
+{
+  // annoying to test, currently don't believe I have this bug:
+  // assert_is_entire_line(NULL, 0);
+  assert_is_entire_line("", 0);
+  assert_is_entire_line("123", 0);
+  assert_is_entire_line("123\n", 1);
+  assert_is_entire_line("1\n23\n", 1);
+}
+END_TEST
+
+void _assert_filter_rule(int expected, filter_rule *filter_rule, const char *event) {
+  stralloc sa = {0}; stralloc_copys(&sa, event);
+
+  int actual = filter_rule_applies(filter_rule,&sa);
+
+  ck_assert_int_eq(actual, expected);
 }
 
 void assert_filter_rule_applies(filter_rule *filter_rule, const char *event) {
@@ -52,7 +69,7 @@ void assert_filter_rule_does_not_apply(filter_rule *filter_rule, const char *eve
 START_TEST (test_filter_rule_applies)
 {
   filter_rule rule = {
-    0,
+    NULL,
     ENV_ANY,                  "caliente",
     REQUEST_PASSTHRU          "*",
     EXIT_LATER_NORMALLY,      ""
@@ -73,6 +90,7 @@ Suite * fixsmtpio_suite(void)
 
   tc_proxy = tcase_create("proxy");
   tcase_add_test(tc_proxy, test_strip_last_eol);
+  tcase_add_test(tc_proxy, test_is_entire_line);
   suite_add_tcase(s, tc_proxy);
 
   tc_filter = tcase_create("filter");

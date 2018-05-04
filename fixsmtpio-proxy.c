@@ -3,13 +3,6 @@
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
-/*
- NULL: false
- empty: false
- non-empty but no "\n" at the end: false
- non-empty and "\n" at the end: true
- "\n" at the end and also in the middle: true, as it happens
- */
 int is_entire_line(stralloc *sa) {
   return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }

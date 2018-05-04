@@ -14,5 +14,6 @@ typedef struct request_response {
 extern substdio sserr;
 
 extern void strip_last_eol(stralloc *);
+extern int is_entire_line(stralloc *);
 
 extern int read_and_process_until_either_end_closes(int,int,int,int,stralloc *,filter_rule *);
