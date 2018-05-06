@@ -7,16 +7,21 @@ default: it
 acceptutils: \
 reup authup checknotroot fixsmtpio
 
+acceptutils_base64.o: \
+compile acceptutils_base64.c acceptutils_base64.h
+	./compile acceptutils_base64.c
+
+acceptutils-memcheck: \
+fixsmtpio-tests
+	valgrind --leak-check=full --error-exitcode=99 ./fixsmtpio-tests >/dev/null
+	valgrind --leak-check=full --error-exitcode=88 ./fixsmtpio echo hi >/dev/null
+
 acceptutils-tests: \
 fixsmtpio-tests
 
 acceptutils-tests-run: \
 acceptutils-tests
 	@prove -v -e '' ./fixsmtpio-tests
-
-acceptutils_base64.o: \
-compile acceptutils_base64.c acceptutils_base64.h
-	./compile acceptutils_base64.c
 
 authup: \
 load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
