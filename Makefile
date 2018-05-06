@@ -97,12 +97,12 @@ load fixsmtpio-tests.o fixsmtpio.o fixsmtpio-common.o \
 fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
-libcheck.a
+libcheck.a rt.lib
 	./load fixsmtpio-tests fixsmtpio.o fixsmtpio-common.o \
 	fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \
-	libcheck.a -lpthread -lm
+	libcheck.a -lpthread -lm `cat rt.lib`
 
 fixsmtpio-tests.o: \
 compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
@@ -110,6 +110,13 @@ compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
 
 libcheck.a:
 	cp `head -1 conf-check`/lib/libcheck.a .
+
+rt.lib: \
+compile load
+	( ( echo 'main() { ; }' > tryrt.c && ./compile tryrt.c && \
+	./load tryrt -lrt ) >/dev/null 2>&1 \
+	&& echo -lrt || exit 0 ) > rt.lib
+	rm -f tryrt.c tryrt.o tryrt
 
 reup: \
 load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
