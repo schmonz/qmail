@@ -324,11 +324,18 @@ filter_rule *load_filter_rules(void) {
       EXIT_NOW_TIMEOUT,         ""
   ); // XXX REMOVE_RESPONSE_LINE
 
-  // if authenticated, replace greeting
+  // always replace hostname in greeting
+  backwards_rules = prepend_rule(backwards_rules,
+      ENV_ANY,                  EVENT_GREETING,
+      REQUEST_PASSTHRU,         "2*",
+      EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
+  );
+
+  // if authenticated, replace greeting entirely
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             EVENT_GREETING,
       REQUEST_PASSTHRU,         "2*",
-      EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
+      EXIT_LATER_NORMALLY,      "235 ok, go ahead (#2.0.0)"
   );
 
   // implement a new verb that is not very interesting
