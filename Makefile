@@ -24,18 +24,20 @@ acceptutils-tests
 	@prove -v -e '' ./fixsmtpio-tests
 
 authup: \
-load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
-case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a \
-fs.a socket.lib
-	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o timeoutread.o timeoutwrite.o \
-	now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
-	substdio.a error.a str.a fs.a  `cat socket.lib`
+load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o \
+timeoutread.o timeoutwrite.o now.o case.a env.a fd.a getln.a open.a \
+sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a fs.a \
+socket.lib
+	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o \
+	timeoutread.o timeoutwrite.o now.o case.a env.a fd.a getln.a open.a \
+	sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a fs.a \
+	`cat socket.lib`
 
 authup.o: \
 compile authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
-readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h env.h control.h \
-error.h scan.h auto_qmail.h
+readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h \
+env.h control.h error.h scan.h auto_qmail.h
 	./compile authup.c
 
 check.h:
@@ -55,15 +57,23 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 	./compile checknotroot.c
 
 fixsmtpio: \
-load fixsmtpio.o fixsmtpio-common.o fixsmtpio-filter.o fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
-	./load fixsmtpio fixsmtpio-common.o fixsmtpio-filter.o fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a
+load fixsmtpio.o fixsmtpio-common.o fixsmtpio-filter.o \
+fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a \
+substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
+case.a open.a fs.a
+	./load fixsmtpio fixsmtpio-common.o fixsmtpio-filter.o \
+	fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a \
+	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
+	case.a open.a fs.a
 
 fixsmtpio.h: \
 select.h fixsmtpio.h1
 	cat fixsmtpio.h1 > fixsmtpio.h
 
 fixsmtpio.o: \
-compile fixsmtpio.c fixsmtpio.h fixsmtpio-common.h fixsmtpio-filter.h fixsmtpio-proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
+compile fixsmtpio.c fixsmtpio.h fixsmtpio-common.h fixsmtpio-filter.h \
+fixsmtpio-proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h \
+fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
 	./compile fixsmtpio.c
 
 fixsmtpio-common.o: \
@@ -83,8 +93,16 @@ compile fixsmtpio-proxy.c fixsmtpio-proxy.h
 	./compile fixsmtpio-proxy.c
 
 fixsmtpio-tests: \
-load fixsmtpio-tests.o fixsmtpio.o fixsmtpio-common.o fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a
-	./load fixsmtpio-tests fixsmtpio.o fixsmtpio-common.o fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a case.a open.a fs.a libcheck.a -lpthread -lm
+load fixsmtpio-tests.o fixsmtpio.o fixsmtpio-common.o \
+fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a \
+substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
+case.a open.a fs.a \
+libcheck.a
+	./load fixsmtpio-tests fixsmtpio.o fixsmtpio-common.o \
+	fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a \
+	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
+	case.a open.a fs.a \
+	libcheck.a -lpthread -lm
 
 fixsmtpio-tests.o: \
 compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
