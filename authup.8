@@ -1,13 +1,14 @@
 .TH authup 8
 .SH NAME
-authup \- read an SMTP or POP3 username and password
+authup \- offer SMTP or POP3 authentication
 .SH SYNOPSIS
 .B authup
 .I protocol
 .I prog
 .SH DESCRIPTION
 .B authup
-reads an SMTP or POP3 username and password from the network.
+speaks just enough SMTP or POP3
+to read a username and password from the network.
 It then runs
 .IR prog .
 
@@ -39,32 +40,18 @@ or
 as root, so that
 .B checkpassword
 can run
-.B qmail-smtpd
+.B ofmipd
 or
 .B qmail-pop3d
 under the UID of the authenticated user.
 
-If
-.B QMAILQUEUE
-is set, the designated
-.B qmail-queue
-wrapper will also run as the authenticated user.
-This can be useful for filtering.
-
 .B authup
-expects descriptor 0 to read from the network
-and descriptor 1 to write to the network.
-It reads a username and password from descriptor 0
-in SMTP's AUTH LOGIN or AUTH PLAIN styles
-or in POP3's USER-PASS style.
+speaks just enough SMTP to parse usernames and passwords
+from AUTH LOGIN or AUTH PLAIN,
+or just enough POP3 to understand USER-PASS.
 It invokes
-.IR prog ,
-with the same descriptors 0 and 1;
-descriptor 2 writing to the network;
-and descriptor 3 reading the username, a 0 byte, the password,
-another 0 byte,
-a protocol-specific datum such as a timestamp or challenge,
-and a final 0 byte.
+.I prog
+via the checkpassword interface.
 .B authup
 then waits for
 .I prog
@@ -74,9 +61,9 @@ It prints an error message if
 crashes or exits nonzero.
 
 .B authup
-should be used only within
-a secure network.
-Otherwise an eavesdropper can steal passwords.
+does not perform any encryption of its own.
+For security, make it available over the network only by means of
+another program that encrypts the network connection.
 .SH "ENVIRONMENT VARIABLES"
 The authenticated user is available to child processes as
 .BR AUTHUSER .
@@ -88,6 +75,18 @@ is set,
 will advertise AUTH support in a non-standard way
 to add interoperability with Outlook Express 4, Exchange 5,
 and other SMTP clients that implement an obsolete version of the AUTH command.
+
+Because
+.B ofmipd
+(or
+.BR qmail-smtpd )
+runs as the authenticated user,
+so does
+.BR qmail-queue ,
+as well as any custom
+.B QMAILQUEUE
+wrapper.
+This can be useful for user-controlled filtering.
 .SH "CONTROL FILES"
 .TP 5
 .I smtpgreeting / pop3greeting
@@ -124,7 +123,6 @@ checknotroot(8),
 fixsmtpio(8),
 stunnel(8),
 qmail-qfilter-ofmipd-queue(8),
-pymsgauth-tag(1),
-qmail-smtpd(8),
+ofmipd(8),
 qmail-pop3d(8),
 qmail-popup(8).
