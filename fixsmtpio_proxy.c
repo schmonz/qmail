@@ -7,7 +7,8 @@ int is_entire_line(stralloc *sa) {
   // XXX let's try enforcing exactly one line, not more
   int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
   int first_occurrence_of_newline = -1;
-  for (int i = 0; i < sa->len; i++) {
+  int i;
+  for (i = 0; i < sa->len; i++) {
     if (sa->s[i] == '\n') {
       first_occurrence_of_newline = i;
       break;
@@ -92,14 +93,6 @@ int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
 
-/*
- * line is null
- * line is empty
- * line is non-empty but has no spaces: all verb, no arg
- * line is only spaces: no verb, no arg (then what???)
- * line has multiple spaces: verb up to the first one, arg for the rest
- * have one space, but not in the 4th position: we still split on space even though verbs seem to always be 4 chars long
- */
 void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   int i;
   for (i = 0; i < request->len; i++)

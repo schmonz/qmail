@@ -76,13 +76,6 @@ START_TEST (test_could_be_final_response_line)
 }
 END_TEST
 
-START_TEST (test_parse_client_request)
-{
-  // given "" request, verb is "" and arg is ""
-  assert_parse_client_request("", "", "");
-}
-END_TEST
-
 void assert_parse_client_request(const char *request, const char *verb, const char *arg)
 {
   stralloc sa_request = {0}; stralloc_copys(&sa_request, request);
@@ -92,10 +85,26 @@ void assert_parse_client_request(const char *request, const char *verb, const ch
   parse_client_request(&sa_verb, &sa_arg, &sa_request);
 
   stralloc_0(&sa_verb);
+  ck_assert_str_eq(sa_verb.s, verb);
   stralloc_0(&sa_arg);
-  ck_assert_str_eq(sa_verb.buf, verb);
-  ck_assert_str_eq(sa_arg.buf, arg);
+  ck_assert_str_eq(sa_arg.s, arg);
 }
+
+START_TEST (test_parse_client_request)
+{
+  //assert_parse_client_request(NULL, "", "");
+  assert_parse_client_request("", "", "");
+  assert_parse_client_request("MAIL FROM:<schmonz@schmonz.com>", "MAIL", "FROM:<schmonz@schmonz.com>");
+  assert_parse_client_request("RCPT TO:<geepawhill@geepawhill.org>", "RCPT", "TO:<geepawhill@geepawhill.org>");
+  assert_parse_client_request("GENIUSPROGRAMMER", "GENIUSPROGRAMMER", "");
+  assert_parse_client_request(" NEATO", "", "NEATO");
+  assert_parse_client_request(" ", "", "");
+  assert_parse_client_request("   ", "", "  ");
+  assert_parse_client_request("SUPER WEIRD STUFF", "SUPER", "WEIRD STUFF");
+  assert_parse_client_request("R WEIRD STUFF", "R", "WEIRD STUFF");
+  assert_parse_client_request("MAIL FROM:<schmonz@schmonz.com>\r\nRCPT TO:<geepawhill@geepawhill.org>", "MAIL", "FROM:<schmonz@schmonz.com>\r\nRCPT TO:<geepawhill@geepawhill.org>");
+}
+END_TEST
 
 void _assert_filter_rule(int expected, filter_rule *filter_rule, const char *event) {
   stralloc sa = {0}; stralloc_copys(&sa, event);
