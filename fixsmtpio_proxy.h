@@ -1,5 +1,5 @@
 #include "fixsmtpio.h"
-#include "fixsmtpio-filter.h"
+#include "fixsmtpio_filter.h"
 
 typedef struct request_response {
   stralloc *client_request;

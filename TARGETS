@@ -395,12 +395,12 @@ reup.o
 fixsmtpio
 fixsmtpio.h
 fixsmtpio.o
-fixsmtpio-main.o
+fixsmtpio_main.o
 fixsmtpio-tests
 fixsmtpio-tests.o
-fixsmtpio-filter.o
-fixsmtpio-proxy.o
-fixsmtpio-common.o
+fixsmtpio_filter.o
+fixsmtpio_proxy.o
+fixsmtpio_common.o
 check.h
 check_stdint.h
 libcheck.a

@@ -1,7 +1,7 @@
 #include "fixsmtpio.h"
-#include "fixsmtpio-common.h"
-#include "fixsmtpio-filter.h"
-#include "fixsmtpio-proxy.h"
+#include "fixsmtpio_common.h"
+#include "fixsmtpio_filter.h"
+#include "fixsmtpio_proxy.h"
 
 void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
 void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }

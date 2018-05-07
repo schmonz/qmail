@@ -1,5 +1,5 @@
 #include "fixsmtpio.h"
-#include "fixsmtpio-filter.h"
+#include "fixsmtpio_filter.h"
 
 void munge_greeting(stralloc *response,int lineno,stralloc *greeting) {
   copys(response,"220 "); cat(response,greeting);

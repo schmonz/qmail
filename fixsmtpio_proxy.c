@@ -1,5 +1,5 @@
-#include "fixsmtpio-proxy.h"
-#include "fixsmtpio-filter.h"
+#include "fixsmtpio_proxy.h"
+#include "fixsmtpio_filter.h"
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 

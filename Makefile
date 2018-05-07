@@ -57,12 +57,12 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 	./compile checknotroot.c
 
 fixsmtpio: \
-load fixsmtpio.o fixsmtpio-common.o fixsmtpio-filter.o \
-fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a \
+load fixsmtpio.o fixsmtpio_common.o fixsmtpio_filter.o \
+fixsmtpio_proxy.o fixsmtpio_main.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a
-	./load fixsmtpio fixsmtpio-common.o fixsmtpio-filter.o \
-	fixsmtpio-proxy.o fixsmtpio-main.o auto_qmail.o control.o getln.a \
+	./load fixsmtpio fixsmtpio_common.o fixsmtpio_filter.o \
+	fixsmtpio_proxy.o fixsmtpio_main.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a
 
@@ -71,35 +71,35 @@ select.h fixsmtpio.h1
 	cat fixsmtpio.h1 > fixsmtpio.h
 
 fixsmtpio.o: \
-compile fixsmtpio.c fixsmtpio.h fixsmtpio-common.h fixsmtpio-filter.h \
-fixsmtpio-proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h \
+compile fixsmtpio.c fixsmtpio.h fixsmtpio_common.h fixsmtpio_filter.h \
+fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h \
 fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
 	./compile fixsmtpio.c
 
-fixsmtpio-common.o: \
-compile fixsmtpio-common.c fixsmtpio-common.h
-	./compile fixsmtpio-common.c
+fixsmtpio_common.o: \
+compile fixsmtpio_common.c fixsmtpio_common.h
+	./compile fixsmtpio_common.c
 
-fixsmtpio-filter.o: \
-compile fixsmtpio-filter.c fixsmtpio-filter.h
-	./compile fixsmtpio-filter.c
+fixsmtpio_filter.o: \
+compile fixsmtpio_filter.c fixsmtpio_filter.h
+	./compile fixsmtpio_filter.c
 
-fixsmtpio-main.o: \
-compile fixsmtpio-main.c
-	./compile fixsmtpio-main.c
+fixsmtpio_main.o: \
+compile fixsmtpio_main.c
+	./compile fixsmtpio_main.c
 
-fixsmtpio-proxy.o: \
-compile fixsmtpio-proxy.c fixsmtpio-proxy.h
-	./compile fixsmtpio-proxy.c
+fixsmtpio_proxy.o: \
+compile fixsmtpio_proxy.c fixsmtpio_proxy.h
+	./compile fixsmtpio_proxy.c
 
 fixsmtpio-tests: \
-load fixsmtpio-tests.o fixsmtpio.o fixsmtpio-common.o \
-fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a \
+load fixsmtpio-tests.o fixsmtpio.o fixsmtpio_common.o \
+fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
-	./load fixsmtpio-tests fixsmtpio.o fixsmtpio-common.o \
-	fixsmtpio-filter.o fixsmtpio-proxy.o auto_qmail.o control.o getln.a \
+	./load fixsmtpio-tests fixsmtpio.o fixsmtpio_common.o \
+	fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \
 	libcheck.a -lpthread -lm `cat rt.lib`

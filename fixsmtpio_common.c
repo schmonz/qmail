@@ -1,5 +1,5 @@
 #include "fixsmtpio.h"
-#include "fixsmtpio-common.h"
+#include "fixsmtpio_common.h"
 
 void die() { _exit(1); }
 

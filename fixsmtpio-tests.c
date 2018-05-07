@@ -1,8 +1,8 @@
 #include "check.h"
 #include <stdlib.h>
 
-#include "fixsmtpio-proxy.h"
-#include "fixsmtpio-filter.h"
+#include "fixsmtpio_proxy.h"
+#include "fixsmtpio_filter.h"
 #include "stralloc.h"
 
 void assert_strip_last_eol(const char *input, const char *expected_output) {
