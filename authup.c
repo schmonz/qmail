@@ -272,7 +272,7 @@ void smtp_ehlo(char *arg) {
   puts("\r\n250-AUTH LOGIN PLAIN");
   if (x = env_get("BROKEN_SASL_AUTH_CLIENTS"))
     puts("\r\n250-AUTH=LOGIN PLAIN");
-  smtp_out("\r\n250 8BITMIME");
+  smtp_out("\r\n250-PIPELINING\r\n250 8BITMIME");
 }
 
 static stralloc authin = {0};
