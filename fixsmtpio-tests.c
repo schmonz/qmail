@@ -76,6 +76,27 @@ START_TEST (test_could_be_final_response_line)
 }
 END_TEST
 
+START_TEST (test_parse_client_request)
+{
+  // given "" request, verb is "" and arg is ""
+  assert_parse_client_request("", "", "");
+}
+END_TEST
+
+void assert_parse_client_request(const char *request, const char *verb, const char *arg)
+{
+  stralloc sa_request = {0}; stralloc_copys(&sa_request, request);
+  stralloc sa_verb = {0};
+  stralloc sa_arg = {0};
+
+  parse_client_request(&sa_verb, &sa_arg, &sa_request);
+
+  stralloc_0(&sa_verb);
+  stralloc_0(&sa_arg);
+  ck_assert_str_eq(sa_verb.buf, verb);
+  ck_assert_str_eq(sa_arg.buf, arg);
+}
+
 void _assert_filter_rule(int expected, filter_rule *filter_rule, const char *event) {
   stralloc sa = {0}; stralloc_copys(&sa, event);
 
@@ -118,6 +139,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_proxy, test_strip_last_eol);
   tcase_add_test(tc_proxy, test_is_entire_line);
   tcase_add_test(tc_proxy, test_could_be_final_response_line);
+  tcase_add_test(tc_proxy, test_parse_client_request);
   suite_add_tcase(s, tc_proxy);
 
   tc_filter = tcase_create("filter");
