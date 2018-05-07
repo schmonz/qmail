@@ -19,19 +19,21 @@ or
 as
 
 .EX
-  reup \\
-    authup smtp \\
-      checkpassword checknotroot \\
-        fixsmtpio \\
-          env RELAYCLIENT="" qmail-smtpd
+  reup -t 5     \\
+  authup smtp   \\
+  checkpassword \\
+  checknotroot  \\
+  fixsmtpio     \\
+  env RELAYCLIENT="" ofmipd
 .EE
 
 or
 
 .EX
-  authup pop3 \\
-    checkpassword checknotroot \\
-      qmail-pop3d
+  authup pop3   \\
+  checkpassword \\
+  checknotroot  \\
+  qmail-pop3d
 .EE
 
 as root, so that
