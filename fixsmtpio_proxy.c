@@ -3,9 +3,7 @@
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
-int is_entire_line(stralloc *sa) {
-  // XXX let's try enforcing exactly one line, not more
-  int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
+int find_first_newline(stralloc *sa) {
   int first_occurrence_of_newline = -1;
   int i;
   for (i = 0; i < sa->len; i++) {
@@ -14,6 +12,14 @@ int is_entire_line(stralloc *sa) {
       break;
     }
   }
+
+  return first_occurrence_of_newline;
+}
+
+int is_entire_line(stralloc *sa) {
+  // XXX let's try enforcing exactly one line, not more
+  int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
+  int first_occurrence_of_newline = find_first_newline(sa);
 
   return (is_at_least_one_line && first_occurrence_of_newline == (sa->len - 1));
 }
