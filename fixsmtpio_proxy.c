@@ -4,7 +4,17 @@
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
 int is_entire_line(stralloc *sa) {
-  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
+  // XXX let's try enforcing exactly one line, not more
+  int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
+  int first_occurrence_of_newline = -1;
+  for (int i = 0; i < sa->len; i++) {
+    if (sa->s[i] == '\n') {
+      first_occurrence_of_newline = i;
+      break;
+    }
+  }
+
+  return (is_at_least_one_line && first_occurrence_of_newline == (sa->len - 1));
 }
 
 int could_be_final_response_line(stralloc *line) {
