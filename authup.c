@@ -266,10 +266,12 @@ void smtp_helo(char *arg) {
 }
 
 void smtp_ehlo(char *arg) {
+  char *x;
   puts("250-");
   puts(greeting.s);
   puts("\r\n250-AUTH LOGIN PLAIN");
-  puts("\r\n250-AUTH=LOGIN PLAIN");
+  if (x = env_get("BROKEN_SASL_AUTH_CLIENTS"))
+    puts("\r\n250-AUTH=LOGIN PLAIN");
   smtp_out("\r\n250 8BITMIME");
 }
 

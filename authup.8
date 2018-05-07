@@ -78,6 +78,14 @@ Otherwise an eavesdropper can steal passwords.
 .SH "ENVIRONMENT VARIABLES"
 The authenticated user is available to child processes as
 .BR AUTHUSER .
+
+If
+.B BROKEN_SASL_AUTH_CLIENTS
+is set,
+.B authup
+will advertise AUTH support in a non-standard way
+to add interoperability with Outlook Express 4, Exchange 5,
+and other SMTP clients that implement an obsolete version of the AUTH command.
 .SH "CONTROL FILES"
 .TP 5
 .I smtpgreeting / pop3greeting
