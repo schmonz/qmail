@@ -46,7 +46,7 @@ START_TEST (test_is_entire_line)
   assert_is_entire_line("", 0);
   assert_is_entire_line("123", 0);
   assert_is_entire_line("123\n", 1);
-  assert_is_entire_line("1\n23\n", 1);
+  assert_is_entire_line("1\n23\n", 0);
 }
 END_TEST
 
