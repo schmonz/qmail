@@ -5,7 +5,7 @@ SHELL=/bin/sh
 default: it
 
 acceptutils: \
-reup authup checknotroot fixsmtpio
+reup authup checknotroot fixsmtpio qmail-qfilter-pymsgauth
 
 acceptutils_base64.o: \
 compile acceptutils_base64.c acceptutils_base64.h
@@ -111,12 +111,9 @@ compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
 libcheck.a:
 	cp `head -1 conf-check`/lib/libcheck.a .
 
-rt.lib: \
-compile load
-	( ( echo 'main() { ; }' > tryrt.c && ./compile tryrt.c && \
-	./load tryrt -lrt ) >/dev/null 2>&1 \
-	&& echo -lrt || exit 0 ) > rt.lib
-	rm -f tryrt.c tryrt.o tryrt
+qmail-qfilter-pymsgauth: \
+qmail-qfilter-pymsgauth.sh
+	cp qmail-qfilter-pymsgauth.sh qmail-qfilter-pymsgauth.sh
 
 reup: \
 load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
@@ -125,6 +122,13 @@ load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
 reup.o: \
 compile reup.c env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
 	./compile reup.c
+
+rt.lib: \
+compile load
+	( ( echo 'main() { ; }' > tryrt.c && ./compile tryrt.c && \
+	./load tryrt -lrt ) >/dev/null 2>&1 \
+	&& echo -lrt || exit 0 ) > rt.lib
+	rm -f tryrt.c tryrt.o tryrt
 
 addresses.0: \
 addresses.5
