@@ -113,7 +113,7 @@ libcheck.a:
 
 qmail-qfilter-pymsgauth: \
 qmail-qfilter-pymsgauth.sh
-	cp qmail-qfilter-pymsgauth.sh qmail-qfilter-pymsgauth.sh
+	cp qmail-qfilter-pymsgauth.sh qmail-qfilter-pymsgauth
 
 reup: \
 load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
