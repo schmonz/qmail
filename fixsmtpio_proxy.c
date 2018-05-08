@@ -168,7 +168,7 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
   copy(proxy_response,server_response);
-  if (!*in_data && !request_received && !verb->len)
+  if (!*in_data && !request_received)
     copys(verb,EVENT_TIMEOUT);
   munge_response(proxy_response,proxy_exitcode,greeting,rules,verb);
 }
