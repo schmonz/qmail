@@ -17,11 +17,12 @@ int find_first_newline(stralloc *sa) {
 }
 
 int is_entire_line(stralloc *sa) {
-  // XXX let's try enforcing exactly one line, not more
   int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
-  int first_occurrence_of_newline = find_first_newline(sa);
+  //int first_occurrence_of_newline = find_first_newline(sa);
 
-  return (is_at_least_one_line && first_occurrence_of_newline == (sa->len - 1));
+  return is_at_least_one_line;
+  //this throws off some callers. breaks filtering, at least. try `ehlo` to see.
+  //return (is_at_least_one_line && first_occurrence_of_newline == (sa->len - 1));
 }
 
 int could_be_final_response_line(stralloc *line) {
