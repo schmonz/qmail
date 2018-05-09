@@ -99,6 +99,7 @@ compile fixsmtpio_proxy.c fixsmtpio_proxy.h
 	./compile fixsmtpio_proxy.c
 
 fixsmtpio-tests: \
+fixsmtpio \
 load fixsmtpio-tests.o fixsmtpio.o fixsmtpio_common.o \
 fixsmtpio_eventq.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \

@@ -135,23 +135,19 @@ void safewrite(int fd,stralloc *sa) {
  */
 void construct_proxy_request(stralloc *proxy_request,
                              filter_rule *rules,
-                             stralloc *verb,stralloc *arg,
+                             char *event,stralloc *arg,
                              stralloc *client_request,
                              int *want_data,int *in_data) {
   filter_rule *rule;
-
-  stralloc event = {0};
-  copy(&event,&verb);
-  if (!stralloc_0(&event)) die_nomem();
 
   if (*in_data) {
     copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
     for (rule = rules; rule; rule = rule->next)
-      if (rule->request_prepend && filter_rule_applies(rule,event.s))
+      if (rule->request_prepend && filter_rule_applies(rule,event))
         cats(proxy_request,rule->request_prepend); //XXX if we have stuff already, this is not prepending!!!
-    if (event_matches("data",event.s)) *want_data = 1;
+    if (event_matches("data",event)) *want_data = 1;
     cat(proxy_request,client_request);
   }
 }
@@ -175,21 +171,25 @@ void construct_proxy_response(stralloc *proxy_response,
   munge_response(proxy_response,proxy_exitcode,greeting,rules,event);
 }
 
-void request_response_init(request_response *rr) {
+void proxied_request_init(proxied_request *rq) {
   static stralloc client_request  = {0},
                   client_verb     = {0},
                   client_arg      = {0},
-                  proxy_request   = {0},
-                  server_response = {0},
+                  proxy_request   = {0};
+
+  blank(&client_request);  rq->client_request  = &client_request;
+  blank(&client_verb);     rq->client_verb     = &client_verb;
+  blank(&client_arg);      rq->client_arg      = &client_arg;
+  blank(&proxy_request);   rq->proxy_request   = &proxy_request;
+}
+
+void proxied_response_init(proxied_response *rp) {
+  static stralloc server_response = {0},
                   proxy_response  = {0};
 
-  blank(&client_request);  rr->client_request  = &client_request;
-  blank(&client_verb);     rr->client_verb     = &client_verb;
-  blank(&client_arg);      rr->client_arg      = &client_arg;
-  blank(&proxy_request);   rr->proxy_request   = &proxy_request;
-  blank(&server_response); rr->server_response = &server_response;
-  blank(&proxy_response);  rr->proxy_response  = &proxy_response;
-                           rr->proxy_exitcode  = EXIT_LATER_NORMALLY;
+  blank(&server_response); rp->server_response = &server_response;
+  blank(&proxy_response);  rp->proxy_response  = &proxy_response;
+                           rp->proxy_exitcode  = EXIT_LATER_NORMALLY;
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -201,39 +201,44 @@ void logit(char logprefix,stralloc *sa) {
   substdio_flush(&sserr);
 }
 
-void handle_client_request(int to_server,filter_rule *rules,
-                           request_response *rr,
-                           int *want_data,int *in_data) {
-  logit('1',rr->client_request);
+char *handle_client_request(int to_server,filter_rule *rules,
+                            proxied_request *rq,
+                            int *want_data,int *in_data) {
+  stralloc event_sa = {0};
+  logit('1',rq->client_request);
   if (!*in_data)
-    parse_client_request(rr->client_verb,rr->client_arg,rr->client_request);
-  logit('2',rr->client_verb);
-  logit('3',rr->client_arg);
-  construct_proxy_request(rr->proxy_request,rules,
-                          rr->client_verb,rr->client_arg,
-                          rr->client_request,
+    parse_client_request(rq->client_verb,rq->client_arg,rq->client_request);
+  logit('2',rq->client_verb);
+  copy(&event_sa,rq->client_verb);
+  stralloc_0(&event_sa);
+  logit('3',rq->client_arg);
+  construct_proxy_request(rq->proxy_request,rules,
+                          event_sa.s,rq->client_arg,
+                          rq->client_request,
                           want_data,in_data);
-  logit('4',rr->proxy_request);
-  safewrite(to_server,rr->proxy_request);
+  logit('4',rq->proxy_request);
+  safewrite(to_server,rq->proxy_request);
   if (*in_data) {
-    blank(rr->client_request);
-    blank(rr->proxy_request);
+    blank(rq->client_request);
+    blank(rq->proxy_request);
   }
+
+  return event_sa.s;
 }
 
 int handle_server_response(int to_client,
                            stralloc *greeting,filter_rule *rules,char *event,
-                           request_response *rr,
+                           proxied_response *rp,
                            int *want_data,int *in_data) {
-  logit('5',rr->server_response);
-  construct_proxy_response(rr->proxy_response,
+  logit('5',rp->server_response);
+  construct_proxy_response(rp->proxy_response,
                            greeting,rules,event,
-                           rr->server_response,
-                           &rr->proxy_exitcode,
+                           rp->server_response,
+                           &rp->proxy_exitcode,
                            want_data,in_data);
-  logit('6',rr->proxy_response);
-  safewrite(to_client,rr->proxy_response);
-  return rr->proxy_exitcode;
+  logit('6',rp->proxy_response);
+  safewrite(to_client,rp->proxy_response);
+  return rp->proxy_exitcode;
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
@@ -243,9 +248,11 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   char buf[1];
   int exitcode = EXIT_LATER_NORMALLY;
   int want_data = 0, in_data = 0;
-  request_response rr;
+  proxied_request rq;
+  proxied_response rp;
 
-  request_response_init(&rr);
+  proxied_request_init(&rq);
+  proxied_response_init(&rp);
   eventq_put(EVENT_GREETING);
 
   for (;;) {
@@ -253,19 +260,25 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(rr.client_request,from_client,buf,sizeof buf)) {
+      if (!safeappend(rq.client_request,from_client,buf,sizeof buf)) {
         eventq_put(EVENT_CLIENTEOF);
         break;
       }
-      if (is_entire_line(rr.client_request))
-        handle_client_request(to_server,rules,&rr,&want_data,&in_data);
+      if (is_entire_line(rq.client_request)) {
+        char *event = handle_client_request(to_server,rules,&rq,&want_data,&in_data);
+        eventq_put(event);
+        alloc_free(event);
+        proxied_request_init(&rq);
+      }
     }
 
     if (can_read(from_server)) {
-      if (!safeappend(rr.server_response,from_server,buf,sizeof buf)) break;
-      if (is_entire_response(rr.server_response)) {
-        exitcode = handle_server_response(to_client,greeting,rules,eventq_get(),&rr,&want_data,&in_data);
-        request_response_init(&rr);
+      if (!safeappend(rp.server_response,from_server,buf,sizeof buf)) break;
+      if (is_entire_response(rp.server_response)) {
+        char *event = eventq_get();
+        exitcode = handle_server_response(to_client,greeting,rules,event,&rp,&want_data,&in_data);
+        alloc_free(event);
+        proxied_response_init(&rp);
       }
     }
 

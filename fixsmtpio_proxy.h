@@ -1,15 +1,18 @@
 #include "fixsmtpio.h"
 #include "fixsmtpio_filter.h"
 
-typedef struct request_response {
+typedef struct proxied_request {
   stralloc *client_request;
   stralloc *client_verb;
   stralloc *client_arg;
   stralloc *proxy_request;
+} proxied_request;
+
+typedef struct proxied_response {
   stralloc *server_response;
   stralloc *proxy_response;
   int       proxy_exitcode;
-} request_response;
+} proxied_response;
 
 extern substdio sserr;
 
