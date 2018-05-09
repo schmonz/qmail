@@ -14,7 +14,7 @@ compile acceptutils_base64.c acceptutils_base64.h
 acceptutils-memcheck: \
 fixsmtpio-tests
 	valgrind --leak-check=full --error-exitcode=99 ./fixsmtpio-tests >/dev/null
-	valgrind --leak-check=full --error-exitcode=88 ./fixsmtpio echo hi >/dev/null
+	#valgrind --leak-check=full --error-exitcode=88 ./fixsmtpio echo hi >/dev/null
 
 acceptutils-tests: \
 fixsmtpio-tests
@@ -80,6 +80,10 @@ fixsmtpio_common.o: \
 compile fixsmtpio_common.c fixsmtpio_common.h
 	./compile fixsmtpio_common.c
 
+fixsmtpio_eventq.o: \
+compile fixsmtpio_eventq.c fixsmtpio_eventq.h sysqueue.h
+	./compile fixsmtpio_eventq.c
+
 fixsmtpio_filter.o: \
 compile fixsmtpio_filter.c fixsmtpio_filter.h
 	./compile fixsmtpio_filter.c
@@ -94,11 +98,13 @@ compile fixsmtpio_proxy.c fixsmtpio_proxy.h
 
 fixsmtpio-tests: \
 load fixsmtpio-tests.o fixsmtpio.o fixsmtpio_common.o \
+fixsmtpio_eventq.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
 	./load fixsmtpio-tests fixsmtpio.o fixsmtpio_common.o \
+	fixsmtpio_eventq.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \
@@ -129,6 +135,10 @@ compile load
 	./load tryrt -lrt ) >/dev/null 2>&1 \
 	&& echo -lrt || exit 0 ) > rt.lib
 	rm -f tryrt.c tryrt.o tryrt
+
+sysqueue.h:
+	( echo '#define NULL 0'; \
+	cat /usr/include/sys/queue.h ) > sysqueue.h
 
 addresses.0: \
 addresses.5

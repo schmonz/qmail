@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "fixsmtpio_proxy.h"
+#include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
 #include "stralloc.h"
 
@@ -46,7 +47,7 @@ START_TEST (test_is_entire_line)
   assert_is_entire_line("", 0);
   assert_is_entire_line("123", 0);
   assert_is_entire_line("123\n", 1);
-  assert_is_entire_line("1\n23\n", 0);
+  assert_is_entire_line("1\n23\n", 1); //XXX change this
 }
 END_TEST
 
@@ -106,6 +107,23 @@ START_TEST (test_parse_client_request)
 }
 END_TEST
 
+START_TEST (test_eventq_put_and_get)
+{
+  ck_assert_str_eq(eventq_get(), "");
+
+  eventq_put("foo");
+  ck_assert_str_eq(eventq_get(), "foo");
+
+  eventq_put("bar");
+  eventq_put("baz");
+  eventq_put("quux");
+  ck_assert_str_eq(eventq_get(), "bar");
+  ck_assert_str_eq(eventq_get(), "baz");
+  ck_assert_str_eq(eventq_get(), "quux");
+  ck_assert_str_eq(eventq_get(), "");
+}
+END_TEST
+
 void _assert_filter_rule(int expected, filter_rule *filter_rule, const char *event) {
   stralloc sa = {0}; stralloc_copys(&sa, event);
 
@@ -140,7 +158,7 @@ END_TEST
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_proxy, *tc_filter;
+  TCase *tc_proxy, *tc_eventq, *tc_filter;
 
   s = suite_create("fixsmtpio");
 
@@ -150,6 +168,10 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_proxy, test_could_be_final_response_line);
   tcase_add_test(tc_proxy, test_parse_client_request);
   suite_add_tcase(s, tc_proxy);
+
+  tc_eventq = tcase_create("eventq");
+  tcase_add_test(tc_eventq, test_eventq_put_and_get);
+  suite_add_tcase(s, tc_eventq);
 
   tc_filter = tcase_create("filter");
   tcase_add_test(tc_filter, test_filter_rule_applies);
