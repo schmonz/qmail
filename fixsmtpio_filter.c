@@ -34,9 +34,9 @@ void munge_quit(stralloc *response,int lineno,stralloc *greeting) {
  * strings same, do match
  * strings same except case, do match
  */
-int verb_matches(char *s,stralloc *sa) {
-  if (!sa->len) return 0;
-  return !case_diffb(s,sa->len,sa->s);
+int event_matches(char *s,char *s2) {
+  if (!str_len(s2)) return 0;
+  return !case_diffs(s,s2);
 }
 
 /*
@@ -100,10 +100,10 @@ struct munge_command m[] = {
 , { 0, 0 }
 };
 
-void *munge_line_fn(stralloc *verb) {
+void *munge_line_fn(char *event) {
   int i;
   for (i = 0; m[i].event; ++i)
-    if (verb_matches(m[i].event,verb))
+    if (event_matches(m[i].event,event))
       return m[i].munger;
   return 0;
 }
@@ -124,8 +124,8 @@ void *munge_line_fn(stralloc *verb) {
  ("221 get outta here", 0, "yo.sup.local", "quit") -> "221 yo.sup.local"
  */
 void munge_line_internally(stralloc *line,int lineno,
-                           stralloc *greeting,stralloc *verb) {
-  void (*munger)() = munge_line_fn(verb);
+                           stralloc *greeting,char *event) {
+  void (*munger)() = munge_line_fn(event);
   if (munger) munger(line,lineno,greeting);
 }
 
@@ -186,8 +186,8 @@ int envvar_exists_if_needed(char *envvar) {
 }
 
 // XXX don't test this directly
-int filter_rule_applies(filter_rule *rule,stralloc *verb) {
-  return (verb_matches(rule->event,verb) && envvar_exists_if_needed(rule->env));
+int filter_rule_applies(filter_rule *rule,char *event) {
+  return (event_matches(rule->event,event) && envvar_exists_if_needed(rule->env));
 }
 
 void munge_exitcode(int *exitcode,filter_rule *rule) {
@@ -216,8 +216,7 @@ void munge_exitcode(int *exitcode,filter_rule *rule) {
  */
 void munge_response_line(int lineno,
                          stralloc *line,int *exitcode,
-                         stralloc *greeting,filter_rule *rules,
-                         stralloc *verb) {
+                         stralloc *greeting,filter_rule *rules,const char *event) {
   filter_rule *rule;
   stralloc line0 = {0};
 
@@ -225,11 +224,11 @@ void munge_response_line(int lineno,
   if (!stralloc_0(&line0)) die_nomem();
 
   for (rule = rules; rule; rule = rule->next) {
-    if (!filter_rule_applies(rule,verb)) continue;
+    if (!filter_rule_applies(rule,event)) continue;
     if (!string_matches_glob(rule->response_line_glob,line0.s)) continue;
     munge_exitcode(exitcode,rule);
     if (want_munge_internally(rule->response))
-      munge_line_internally(line,lineno,greeting,verb);
+      munge_line_internally(line,lineno,greeting,event);
     else if (want_munge_from_config(rule->response))
       copys(line,rule->response);
   }
@@ -245,8 +244,7 @@ void munge_response_line(int lineno,
  response is multiline, first line ends with newline, second line does not
  */
 void munge_response(stralloc *response,int *exitcode,
-                    stralloc *greeting,filter_rule *rules,
-                    stralloc *verb) {
+                    stralloc *greeting,filter_rule *rules,const char *event) {
   stralloc munged = {0};
   stralloc line = {0};
   int lineno = 0;
@@ -255,7 +253,7 @@ void munge_response(stralloc *response,int *exitcode,
   for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
-      munge_response_line(lineno++,&line,exitcode,greeting,rules,verb);
+      munge_response_line(lineno++,&line,exitcode,greeting,rules,event);
       cat(&munged,&line);
       blank(&line);
     }

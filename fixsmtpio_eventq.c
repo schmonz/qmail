@@ -1,6 +1,7 @@
 #include "alloc.h"
 #include "str.h"
 #include "sysqueue.h"
+#include "fixsmtpio.h"
 #include "fixsmtpio_common.h"
 
 #include "fixsmtpio_eventq.h"
@@ -45,7 +46,7 @@ char *eventq_get() {
   char *event;
   node_t *e;
   if (TAILQ_EMPTY(&head)) {
-    event = "";
+    event = EVENT_TIMEOUT;
   } else {
     e = TAILQ_FIRST(&head);
     event = eventq_alloc_event(e->event);

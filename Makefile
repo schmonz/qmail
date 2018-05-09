@@ -58,10 +58,12 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 
 fixsmtpio: \
 load fixsmtpio.o fixsmtpio_common.o fixsmtpio_filter.o \
+fixsmtpio_eventq.o \
 fixsmtpio_proxy.o fixsmtpio_main.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a
 	./load fixsmtpio fixsmtpio_common.o fixsmtpio_filter.o \
+	fixsmtpio_eventq.o \
 	fixsmtpio_proxy.o fixsmtpio_main.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a

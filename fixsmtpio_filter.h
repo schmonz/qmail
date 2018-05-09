@@ -14,11 +14,11 @@ typedef struct filter_rule {
 } filter_rule;
 
 extern filter_rule * load_filter_rules(void);
-extern int filter_rule_applies(filter_rule *,stralloc *);
+extern int filter_rule_applies(filter_rule *,char *);
 
-extern int verb_matches(char *,stralloc *);
+extern int event_matches(char *,char *);
 
-extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,stralloc *);
-extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,stralloc *);
+extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,const char *);
+extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,const char *);
 
 #endif

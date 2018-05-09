@@ -109,7 +109,7 @@ END_TEST
 
 START_TEST (test_eventq_put_and_get)
 {
-  ck_assert_str_eq(eventq_get(), "");
+  ck_assert_str_eq(eventq_get(), "timeout");
 
   eventq_put("foo");
   ck_assert_str_eq(eventq_get(), "foo");
@@ -120,24 +120,12 @@ START_TEST (test_eventq_put_and_get)
   ck_assert_str_eq(eventq_get(), "bar");
   ck_assert_str_eq(eventq_get(), "baz");
   ck_assert_str_eq(eventq_get(), "quux");
-  ck_assert_str_eq(eventq_get(), "");
+  ck_assert_str_eq(eventq_get(), "timeout");
 }
 END_TEST
 
-void _assert_filter_rule(int expected, filter_rule *filter_rule, const char *event) {
-  stralloc sa = {0}; stralloc_copys(&sa, event);
-
-  int actual = filter_rule_applies(filter_rule,&sa);
-
-  ck_assert_int_eq(actual, expected);
-}
-
-void assert_filter_rule_applies(filter_rule *filter_rule, const char *event) {
-  _assert_filter_rule(1, filter_rule, event);
-}
-
-void assert_filter_rule_does_not_apply(filter_rule *filter_rule, const char *event) {
-  _assert_filter_rule(0, filter_rule, event);
+void assert_filter_rule(filter_rule *filter_rule, const char *event, int expected) {
+  ck_assert_int_eq(filter_rule_applies(filter_rule, event), expected);
 }
 
 START_TEST (test_filter_rule_applies)
@@ -148,10 +136,10 @@ START_TEST (test_filter_rule_applies)
     REQUEST_PASSTHRU          "*",
     EXIT_LATER_NORMALLY,      ""
   };
-  assert_filter_rule_does_not_apply(&rule, "clienteof");
+  assert_filter_rule(&rule, "clienteof", 0);
 
   rule.event = "clienteof";
-  assert_filter_rule_applies(&rule, "clienteof");
+  assert_filter_rule(&rule, "clienteof", 1);
 }
 END_TEST
 

@@ -1,4 +1,5 @@
 #include "fixsmtpio_proxy.h"
+#include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
@@ -139,14 +140,18 @@ void construct_proxy_request(stralloc *proxy_request,
                              int *want_data,int *in_data) {
   filter_rule *rule;
 
+  stralloc event = {0};
+  copy(&event,&verb);
+  if (!stralloc_0(&event)) die_nomem();
+
   if (*in_data) {
     copy(proxy_request,client_request);
     if (is_last_line_of_data(proxy_request)) *in_data = 0;
   } else {
     for (rule = rules; rule; rule = rule->next)
-      if (rule->request_prepend && filter_rule_applies(rule,verb))
+      if (rule->request_prepend && filter_rule_applies(rule,event.s))
         cats(proxy_request,rule->request_prepend); //XXX if we have stuff already, this is not prepending!!!
-    if (verb_matches("data",verb)) *want_data = 1;
+    if (event_matches("data",event.s)) *want_data = 1;
     cat(proxy_request,client_request);
   }
 }
@@ -158,9 +163,8 @@ void construct_proxy_request(stralloc *proxy_request,
 void construct_proxy_response(stralloc *proxy_response,
                               stralloc *greeting,
                               filter_rule *rules,
-                              stralloc *verb,
+                              char *event,
                               stralloc *server_response,
-                              int request_received,
                               int *proxy_exitcode,
                               int *want_data,int *in_data) {
   if (*want_data) {
@@ -168,9 +172,7 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
   copy(proxy_response,server_response);
-  if (!*in_data && !request_received && !verb->len)
-    copys(verb,EVENT_TIMEOUT);
-  munge_response(proxy_response,proxy_exitcode,greeting,rules,verb);
+  munge_response(proxy_response,proxy_exitcode,greeting,rules,event);
 }
 
 void request_response_init(request_response *rr) {
@@ -188,13 +190,6 @@ void request_response_init(request_response *rr) {
   blank(&server_response); rr->server_response = &server_response;
   blank(&proxy_response);  rr->proxy_response  = &proxy_response;
                            rr->proxy_exitcode  = EXIT_LATER_NORMALLY;
-}
-
-void handle_client_eof(stralloc *line,int lineno,int *exitcode,
-                       stralloc *greeting,filter_rule *rules) {
-  stralloc client_eof = {0};
-  copys(&client_eof,EVENT_CLIENTEOF);
-  munge_response_line(lineno,line,exitcode,greeting,rules,&client_eof);
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -227,15 +222,13 @@ void handle_client_request(int to_server,filter_rule *rules,
 }
 
 int handle_server_response(int to_client,
-                           stralloc *greeting,filter_rule *rules,
+                           stralloc *greeting,filter_rule *rules,char *event,
                            request_response *rr,
                            int *want_data,int *in_data) {
   logit('5',rr->server_response);
   construct_proxy_response(rr->proxy_response,
-                           greeting,rules,
-                           rr->client_verb,
+                           greeting,rules,event,
                            rr->server_response,
-                           rr->client_request->len,
                            &rr->proxy_exitcode,
                            want_data,in_data);
   logit('6',rr->proxy_response);
@@ -253,7 +246,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   request_response rr;
 
   request_response_init(&rr);
-  copys(rr.client_verb,EVENT_GREETING);
+  eventq_put(EVENT_GREETING);
 
   for (;;) {
     want_to_read(from_client,from_server);
@@ -261,7 +254,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(rr.client_request,from_client,buf,sizeof buf)) {
-        handle_client_eof(rr.client_request,0,&exitcode,greeting,rules);
+        eventq_put(EVENT_CLIENTEOF);
         break;
       }
       if (is_entire_line(rr.client_request))
@@ -271,7 +264,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(rr.server_response,from_server,buf,sizeof buf)) break;
       if (is_entire_response(rr.server_response)) {
-        exitcode = handle_server_response(to_client,greeting,rules,&rr,&want_data,&in_data);
+        exitcode = handle_server_response(to_client,greeting,rules,eventq_get(),&rr,&want_data,&in_data);
         request_response_init(&rr);
       }
     }
