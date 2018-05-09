@@ -245,7 +245,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              int from_server,int to_client,
                                              stralloc *greeting,
                                              filter_rule *rules) {
-  char buf[1];
+  char buf[SUBSTDIO_INSIZE];
   int exitcode = EXIT_LATER_NORMALLY;
   int want_data = 0, in_data = 0;
   proxied_request rq;
