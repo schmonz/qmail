@@ -226,8 +226,7 @@ char *handle_client_request(int to_server,filter_rule *rules,
   return event_sa.s;
 }
 
-int handle_server_response(int to_client,
-                           stralloc *greeting,filter_rule *rules,char *event,
+int handle_server_response(stralloc *greeting,filter_rule *rules,char *event,
                            proxied_response *rp,
                            int *want_data,int *in_data) {
   logit('5',rp->server_response);
@@ -237,7 +236,6 @@ int handle_server_response(int to_client,
                            &rp->proxy_exitcode,
                            want_data,in_data);
   logit('6',rp->proxy_response);
-  safewrite(to_client,rp->proxy_response);
   return rp->proxy_exitcode;
 }
 
@@ -276,8 +274,9 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       if (!safeappend(rp.server_response,from_server,buf,sizeof buf)) break;
       if (is_at_least_one_response(rp.server_response)) {
         char *event = eventq_get();
-        exitcode = handle_server_response(to_client,greeting,rules,event,&rp,&want_data,&in_data);
+        exitcode = handle_server_response(greeting,rules,event,&rp,&want_data,&in_data);
         alloc_free(event);
+        safewrite(to_client,rp.proxy_response);
         proxied_response_init(&rp);
       }
     }

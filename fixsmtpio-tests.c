@@ -1,6 +1,7 @@
 #include "check.h"
 #include <stdlib.h>
 
+#include "fixsmtpio_common.h"
 #include "fixsmtpio_proxy.h"
 #include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
@@ -107,6 +108,28 @@ START_TEST (test_parse_client_request)
 }
 END_TEST
 
+START_TEST (test_handle_server_response)
+{
+  proxied_response rp;
+  stralloc greeting = {0}, server_response = {0};
+  int want_data = 0, in_data = 0;
+  char *event = "greeting";
+  proxied_response_init(&rp);
+  copys(&greeting,"this is the greeting");
+  copys(&server_response,"220 yo what is up");
+  rp.server_response = &server_response;
+  int exitcode = handle_server_response(
+      &greeting,
+      (filter_rule *)0,
+      event,
+      &rp,
+      &want_data,
+      &in_data
+  );
+  ck_assert_int_eq(exitcode, EXIT_LATER_NORMALLY);
+}
+END_TEST
+
 START_TEST (test_eventq_put_and_get)
 {
   ck_assert_str_eq(eventq_get(), "timeout");
@@ -155,6 +178,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_proxy, test_is_entire_line);
   tcase_add_test(tc_proxy, test_could_be_final_response_line);
   tcase_add_test(tc_proxy, test_parse_client_request);
+  tcase_add_test(tc_proxy, test_handle_server_response);
   suite_add_tcase(s, tc_proxy);
 
   tc_eventq = tcase_create("eventq");
