@@ -38,7 +38,7 @@ int could_be_final_response_line(stralloc *line) {
   two lines, first with ' ' as char 4, second with '-': false
   two lines, first with '-' as char 4, second with ' ': true
  */
-int is_entire_response(stralloc *response) {
+int is_at_least_one_response(stralloc *response) {
   stralloc lastline = {0};
   int pos = 0;
   int i;
@@ -274,7 +274,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_server)) {
       if (!safeappend(rp.server_response,from_server,buf,sizeof buf)) break;
-      if (is_entire_response(rp.server_response)) {
+      if (is_at_least_one_response(rp.server_response)) {
         char *event = eventq_get();
         exitcode = handle_server_response(to_client,greeting,rules,event,&rp,&want_data,&in_data);
         alloc_free(event);
