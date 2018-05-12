@@ -118,6 +118,7 @@ START_TEST (test_handle_server_response)
   copys(&greeting,"this is the greeting");
   copys(&server_response,"220 yo what is up");
   rp.server_response = &server_response;
+
   int exitcode = handle_server_response(
       &greeting,
       (filter_rule *)0,
@@ -126,6 +127,7 @@ START_TEST (test_handle_server_response)
       &want_data,
       &in_data
   );
+
   ck_assert_int_eq(exitcode, EXIT_LATER_NORMALLY);
 }
 END_TEST
