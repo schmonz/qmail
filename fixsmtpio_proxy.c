@@ -201,29 +201,9 @@ void logit(char logprefix,stralloc *sa) {
   substdio_flush(&sserr);
 }
 
-char *handle_client_request(int to_server,filter_rule *rules,
-                            proxied_request *rq,
-                            int *want_data,int *in_data) {
-  stralloc event_sa = {0};
-  logit('1',rq->client_request);
-  if (!*in_data)
-    parse_client_request(rq->client_verb,rq->client_arg,rq->client_request);
-  logit('2',rq->client_verb);
-  copy(&event_sa,rq->client_verb);
-  stralloc_0(&event_sa);
-  logit('3',rq->client_arg);
-  construct_proxy_request(rq->proxy_request,rules,
-                          event_sa.s,rq->client_arg,
-                          rq->client_request,
-                          want_data,in_data);
-  logit('4',rq->proxy_request);
-  safewrite(to_server,rq->proxy_request);
-  if (*in_data) {
-    blank(rq->client_request);
-    blank(rq->proxy_request);
-  }
-
-  return event_sa.s;
+void get_one_request(stralloc *one,stralloc *pile) {
+  copy(one,pile);
+  copys(pile,"");
 }
 
 void get_one_response(stralloc *one,stralloc *pile) {
@@ -274,9 +254,29 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         break;
       }
       if (is_entire_line(rq.client_request)) {
-        char *event = handle_client_request(to_server,rules,&rq,&want_data,&in_data);
-        eventq_put(event);
-        alloc_free(event);
+        stralloc one_request = {0};
+        while (rq.client_request->len) {
+          stralloc event_sa = {0};
+          get_one_request(&one_request,rq.client_request);
+          logit('1',&one_request);
+          if (!in_data)
+            parse_client_request(rq.client_verb,rq.client_arg,&one_request);
+          logit('2',rq.client_verb);
+          copy(&event_sa,rq.client_verb);
+          stralloc_0(&event_sa);
+          eventq_put(event_sa.s);
+          logit('3',rq.client_arg);
+          construct_proxy_request(rq.proxy_request,rules,
+                                  event_sa.s,rq.client_arg,
+                                  &one_request,
+                                  &want_data,&in_data);
+          logit('4',rq.proxy_request);
+          safewrite(to_server,rq.proxy_request);
+          if (in_data) {
+            blank(&one_request);
+            blank(rq.proxy_request);
+          }
+        }
         proxied_request_init(&rq);
       }
     }
