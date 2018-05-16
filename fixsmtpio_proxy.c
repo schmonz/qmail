@@ -202,8 +202,27 @@ void logit(char logprefix,stralloc *sa) {
 }
 
 void get_one_request(stralloc *one,stralloc *pile) {
-  copy(one,pile);
-  copys(pile,"");
+  stralloc next_pile = {0};
+  int pos = 0;
+  int i;
+
+  copys(one,"");
+
+  for (i = pos; i < pile->len; i++) {
+    if (pile->s[i] == '\n') {
+      stralloc line = {0};
+      copys(&line,"");
+
+      catb(&line,pile->s+pos,i+1-pos);
+      pos = i+1;
+      cat(one,&line);
+
+      break;
+    }
+  }
+
+  copyb(&next_pile,pile->s+pos,pile->len-pos);
+  copy(pile,&next_pile);
 }
 
 void get_one_response(stralloc *one,stralloc *pile) {
