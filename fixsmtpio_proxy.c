@@ -26,7 +26,7 @@ int is_entire_line(stralloc *sa) {
   //return (is_at_least_one_line && first_occurrence_of_newline == (sa->len - 1));
 }
 
-int could_be_final_response_line(stralloc *line) {
+int is_last_line_of_response(stralloc *line) {
   return line->len >= 4 && line->s[3] == ' ';
 }
 
@@ -50,7 +50,7 @@ int is_at_least_one_response(stralloc *response) {
     }
   }
   copyb(&lastline,response->s+pos,response->len-pos);
-  return could_be_final_response_line(&lastline);
+  return is_last_line_of_response(&lastline);
 }
 
 void strip_last_eol(stralloc *sa) {
@@ -226,17 +226,28 @@ char *handle_client_request(int to_server,filter_rule *rules,
   return event_sa.s;
 }
 
-int handle_server_response(stralloc *greeting,filter_rule *rules,char *event,
-                           proxied_response *rp,
-                           int *want_data,int *in_data) {
-  logit('5',rp->server_response);
-  construct_proxy_response(rp->proxy_response,
-                           greeting,rules,event,
-                           rp->server_response,
-                           &rp->proxy_exitcode,
-                           want_data,in_data);
-  logit('6',rp->proxy_response);
-  return rp->proxy_exitcode;
+void get_one_response(stralloc *one,stralloc *pile) {
+  stralloc next_pile = {0};
+  int pos = 0;
+  int i;
+
+  copys(one,"");
+
+  for (i = pos; i < pile->len; i++) {
+    if (pile->s[i] == '\n') {
+      stralloc line = {0};
+      copys(&line,"");
+
+      catb(&line,pile->s+pos,i+1-pos);
+      pos = i+1;
+      cat(one,&line);
+
+      if (is_last_line_of_response(&line)) break;
+    }
+  }
+
+  copyb(&next_pile,pile->s+pos,pile->len-pos);
+  copy(pile,&next_pile);
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
@@ -273,10 +284,22 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(rp.server_response,from_server,buf,sizeof buf)) break;
       if (is_at_least_one_response(rp.server_response)) {
-        char *event = eventq_get();
-        exitcode = handle_server_response(greeting,rules,event,&rp,&want_data,&in_data);
-        alloc_free(event);
-        safewrite(to_client,rp.proxy_response);
+        stralloc one_response = {0};
+        char *event;
+        while (rp.server_response->len && rp.proxy_exitcode == EXIT_LATER_NORMALLY) {
+          get_one_response(&one_response,rp.server_response);
+          logit('5',&one_response);
+          event = eventq_get();
+          construct_proxy_response(rp.proxy_response,
+                                   greeting,rules,event,
+                                   &one_response,
+                                   &rp.proxy_exitcode,
+                                   &want_data,&in_data);
+          logit('6',rp.proxy_response);
+          alloc_free(event);
+          safewrite(to_client,rp.proxy_response);
+        }
+        if (exitcode != EXIT_LATER_NORMALLY) break;
         proxied_response_init(&rp);
       }
     }

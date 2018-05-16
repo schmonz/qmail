@@ -53,28 +53,30 @@ START_TEST (test_is_entire_line)
 END_TEST
 
 
-void assert_could_be_final_response_line(const char *input, int expected)
+void assert_is_last_line_of_response(const char *input, int expected)
 {
   stralloc sa = {0}; stralloc_copys(&sa, input);
-  int actual = could_be_final_response_line(&sa);
+  int actual = is_last_line_of_response(&sa);
   ck_assert_int_eq(actual, expected); }
 
 
-START_TEST (test_could_be_final_response_line)
+START_TEST (test_is_last_line_of_response)
 {
-  //assert_could_be_final_response_line(NULL, 0);
-  assert_could_be_final_response_line("", 0);
-  assert_could_be_final_response_line("123", 0);
-  assert_could_be_final_response_line("1234", 0);
-  assert_could_be_final_response_line("123 this is a final line", 1);
-  assert_could_be_final_response_line("123-this is NOT a final line", 0);
+  //assert_is_last_line_of_response(NULL, 0);
+  assert_is_last_line_of_response("", 0);
+  assert_is_last_line_of_response("123", 0);
+  assert_is_last_line_of_response("1234", 0);
+  assert_is_last_line_of_response("123 this is a final line", 1);
+  assert_is_last_line_of_response("123-this is NOT a final line", 0);
+  assert_is_last_line_of_response("777-is not\r\n", 0);
+  assert_is_last_line_of_response("777 is\r\n", 1);
   
 
   // two surprises, but maybe fine for this function's job:
   // - "\r\n" can be un-present and it's fine
   // - it can have nothing after the space and it's fine
-  assert_could_be_final_response_line("123 ", 1);
-  assert_could_be_final_response_line("123\n", 0);
+  assert_is_last_line_of_response("123 ", 1);
+  assert_is_last_line_of_response("123\n", 0);
 }
 END_TEST
 
@@ -108,27 +110,25 @@ START_TEST (test_parse_client_request)
 }
 END_TEST
 
-START_TEST (test_handle_server_response)
+static void assert_get_one_response(const char *input, const char *expected_result, const char *expected_remaining) {
+  stralloc actual_one = {0}, actual_many = {0};
+  copys(&actual_many,input);
+
+  get_one_response(&actual_one,&actual_many);
+
+  stralloc_0(&actual_one);
+  ck_assert_str_eq(actual_one.s, expected_result);
+
+  stralloc_0(&actual_many);
+  ck_assert_str_eq(actual_many.s, expected_remaining);
+}
+
+START_TEST (test_get_one_response)
 {
-  proxied_response rp;
-  stralloc greeting = {0}, server_response = {0};
-  int want_data = 0, in_data = 0;
-  char *event = "greeting";
-  proxied_response_init(&rp);
-  copys(&greeting,"this is the greeting");
-  copys(&server_response,"220 yo what is up");
-  rp.server_response = &server_response;
-
-  int exitcode = handle_server_response(
-      &greeting,
-      (filter_rule *)0,
-      event,
-      &rp,
-      &want_data,
-      &in_data
-  );
-
-  ck_assert_int_eq(exitcode, EXIT_LATER_NORMALLY);
+  assert_get_one_response("777 oneline\r\n", "777 oneline\r\n", "");
+  assert_get_one_response("777 separate\r\n888 responses\r\n", "777 separate\r\n", "888 responses\r\n");
+  assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n");
+  assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n999 four\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n999 four\r\n");
 }
 END_TEST
 
@@ -178,9 +178,9 @@ Suite * fixsmtpio_suite(void)
   tc_proxy = tcase_create("proxy");
   tcase_add_test(tc_proxy, test_strip_last_eol);
   tcase_add_test(tc_proxy, test_is_entire_line);
-  tcase_add_test(tc_proxy, test_could_be_final_response_line);
+  tcase_add_test(tc_proxy, test_is_last_line_of_response);
   tcase_add_test(tc_proxy, test_parse_client_request);
-  tcase_add_test(tc_proxy, test_handle_server_response);
+  tcase_add_test(tc_proxy, test_get_one_response);
   suite_add_tcase(s, tc_proxy);
 
   tc_eventq = tcase_create("eventq");

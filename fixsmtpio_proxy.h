@@ -18,8 +18,8 @@ extern substdio sserr;
 
 extern void strip_last_eol(stralloc *);
 extern int is_entire_line(stralloc *);
-extern int could_be_final_response_line(stralloc *);
+extern int is_last_line_of_response(stralloc *);
 extern void parse_client_request(stralloc *,stralloc *,stralloc *);
-extern int handle_server_response(stralloc *,filter_rule *,char *,proxied_response *,int *,int *);
+extern void get_one_response(stralloc *,stralloc *);
 extern void proxied_response_init(proxied_response *);
 extern int read_and_process_until_either_end_closes(int,int,int,int,stralloc *,filter_rule *);
