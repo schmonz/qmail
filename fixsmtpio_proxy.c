@@ -291,10 +291,10 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                   &want_data,&in_data);
           logit('4',rq.proxy_request);
           safewrite(to_server,rq.proxy_request);
-          if (in_data) {
+          //if (in_data) {
             blank(&one_request);
             blank(rq.proxy_request);
-          }
+          //}
         }
         proxied_request_init(&rq);
       }
