@@ -171,27 +171,6 @@ void construct_proxy_response(stralloc *proxy_response,
   munge_response(proxy_response,proxy_exitcode,greeting,rules,event);
 }
 
-void proxied_request_init(proxied_request *rq) {
-  static stralloc client_request  = {0},
-                  client_verb     = {0},
-                  client_arg      = {0},
-                  proxy_request   = {0};
-
-  blank(&client_request);  rq->client_request  = &client_request;
-  blank(&client_verb);     rq->client_verb     = &client_verb;
-  blank(&client_arg);      rq->client_arg      = &client_arg;
-  blank(&proxy_request);   rq->proxy_request   = &proxy_request;
-}
-
-void proxied_response_init(proxied_response *rp) {
-  static stralloc server_response = {0},
-                  proxy_response  = {0};
-
-  blank(&server_response); rp->server_response = &server_response;
-  blank(&proxy_response);  rp->proxy_response  = &proxy_response;
-                           rp->proxy_exitcode  = EXIT_LATER_NORMALLY;
-}
-
 void logit(char logprefix,stralloc *sa) {
   if (!env_get("FIXSMTPIODEBUG")) return;
   substdio_put(&sserr,&logprefix,1);
@@ -254,13 +233,20 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              stralloc *greeting,
                                              filter_rule *rules) {
   char buf[SUBSTDIO_INSIZE];
-  int exitcode = EXIT_LATER_NORMALLY;
-  int want_data = 0, in_data = 0;
-  proxied_request rq;
-  proxied_response rp;
 
-  proxied_request_init(&rq);
-  proxied_response_init(&rp);
+  int      exitcode        = EXIT_LATER_NORMALLY;
+
+  stralloc client_request  = {0},
+           client_verb     = {0},
+           client_arg      = {0},
+           proxy_request   = {0};
+
+  int      want_data       =  0,
+           in_data         =  0;
+
+  stralloc server_response = {0},
+           proxy_response  = {0};
+
   eventq_put(EVENT_GREETING);
 
   for (;;) {
@@ -268,56 +254,57 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(rq.client_request,from_client,buf,sizeof buf)) {
+      if (!safeappend(&client_request,from_client,buf,sizeof buf)) {
         eventq_put(EVENT_CLIENTEOF);
         break;
       }
-      if (is_at_least_one_line(rq.client_request)) {
+      if (is_at_least_one_line(&client_request)) {
         stralloc one_request = {0};
-        while (rq.client_request->len) {
+        while (client_request.len) {
           stralloc event_sa = {0};
-          get_one_request(&one_request,rq.client_request);
+          get_one_request(&one_request,&client_request);
           logit('1',&one_request);
           if (!in_data)
-            parse_client_request(rq.client_verb,rq.client_arg,&one_request);
-          logit('2',rq.client_verb);
-          copy(&event_sa,rq.client_verb);
+            parse_client_request(&client_verb,&client_arg,&one_request);
+          logit('2',&client_verb);
+          copy(&event_sa,&client_verb);
           stralloc_0(&event_sa);
           eventq_put(event_sa.s);
-          logit('3',rq.client_arg);
-          construct_proxy_request(rq.proxy_request,rules,
-                                  event_sa.s,rq.client_arg,
+          logit('3',&client_arg);
+          construct_proxy_request(&proxy_request,rules,
+                                  event_sa.s,&client_arg,
                                   &one_request,
                                   &want_data,&in_data);
-          logit('4',rq.proxy_request);
-          safewrite(to_server,rq.proxy_request);
+          logit('4',&proxy_request);
+          safewrite(to_server,&proxy_request);
           blank(&one_request);
-          blank(rq.proxy_request);
+          blank(&proxy_request);
+          //XXX if (!in_data) blank the other stuff too?
         }
-        proxied_request_init(&rq);
       }
     }
 
     if (can_read(from_server)) {
-      if (!safeappend(rp.server_response,from_server,buf,sizeof buf)) break;
-      if (is_at_least_one_response(rp.server_response)) {
+      if (!safeappend(&server_response,from_server,buf,sizeof buf)) break;
+      if (is_at_least_one_response(&server_response)) {
         stralloc one_response = {0};
         char *event;
-        while (rp.server_response->len && rp.proxy_exitcode == EXIT_LATER_NORMALLY) {
-          get_one_response(&one_response,rp.server_response);
+        while (server_response.len && exitcode == EXIT_LATER_NORMALLY) {
+          get_one_response(&one_response,&server_response);
           logit('5',&one_response);
           event = eventq_get();
-          construct_proxy_response(rp.proxy_response,
+          construct_proxy_response(&proxy_response,
                                    greeting,rules,event,
                                    &one_response,
-                                   &rp.proxy_exitcode,
+                                   &exitcode,
                                    &want_data,&in_data);
-          logit('6',rp.proxy_response);
+          logit('6',&proxy_response);
           alloc_free(event);
-          safewrite(to_client,rp.proxy_response);
+          safewrite(to_client,&proxy_response);
         }
         if (exitcode != EXIT_LATER_NORMALLY) break;
-        proxied_response_init(&rp);
+        blank(&server_response);
+        blank(&proxy_response);
       }
     }
 
