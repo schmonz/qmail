@@ -182,7 +182,7 @@ void logit(char logprefix,stralloc *sa) {
   substdio_flush(&sserr);
 }
 
-void get_one_request(stralloc *one,stralloc *pile) {
+void get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
   stralloc next_pile = {0};
   int pos = 0;
   int i;
@@ -192,13 +192,13 @@ void get_one_request(stralloc *one,stralloc *pile) {
   for (i = pos; i < pile->len; i++) {
     if (pile->s[i] == '\n') {
       stralloc line = {0};
-      copys(&line,"");
+      blank(&line);
 
       catb(&line,pile->s+pos,i+1-pos);
       pos = i+1;
       cat(one,&line);
 
-      break;
+      if (fn && fn(&line)) break;
     }
   }
 
@@ -206,28 +206,12 @@ void get_one_request(stralloc *one,stralloc *pile) {
   copy(pile,&next_pile);
 }
 
+void get_one_request(stralloc *one,stralloc *pile) {
+  get_one(one,pile,0);
+}
+
 void get_one_response(stralloc *one,stralloc *pile) {
-  stralloc next_pile = {0};
-  int pos = 0;
-  int i;
-
-  blank(one);
-
-  for (i = pos; i < pile->len; i++) {
-    if (pile->s[i] == '\n') {
-      stralloc line = {0};
-      copys(&line,"");
-
-      catb(&line,pile->s+pos,i+1-pos);
-      pos = i+1;
-      cat(one,&line);
-
-      if (is_last_line_of_response(&line)) break;
-    }
-  }
-
-  copyb(&next_pile,pile->s+pos,pile->len-pos);
-  copy(pile,&next_pile);
+  get_one(one,pile,&is_last_line_of_response);
 }
 
 void handle_request(stralloc *proxy_request,stralloc *request,int *want_data,int *in_data,filter_rule *rules) {
