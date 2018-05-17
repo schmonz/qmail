@@ -1,4 +1,5 @@
 #include "fixsmtpio_proxy.h"
+#include "fixsmtpio_common.h"
 #include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
 
@@ -185,7 +186,7 @@ void get_one_request(stralloc *one,stralloc *pile) {
   int pos = 0;
   int i;
 
-  copys(one,"");
+  blank(one);
 
   for (i = pos; i < pile->len; i++) {
     if (pile->s[i] == '\n') {
@@ -209,7 +210,7 @@ void get_one_response(stralloc *one,stralloc *pile) {
   int pos = 0;
   int i;
 
-  copys(one,"");
+  blank(one);
 
   for (i = pos; i < pile->len; i++) {
     if (pile->s[i] == '\n') {
@@ -228,6 +229,28 @@ void get_one_response(stralloc *one,stralloc *pile) {
   copy(pile,&next_pile);
 }
 
+void handle_request(stralloc *request,int *want_data,int *in_data,filter_rule *rules,int to_server) {
+  stralloc verb          = {0},
+           arg           = {0},
+           proxy_request = {0};
+  stralloc event_sa      = {0};
+
+  logit('1',request);
+  if (!*in_data)
+    parse_client_request(&verb,&arg,request);
+  logit('2',&verb);
+  copy(&event_sa,&verb);
+  if (!stralloc_0(&event_sa)) die_nomem();
+  eventq_put(event_sa.s);
+  logit('3',&arg);
+  construct_proxy_request(&proxy_request,rules,
+                          event_sa.s,&arg,
+                          request,
+                          want_data,in_data);
+  logit('4',&proxy_request);
+  safewrite(to_server,&proxy_request);
+}
+
 int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              int from_server,int to_client,
                                              stralloc *greeting,
@@ -236,10 +259,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
   int      exitcode        = EXIT_LATER_NORMALLY;
 
-  stralloc client_request  = {0},
-           client_verb     = {0},
-           client_arg      = {0},
-           proxy_request   = {0};
+  stralloc client_request  = {0};
 
   int      want_data       =  0,
            in_data         =  0;
@@ -261,25 +281,8 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       if (is_at_least_one_line(&client_request)) {
         stralloc one_request = {0};
         while (client_request.len) {
-          stralloc event_sa = {0};
           get_one_request(&one_request,&client_request);
-          logit('1',&one_request);
-          if (!in_data)
-            parse_client_request(&client_verb,&client_arg,&one_request);
-          logit('2',&client_verb);
-          copy(&event_sa,&client_verb);
-          stralloc_0(&event_sa);
-          eventq_put(event_sa.s);
-          logit('3',&client_arg);
-          construct_proxy_request(&proxy_request,rules,
-                                  event_sa.s,&client_arg,
-                                  &one_request,
-                                  &want_data,&in_data);
-          logit('4',&proxy_request);
-          safewrite(to_server,&proxy_request);
-          blank(&one_request);
-          blank(&proxy_request);
-          //XXX if (!in_data) blank the other stuff too?
+          handle_request(&one_request,&want_data,&in_data,rules,to_server);
         }
       }
     }
