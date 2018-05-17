@@ -5,53 +5,12 @@
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
-int find_first_newline(stralloc *sa) {
-  int first_occurrence_of_newline = -1;
-  int i;
-  for (i = 0; i < sa->len; i++) {
-    if (sa->s[i] == '\n') {
-      first_occurrence_of_newline = i;
-      break;
-    }
-  }
-
-  return first_occurrence_of_newline;
-}
-
 int is_at_least_one_line(stralloc *sa) {
-  int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
-  //int first_occurrence_of_newline = find_first_newline(sa);
-
-  return is_at_least_one_line;
-  //this throws off some callers. breaks filtering, at least. try `ehlo` to see.
-  //return (is_at_least_one_line && first_occurrence_of_newline == (sa->len - 1));
+  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
 int is_last_line_of_response(stralloc *line) {
   return line->len >= 4 && line->s[3] == ' ';
-}
-
-/*
-  NULL: false
-  empty: false
-  non-empty but no "\r\n" at the end: false
-  two lines, both ending in "\r\n", both with '-' as char 4: false
-  two lines, first with ' ' as char 4, second with '-': false
-  two lines, first with '-' as char 4, second with ' ': true
- */
-int is_at_least_one_response(stralloc *response) {
-  stralloc lastline = {0};
-  int pos = 0;
-  int i;
-  if (!is_at_least_one_line(response)) return 0;
-  for (i = response->len - 2; i >= 0; i--) {
-    if (response->s[i] == '\n') {
-      pos = i + 1;
-      break;
-    }
-  }
-  copyb(&lastline,response->s+pos,response->len-pos);
-  return is_last_line_of_response(&lastline);
 }
 
 void strip_last_eol(stralloc *sa) {
@@ -182,36 +141,43 @@ void logit(char logprefix,stralloc *sa) {
   substdio_flush(&sserr);
 }
 
-void get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
+int get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
+  int got_one = 0;
   stralloc next_pile = {0};
   int pos = 0;
   int i;
 
-  blank(one);
-
   for (i = pos; i < pile->len; i++) {
     if (pile->s[i] == '\n') {
       stralloc line = {0};
-      blank(&line);
 
       catb(&line,pile->s+pos,i+1-pos);
       pos = i+1;
       cat(one,&line);
 
-      if (fn && fn(&line)) break;
+      if (!fn || fn(&line)) {
+        got_one = 1;
+        break;
+      }
     }
   }
 
-  copyb(&next_pile,pile->s+pos,pile->len-pos);
-  copy(pile,&next_pile);
+  if (got_one) {
+    copyb(&next_pile,pile->s+pos,pile->len-pos);
+    copy(pile,&next_pile);
+  } else {
+    blank(one);
+  }
+
+  return got_one;
 }
 
-void get_one_request(stralloc *one,stralloc *pile) {
-  get_one(one,pile,0);
+int get_one_request(stralloc *one,stralloc *pile) {
+  return get_one(one,pile,0);
 }
 
-void get_one_response(stralloc *one,stralloc *pile) {
-  get_one(one,pile,&is_last_line_of_response);
+int get_one_response(stralloc *one,stralloc *pile) {
+  return get_one(one,pile,&is_last_line_of_response);
 }
 
 void handle_request(stralloc *proxy_request,stralloc *request,int *want_data,int *in_data,filter_rule *rules) {
@@ -229,6 +195,7 @@ void handle_request(stralloc *proxy_request,stralloc *request,int *want_data,int
                           request,
                           want_data,in_data);
   logit('4',proxy_request);
+  blank(request);
 }
 
 void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting) {
@@ -242,6 +209,7 @@ void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,i
                            want_data,in_data);
   logit('6',proxy_response);
   //alloc_free(event);
+  blank(response);
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
@@ -256,8 +224,10 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
            in_data          =  0;
 
   stralloc client_requests  = {0},
+           one_request      = {0},
            proxy_request    = {0},
            server_responses = {0},
+           one_response     = {0},
            proxy_response   = {0};
 
   eventq_put(EVENT_GREETING);
@@ -271,25 +241,17 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF);
         break;
       }
-      if (is_at_least_one_line(&client_requests)) {
-        stralloc one_request = {0};
-        while (client_requests.len) {
-          get_one_request(&one_request,&client_requests);
-          handle_request(&proxy_request,&one_request,&want_data,&in_data,rules);
-          safewrite(to_server,&proxy_request);
-        }
+      while (client_requests.len && get_one_request(&one_request,&client_requests)) {
+        handle_request(&proxy_request,&one_request,&want_data,&in_data,rules);
+        safewrite(to_server,&proxy_request);
       }
     }
 
     if (can_read(from_server)) {
       if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
-      if (is_at_least_one_response(&server_responses)) {
-        stralloc one_response = {0};
-        while (server_responses.len && exitcode == EXIT_LATER_NORMALLY) {
-          get_one_response(&one_response,&server_responses);
-          handle_response(&proxy_response,&exitcode,&one_response,&want_data,&in_data,rules,greeting);
-          safewrite(to_client,&proxy_response);
-        }
+      while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
+        handle_response(&proxy_response,&exitcode,&one_response,&want_data,&in_data,rules,greeting);
+        safewrite(to_client,&proxy_response);
       }
     }
 

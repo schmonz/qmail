@@ -110,11 +110,14 @@ START_TEST (test_parse_client_request)
 }
 END_TEST
 
-static void assert_get_one_response(const char *input, const char *expected_result, const char *expected_remaining) {
+static void assert_get_one_response(const char *input, const char *expected_result, const char *expected_remaining, int expected_return) {
   stralloc actual_one = {0}, actual_many = {0};
+  int return_value;
   copys(&actual_many,input);
 
-  get_one_response(&actual_one,&actual_many);
+  return_value = get_one_response(&actual_one,&actual_many);
+
+  ck_assert_int_eq(return_value, expected_return);
 
   stralloc_0(&actual_one);
   ck_assert_str_eq(actual_one.s, expected_result);
@@ -125,10 +128,11 @@ static void assert_get_one_response(const char *input, const char *expected_resu
 
 START_TEST (test_get_one_response)
 {
-  assert_get_one_response("777 oneline\r\n", "777 oneline\r\n", "");
-  assert_get_one_response("777 separate\r\n888 responses\r\n", "777 separate\r\n", "888 responses\r\n");
-  assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n");
-  assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n999 four\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n999 four\r\n");
+  assert_get_one_response("777 oneline\r\n", "777 oneline\r\n", "", 1);
+  assert_get_one_response("777 separate\r\n888 responses\r\n", "777 separate\r\n", "888 responses\r\n", 1);
+  assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n", 1);
+  assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n999 four\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n999 four\r\n", 1);
+  assert_get_one_response("777-two\r\n", "", "777-two\r\n", 0);
 }
 END_TEST
 
