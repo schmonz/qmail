@@ -247,6 +247,19 @@ void handle_request(stralloc *proxy_request,stralloc *request,int *want_data,int
   logit('4',proxy_request);
 }
 
+void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting) {
+  char *event;
+  logit('5',response);
+  event = eventq_get();
+  construct_proxy_response(proxy_response,
+                           greeting,rules,event,
+                           response,
+                           exitcode,
+                           want_data,in_data);
+  logit('6',proxy_response);
+  alloc_free(event);
+}
+
 int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              int from_server,int to_client,
                                              stralloc *greeting,
@@ -289,23 +302,12 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       if (!safeappend(&server_response,from_server,buf,sizeof buf)) break;
       if (is_at_least_one_response(&server_response)) {
         stralloc one_response = {0};
-        char *event;
         while (server_response.len && exitcode == EXIT_LATER_NORMALLY) {
           get_one_response(&one_response,&server_response);
-          logit('5',&one_response);
-          event = eventq_get();
-          construct_proxy_response(&proxy_response,
-                                   greeting,rules,event,
-                                   &one_response,
-                                   &exitcode,
-                                   &want_data,&in_data);
-          logit('6',&proxy_response);
-          alloc_free(event);
+          handle_response(&proxy_response,&exitcode,&one_response,&want_data,&in_data,rules,greeting);
           safewrite(to_client,&proxy_response);
         }
         if (exitcode != EXIT_LATER_NORMALLY) break;
-        blank(&server_response);
-        blank(&proxy_response);
       }
     }
 
