@@ -17,7 +17,7 @@ int find_first_newline(stralloc *sa) {
   return first_occurrence_of_newline;
 }
 
-int is_entire_line(stralloc *sa) {
+int is_at_least_one_line(stralloc *sa) {
   int is_at_least_one_line = sa->len > 0 && sa->s[sa->len - 1] == '\n';
   //int first_occurrence_of_newline = find_first_newline(sa);
 
@@ -42,7 +42,7 @@ int is_at_least_one_response(stralloc *response) {
   stralloc lastline = {0};
   int pos = 0;
   int i;
-  if (!is_entire_line(response)) return 0;
+  if (!is_at_least_one_line(response)) return 0;
   for (i = response->len - 2; i >= 0; i--) {
     if (response->s[i] == '\n') {
       pos = i + 1;
@@ -197,7 +197,7 @@ void logit(char logprefix,stralloc *sa) {
   substdio_put(&sserr,&logprefix,1);
   substdio_puts(&sserr,": ");
   substdio_put(&sserr,sa->s,sa->len);
-  if (!is_entire_line(sa)) substdio_puts(&sserr,"\r\n");
+  if (!is_at_least_one_line(sa)) substdio_puts(&sserr,"\r\n");
   substdio_flush(&sserr);
 }
 
@@ -272,7 +272,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         eventq_put(EVENT_CLIENTEOF);
         break;
       }
-      if (is_entire_line(rq.client_request)) {
+      if (is_at_least_one_line(rq.client_request)) {
         stralloc one_request = {0};
         while (rq.client_request->len) {
           stralloc event_sa = {0};
@@ -291,10 +291,8 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                   &want_data,&in_data);
           logit('4',rq.proxy_request);
           safewrite(to_server,rq.proxy_request);
-          //if (in_data) {
-            blank(&one_request);
-            blank(rq.proxy_request);
-          //}
+          blank(&one_request);
+          blank(rq.proxy_request);
         }
         proxied_request_init(&rq);
       }

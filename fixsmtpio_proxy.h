@@ -17,7 +17,7 @@ typedef struct proxied_response {
 extern substdio sserr;
 
 extern void strip_last_eol(stralloc *);
-extern int is_entire_line(stralloc *);
+extern int is_at_least_one_line(stralloc *);
 extern int is_last_line_of_response(stralloc *);
 extern void parse_client_request(stralloc *,stralloc *,stralloc *);
 extern void get_one_response(stralloc *,stralloc *);
