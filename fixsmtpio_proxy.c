@@ -125,6 +125,7 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
 
 void safewrite(int fd,stralloc *sa) {
   if (write(fd,sa->s,sa->len) == -1) die_write();
+  blank(sa);
 }
 
 /*
@@ -229,26 +230,21 @@ void get_one_response(stralloc *one,stralloc *pile) {
   copy(pile,&next_pile);
 }
 
-void handle_request(stralloc *request,int *want_data,int *in_data,filter_rule *rules,int to_server) {
-  stralloc verb          = {0},
-           arg           = {0},
-           proxy_request = {0};
-  stralloc event_sa      = {0};
+void handle_request(stralloc *proxy_request,stralloc *request,int *want_data,int *in_data,filter_rule *rules) {
+  stralloc event = {0}, verb = {0}, arg = {0};
 
   logit('1',request);
-  if (!*in_data)
-    parse_client_request(&verb,&arg,request);
+  if (!*in_data) parse_client_request(&verb,&arg,request);
   logit('2',&verb);
-  copy(&event_sa,&verb);
-  if (!stralloc_0(&event_sa)) die_nomem();
-  eventq_put(event_sa.s);
   logit('3',&arg);
-  construct_proxy_request(&proxy_request,rules,
-                          event_sa.s,&arg,
+  copy(&event,&verb);
+  if (!stralloc_0(&event)) die_nomem();
+  eventq_put(event.s);
+  construct_proxy_request(proxy_request,rules,
+                          event.s,&arg,
                           request,
                           want_data,in_data);
-  logit('4',&proxy_request);
-  safewrite(to_server,&proxy_request);
+  logit('4',proxy_request);
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
@@ -260,6 +256,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   int      exitcode        = EXIT_LATER_NORMALLY;
 
   stralloc client_request  = {0};
+  stralloc proxy_request   = {0};
 
   int      want_data       =  0,
            in_data         =  0;
@@ -282,7 +279,8 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         stralloc one_request = {0};
         while (client_request.len) {
           get_one_request(&one_request,&client_request);
-          handle_request(&one_request,&want_data,&in_data,rules,to_server);
+          handle_request(&proxy_request,&one_request,&want_data,&in_data,rules);
+          safewrite(to_server,&proxy_request);
         }
       }
     }
