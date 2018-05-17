@@ -1,5 +1,6 @@
 #include "fixsmtpio.h"
 #include "fixsmtpio_filter.h"
+#include "fixsmtpio_common.h"
 
 void munge_greeting(stralloc *response,int lineno,stralloc *greeting) {
   copys(response,"220 "); cat(response,greeting);
@@ -34,7 +35,7 @@ void munge_quit(stralloc *response,int lineno,stralloc *greeting) {
  * strings same, do match
  * strings same except case, do match
  */
-int event_matches(char *s,char *s2) {
+int event_matches(char *s,const char *s2) {
   if (!str_len(s2)) return 0;
   return !case_diffs(s,s2);
 }
@@ -100,7 +101,7 @@ struct munge_command m[] = {
 , { 0, 0 }
 };
 
-void *munge_line_fn(char *event) {
+void *munge_line_fn(const char *event) {
   int i;
   for (i = 0; m[i].event; ++i)
     if (event_matches(m[i].event,event))
@@ -124,7 +125,7 @@ void *munge_line_fn(char *event) {
  ("221 get outta here", 0, "yo.sup.local", "quit") -> "221 yo.sup.local"
  */
 void munge_line_internally(stralloc *line,int lineno,
-                           stralloc *greeting,char *event) {
+                           stralloc *greeting,const char *event) {
   void (*munger)() = munge_line_fn(event);
   if (munger) munger(line,lineno,greeting);
 }
@@ -186,7 +187,7 @@ int envvar_exists_if_needed(char *envvar) {
 }
 
 // XXX don't test this directly
-int filter_rule_applies(filter_rule *rule,char *event) {
+int filter_rule_applies(filter_rule *rule,const char *event) {
   return (event_matches(rule->event,event) && envvar_exists_if_needed(rule->env));
 }
 
@@ -259,7 +260,7 @@ void munge_response(stralloc *response,int *exitcode,
     }
   }
 
-  reformat_multiline_response(&munged);
+  if (munged.len) reformat_multiline_response(&munged);
   copy(response,&munged);
 }
 

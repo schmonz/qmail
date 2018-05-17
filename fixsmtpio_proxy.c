@@ -241,7 +241,7 @@ void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,i
                            exitcode,
                            want_data,in_data);
   logit('6',proxy_response);
-  alloc_free(event);
+  //alloc_free(event);
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
@@ -252,13 +252,12 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
   int      exitcode         = EXIT_LATER_NORMALLY;
 
-  stralloc client_requests  = {0};
-  stralloc proxy_request    = {0};
-
   int      want_data        =  0,
            in_data          =  0;
 
-  stralloc server_responses = {0},
+  stralloc client_requests  = {0},
+           proxy_request    = {0},
+           server_responses = {0},
            proxy_response   = {0};
 
   eventq_put(EVENT_GREETING);
@@ -269,7 +268,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
-        eventq_put(EVENT_CLIENTEOF);
+        munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF);
         break;
       }
       if (is_at_least_one_line(&client_requests)) {
@@ -291,7 +290,6 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
           handle_response(&proxy_response,&exitcode,&one_response,&want_data,&in_data,rules,greeting);
           safewrite(to_client,&proxy_response);
         }
-        if (exitcode != EXIT_LATER_NORMALLY) break;
       }
     }
 
