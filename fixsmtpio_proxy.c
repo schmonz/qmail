@@ -266,16 +266,16 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              filter_rule *rules) {
   char buf[SUBSTDIO_INSIZE];
 
-  int      exitcode        = EXIT_LATER_NORMALLY;
+  int      exitcode         = EXIT_LATER_NORMALLY;
 
-  stralloc client_request  = {0};
-  stralloc proxy_request   = {0};
+  stralloc client_requests  = {0};
+  stralloc proxy_request    = {0};
 
-  int      want_data       =  0,
-           in_data         =  0;
+  int      want_data        =  0,
+           in_data          =  0;
 
-  stralloc server_response = {0},
-           proxy_response  = {0};
+  stralloc server_responses = {0},
+           proxy_response   = {0};
 
   eventq_put(EVENT_GREETING);
 
@@ -284,14 +284,14 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (!can_read_something(from_client,from_server)) continue;
 
     if (can_read(from_client)) {
-      if (!safeappend(&client_request,from_client,buf,sizeof buf)) {
+      if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
         eventq_put(EVENT_CLIENTEOF);
         break;
       }
-      if (is_at_least_one_line(&client_request)) {
+      if (is_at_least_one_line(&client_requests)) {
         stralloc one_request = {0};
-        while (client_request.len) {
-          get_one_request(&one_request,&client_request);
+        while (client_requests.len) {
+          get_one_request(&one_request,&client_requests);
           handle_request(&proxy_request,&one_request,&want_data,&in_data,rules);
           safewrite(to_server,&proxy_request);
         }
@@ -299,11 +299,11 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     }
 
     if (can_read(from_server)) {
-      if (!safeappend(&server_response,from_server,buf,sizeof buf)) break;
-      if (is_at_least_one_response(&server_response)) {
+      if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
+      if (is_at_least_one_response(&server_responses)) {
         stralloc one_response = {0};
-        while (server_response.len && exitcode == EXIT_LATER_NORMALLY) {
-          get_one_response(&one_response,&server_response);
+        while (server_responses.len && exitcode == EXIT_LATER_NORMALLY) {
+          get_one_response(&one_response,&server_responses);
           handle_response(&proxy_response,&exitcode,&one_response,&want_data,&in_data,rules,greeting);
           safewrite(to_client,&proxy_response);
         }
