@@ -406,4 +406,3 @@ check_stdint.h
 sysqueue.h
 libcheck.a
 rt.lib
-qmail-qfilter-pymsgauth

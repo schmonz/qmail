@@ -5,7 +5,7 @@ SHELL=/bin/sh
 default: it
 
 acceptutils: \
-reup authup checknotroot fixsmtpio qmail-qfilter-pymsgauth
+reup authup checknotroot fixsmtpio
 
 acceptutils_base64.o: \
 compile acceptutils_base64.c acceptutils_base64.h
@@ -115,10 +115,6 @@ compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
 
 libcheck.a:
 	cp `head -1 conf-check`/lib/libcheck.a .
-
-qmail-qfilter-pymsgauth: \
-qmail-qfilter-pymsgauth.sh
-	cp qmail-qfilter-pymsgauth.sh qmail-qfilter-pymsgauth
 
 reup: \
 load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
