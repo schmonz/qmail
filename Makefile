@@ -59,12 +59,12 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 fixsmtpio: \
 load fixsmtpio.o fixsmtpio_common.o fixsmtpio_filter.o \
 fixsmtpio_eventq.o \
-fixsmtpio_proxy.o fixsmtpio_main.o auto_qmail.o control.o getln.a \
+fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a
 	./load fixsmtpio fixsmtpio_common.o fixsmtpio_filter.o \
 	fixsmtpio_eventq.o \
-	fixsmtpio_proxy.o fixsmtpio_main.o auto_qmail.o control.o getln.a \
+	fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a
 
@@ -90,23 +90,19 @@ fixsmtpio_filter.o: \
 compile fixsmtpio_filter.c fixsmtpio_filter.h
 	./compile fixsmtpio_filter.c
 
-fixsmtpio_main.o: \
-compile fixsmtpio_main.c
-	./compile fixsmtpio_main.c
-
 fixsmtpio_proxy.o: \
 compile fixsmtpio_proxy.c fixsmtpio_proxy.h
 	./compile fixsmtpio_proxy.c
 
 fixsmtpio-tests: \
 fixsmtpio \
-load fixsmtpio-tests.o fixsmtpio.o fixsmtpio_common.o \
+load fixsmtpio-tests.o fixsmtpio_common.o \
 fixsmtpio_eventq.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
-	./load fixsmtpio-tests fixsmtpio.o fixsmtpio_common.o \
+	./load fixsmtpio-tests fixsmtpio_common.o \
 	fixsmtpio_eventq.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \

@@ -395,7 +395,6 @@ reup.o
 fixsmtpio
 fixsmtpio.h
 fixsmtpio.o
-fixsmtpio_main.o
 fixsmtpio-tests
 fixsmtpio-tests.o
 fixsmtpio_filter.o

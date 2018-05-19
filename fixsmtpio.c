@@ -62,7 +62,7 @@ void cd_var_qmail() {
   if (chdir(auto_qmail) == -1) die_control();
 }
 
-void main_program(int argc,char **argv) {
+void main(int argc,char **argv) {
   stralloc greeting = {0};
   filter_rule *rules;
   int from_client = 0;
