@@ -30,7 +30,7 @@ void want_to_read(int fd1,int fd2) {
 
 int can_read(int fd) { return FD_ISSET(fd,&fds); }
 
-int can_read_something(int fd1,int fd2) {
+int block_efficiently_until_can_read(int fd1,int fd2) {
   int ready;
   ready = select(1+max(fd1,fd2),&fds,(fd_set *)0,(fd_set *)0,(struct timeval *) 0);
   if (ready == -1 && errno != error_intr) die_read();
@@ -234,7 +234,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
   for (;;) {
     want_to_read(from_client,from_server);
-    if (!can_read_something(from_client,from_server)) continue;
+    if (!block_efficiently_until_can_read(from_client,from_server)) break;
 
     if (can_read(from_client)) {
       if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
