@@ -40,12 +40,14 @@ readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h \
 env.h control.h error.h scan.h auto_qmail.h
 	./compile authup.c
 
-check.h:
+check.h: \
+conf-check
 	cat `head -1 conf-check`/include/check.h \
 	| sed 's}<check_stdint\.h>}"check_stdint.h"}g' \
 	> check.h
 
-check_stdint.h:
+check_stdint.h: \
+conf-check
 	cp `head -1 conf-check`/include/check_stdint.h .
 
 checknotroot: \
@@ -113,7 +115,8 @@ fixsmtpio-tests.o: \
 compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
 	./compile fixsmtpio-tests.c
 
-libcheck.a:
+libcheck.a: \
+conf-check
 	cp `head -1 conf-check`/lib/libcheck.a .
 
 reup: \
