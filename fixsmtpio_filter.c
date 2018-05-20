@@ -370,15 +370,6 @@ filter_rule *load_filter_rules(void) {
       EXIT_LATER_NORMALLY,      MUNGE_INTERNALLY
   );
 
-  // don't advertise PIPELINING
-  // XXX iPhone sends MAIL/RCPT/DATA, we send a reformatted multiline response,
-  // iPhone doesn't think it got enough responses, never sends
-  backwards_rules = prepend_rule(backwards_rules,
-      ENV_ANY,                  "ehlo",
-      REQUEST_PASSTHRU,         "250?PIPELINING*",
-      EXIT_LATER_NORMALLY,      ""
-  );
-
   // don't advertise AUTH or STARTTLS
   backwards_rules = prepend_rule(backwards_rules,
       ENV_AUTHUSER,             "ehlo",
