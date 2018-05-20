@@ -183,7 +183,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
       sig_pipedefault();
       if (!stralloc_0(username)) authup_die("nomem");
       logtry(username->s);
-      if (!env_put2("AUTHUSER",username->s)) authup_die("nomem");
+      if (!env_put2("AUTHUP_USER",username->s)) authup_die("nomem");
       execvp(*childargs,childargs);
       authup_die("fork");
   }
