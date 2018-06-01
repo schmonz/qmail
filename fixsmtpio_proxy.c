@@ -67,18 +67,24 @@ static int find_first_space(stralloc *request) {
   return -1;
 }
 
+static void all_verb_no_arg(stralloc *verb,stralloc *arg,stralloc *request) {
+  copy(verb,request);
+  strip_last_eol(verb);
+  blank(arg);
+}
+
+static void verb_and_arg(stralloc *verb,stralloc *arg,int pos,stralloc *request) {
+  copyb(verb,request->s,pos-1);
+  copyb(arg,request->s+pos,request->len-pos);
+  strip_last_eol(arg);
+}
+
 void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
-  int i = find_first_space(request);
-  if (i == -1) {
-    copy(verb,request);
-    strip_last_eol(verb);
-    blank(arg);
-  } else {
-    i++;
-    copyb(verb,request->s,i-1);
-    copyb(arg,request->s+i,request->len-i);
-    strip_last_eol(arg);
-  }
+  int pos = find_first_space(request);
+  if (pos == -1)
+    all_verb_no_arg(verb,arg,request);
+  else
+    verb_and_arg(verb,arg,++pos,request);
 }
 
 void safewrite(int fd,stralloc *sa) {
