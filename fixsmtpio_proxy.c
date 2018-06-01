@@ -5,7 +5,7 @@
 
 int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
-int is_at_least_one_line(stralloc *sa) {
+int ends_with_newline(stralloc *sa) {
   return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
@@ -142,7 +142,7 @@ void logit(char logprefix,stralloc *sa) {
   substdio_put(&sserr,&logprefix,1);
   substdio_puts(&sserr,": ");
   substdio_put(&sserr,sa->s,sa->len);
-  if (!is_at_least_one_line(sa)) substdio_puts(&sserr,"\r\n");
+  if (!ends_with_newline(sa)) substdio_puts(&sserr,"\r\n");
   substdio_flush(&sserr);
 }
 

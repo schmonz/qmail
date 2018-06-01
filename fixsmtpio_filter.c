@@ -233,7 +233,7 @@ void munge_response_line(int lineno,
     else if (want_munge_from_config(rule->response))
       copys(line,rule->response);
   }
-  if (line->len) if (!is_at_least_one_line(line)) cats(line,"\r\n");
+  if (line->len) if (!ends_with_newline(line)) cats(line,"\r\n");
 }
 
 /*

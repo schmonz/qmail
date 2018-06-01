@@ -53,22 +53,22 @@ START_TEST (test_strip_last_eol)
 }
 END_TEST
 
-void assert_is_at_least_one_line(char *input, int expected) {
+void assert_ends_with_newline(char *input, int expected) {
   stralloc sa = {0}; stralloc_copys(&sa, input);
 
-  int actual = is_at_least_one_line(&sa);
+  int actual = ends_with_newline(&sa);
 
   ck_assert_int_eq(actual, expected);
 }
 
-START_TEST (test_is_at_least_one_line)
+START_TEST (test_ends_with_newline)
 {
   // annoying to test, currently don't believe I have this bug:
-  // assert_is_at_least_one_line(NULL, 0);
-  assert_is_at_least_one_line("", 0);
-  assert_is_at_least_one_line("123", 0);
-  assert_is_at_least_one_line("123\n", 1);
-  assert_is_at_least_one_line("1\n23\n", 1); //XXX change this
+  // assert_ends_with_newline(NULL, 0);
+  assert_ends_with_newline("", 0);
+  assert_ends_with_newline("123", 0);
+  assert_ends_with_newline("123\n", 1);
+  assert_ends_with_newline("1\n23\n", 1); //XXX change this
 }
 END_TEST
 
@@ -206,7 +206,7 @@ Suite * fixsmtpio_suite(void)
 
   tc_proxy = tcase_create("proxy");
   tcase_add_test(tc_proxy, test_strip_last_eol);
-  tcase_add_test(tc_proxy, test_is_at_least_one_line);
+  tcase_add_test(tc_proxy, test_ends_with_newline);
   tcase_add_test(tc_proxy, test_is_last_line_of_response);
   tcase_add_test(tc_proxy, test_parse_client_request);
   tcase_add_test(tc_proxy, test_get_one_response);
