@@ -437,6 +437,7 @@ exit.h auto_spawn.h
 clean: \
 TARGETS
 	rm -f `cat TARGETS`
+	git co -- INSTALL SENDMAIL
 
 coe.o: \
 compile coe.c coe.h
