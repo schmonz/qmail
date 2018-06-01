@@ -7,6 +7,26 @@
 #include "fixsmtpio_filter.h"
 #include "stralloc.h"
 
+void assert_prepends(const char *input, const char *prepend, const char *expected_output) {
+  stralloc sa = {0}; stralloc_copys(&sa, input);
+
+  prepends(&sa, prepend);
+
+  stralloc_0(&sa);
+  ck_assert_str_eq(sa.s, expected_output);
+}
+
+START_TEST (test_prepends)
+{
+  assert_prepends("", "", "");
+  assert_prepends("", "foo", "foo");
+  assert_prepends("bar", "", "bar");
+  assert_prepends("baz", "foo bar", "foo barbaz");
+  assert_prepends("baz quux", "foo bar ", "foo bar baz quux");
+  assert_prepends(" baz quux", "foo bar", "foo bar baz quux");
+}
+END_TEST
+
 void assert_strip_last_eol(const char *input, const char *expected_output) {
   stralloc sa = {0}; stralloc_copys(&sa, input);
 
@@ -176,9 +196,13 @@ END_TEST
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_proxy, *tc_eventq, *tc_filter;
+  TCase *tc_common, *tc_proxy, *tc_eventq, *tc_filter;
 
   s = suite_create("fixsmtpio");
+
+  tc_common = tcase_create("common");
+  tcase_add_test(tc_common, test_prepends);
+  suite_add_tcase(s, tc_common);
 
   tc_proxy = tcase_create("proxy");
   tcase_add_test(tc_proxy, test_strip_last_eol);

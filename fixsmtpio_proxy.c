@@ -112,7 +112,7 @@ void construct_proxy_request(stralloc *proxy_request,
   } else {
     for (rule = rules; rule; rule = rule->next)
       if (rule->request_prepend && filter_rule_applies(rule,event))
-        cats(proxy_request,rule->request_prepend); //XXX if we have stuff already, this is not prepending!!!
+        prepends(proxy_request,rule->request_prepend);
     if (event_matches("data",event)) *want_data = 1;
     cat(proxy_request,client_request);
   }
