@@ -102,6 +102,7 @@ START_TEST (test_parse_client_request)
   assert_parse_client_request("RCPT TO:<geepawhill@geepawhill.org>", "RCPT", "TO:<geepawhill@geepawhill.org>");
   assert_parse_client_request("GENIUSPROGRAMMER", "GENIUSPROGRAMMER", "");
   assert_parse_client_request(" NEATO", "", "NEATO");
+  assert_parse_client_request("SWELL ", "SWELL", "");
   assert_parse_client_request(" ", "", "");
   assert_parse_client_request("   ", "", "  ");
   assert_parse_client_request("SUPER WEIRD STUFF", "SUPER", "WEIRD STUFF");

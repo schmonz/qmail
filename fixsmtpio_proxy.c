@@ -69,8 +69,6 @@ static int find_first_space(stralloc *request) {
 
 void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
   int i = find_first_space(request);
-
-  // XXX: Test edge case >= vs >
   if (i == -1) {
     copy(verb,request);
     strip_last_eol(verb);
