@@ -61,21 +61,22 @@ int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
 
-void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
+static int find_first_space(stralloc *request) {
   int i;
-  for (i = 0; i < request->len; i++)
-    if (request->s[i] == ' ') break;
+  for (i = 0; i < request->len; i++) if (request->s[i] == ' ') return i;
+  return -1;
+}
 
-  // XXX: Pull this behaviour out into it's own function (please )
-  // int pos = find_first_space(request)
-  i++;
+void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
+  int i = find_first_space(request);
 
   // XXX: Test edge case >= vs >
-  if (i > request->len) {
+  if (i == -1) {
     copy(verb,request);
     strip_last_eol(verb);
     blank(arg);
   } else {
+    i++;
     copyb(verb,request->s,i-1);
     copyb(arg,request->s+i,request->len-i);
     strip_last_eol(arg);
