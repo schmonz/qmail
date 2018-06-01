@@ -68,7 +68,7 @@ START_TEST (test_ends_with_newline)
   assert_ends_with_newline("", 0);
   assert_ends_with_newline("123", 0);
   assert_ends_with_newline("123\n", 1);
-  assert_ends_with_newline("1\n23\n", 1); //XXX change this
+  assert_ends_with_newline("1\n23\n", 1);
 }
 END_TEST
 
