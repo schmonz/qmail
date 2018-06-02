@@ -103,11 +103,13 @@ END_TEST
 void assert_parse_client_request(const char *request, const char *verb, const char *arg)
 {
   stralloc sa_request = {0}; stralloc_copys(&sa_request, request);
+  stralloc sa_request_copy = {0}; stralloc_copy(&sa_request_copy, &sa_request);
   stralloc sa_verb = {0};
   stralloc sa_arg = {0};
 
   parse_client_request(&sa_verb, &sa_arg, &sa_request);
 
+  ck_assert_int_eq(sa_request_copy.len, sa_request.len);
   stralloc_0(&sa_verb);
   ck_assert_str_eq(sa_verb.s, verb);
   stralloc_0(&sa_arg);
@@ -118,16 +120,16 @@ START_TEST (test_parse_client_request)
 {
   //assert_parse_client_request(NULL, "", "");
   assert_parse_client_request("", "", "");
-  assert_parse_client_request("MAIL FROM:<schmonz@schmonz.com>", "MAIL", "FROM:<schmonz@schmonz.com>");
-  assert_parse_client_request("RCPT TO:<geepawhill@geepawhill.org>", "RCPT", "TO:<geepawhill@geepawhill.org>");
-  assert_parse_client_request("GENIUSPROGRAMMER", "GENIUSPROGRAMMER", "");
-  assert_parse_client_request(" NEATO", "", "NEATO");
-  assert_parse_client_request("SWELL ", "SWELL", "");
-  assert_parse_client_request(" ", "", "");
-  assert_parse_client_request("   ", "", "  ");
-  assert_parse_client_request("SUPER WEIRD STUFF", "SUPER", "WEIRD STUFF");
-  assert_parse_client_request("R WEIRD STUFF", "R", "WEIRD STUFF");
-  assert_parse_client_request("MAIL FROM:<schmonz@schmonz.com>\r\nRCPT TO:<geepawhill@geepawhill.org>", "MAIL", "FROM:<schmonz@schmonz.com>\r\nRCPT TO:<geepawhill@geepawhill.org>");
+  assert_parse_client_request("MAIL FROM:<schmonz@schmonz.com>\r\n", "MAIL", "FROM:<schmonz@schmonz.com>");
+  assert_parse_client_request("RCPT TO:<geepawhill@geepawhill.org>\r\n", "RCPT", "TO:<geepawhill@geepawhill.org>");
+  assert_parse_client_request("GENIUSPROGRAMMER\r\n", "GENIUSPROGRAMMER", "");
+  assert_parse_client_request(" NEATO\r\n", "", "NEATO");
+  assert_parse_client_request("SWELL \r\n", "SWELL", "");
+  assert_parse_client_request(" \r\n", "", "");
+  assert_parse_client_request("   \r\n", "", "  ");
+  assert_parse_client_request("SUPER WEIRD STUFF\r\n", "SUPER", "WEIRD STUFF");
+  assert_parse_client_request("R WEIRD STUFF\r\n", "R", "WEIRD STUFF");
+  assert_parse_client_request("MAIL FROM:<schmonz@schmonz.com>\r\nRCPT TO:<geepawhill@geepawhill.org>\r\n", "MAIL", "FROM:<schmonz@schmonz.com>\r\nRCPT TO:<geepawhill@geepawhill.org>");
 }
 END_TEST
 
