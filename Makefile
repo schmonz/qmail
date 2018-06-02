@@ -81,15 +81,15 @@ fd.h scan.h str.h stralloc.h substdio.h wait.h
 	./compile fixsmtpio.c
 
 fixsmtpio_common.o: \
-compile fixsmtpio_common.c fixsmtpio_common.h fixsmtpio.h readwrite.h
+compile fixsmtpio_common.c fixsmtpio.h fixsmtpio_common.h readwrite.h
 	./compile fixsmtpio_common.c
 
 fixsmtpio_eventq.o: \
-compile fixsmtpio_eventq.c fixsmtpio_eventq.h sysqueue.h
+compile fixsmtpio_eventq.c alloc.h str.h sysqueue.h fixsmtpio.h fixsmtpio_common.h fixsmtpio_eventq.h
 	./compile fixsmtpio_eventq.c
 
 fixsmtpio_filter.o: \
-compile fixsmtpio_filter.c fixsmtpio_filter.h
+compile fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_common.h fixsmtpio_munge.h fixsmtpio_glob.h
 	./compile fixsmtpio_filter.c
 
 fixsmtpio_glob.o: \
@@ -101,11 +101,11 @@ compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_common.h
 	./compile fixsmtpio_munge.c
 
 fixsmtpio_proxy.o: \
-compile fixsmtpio_proxy.c fixsmtpio_proxy.h
+compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h
 	./compile fixsmtpio_proxy.c
 
 fixsmtpio_readwrite.o: \
-compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h error.h readwrite.h select.h stralloc.h
+compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_common.h error.h readwrite.h select.h
 	./compile fixsmtpio_readwrite.c
 
 fixsmtpio-tests: \

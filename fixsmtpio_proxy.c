@@ -93,10 +93,6 @@ void construct_proxy_response(stralloc *proxy_response,
   munge_response(proxy_response,proxy_exitcode,greeting,rules,event);
 }
 
-int ends_with_newline(stralloc *sa) {
-  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
-}
-
 void logit(char logprefix,stralloc *sa) {
   if (!env_get("FIXSMTPIODEBUG")) return;
   substdio_put(&sserr,&logprefix,1);

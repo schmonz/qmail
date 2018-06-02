@@ -18,6 +18,7 @@ extern void cats(stralloc *,char *);
 extern void copy(stralloc *,stralloc *);
 extern void copyb(stralloc *,char *,int);
 extern void copys(stralloc *,char *);
-extern void prepends(stralloc *,char *);
+extern void prepends(stralloc *,const char *);
 extern int  starts(stralloc *,char *);
+extern int  ends_with_newline(stralloc *);
 extern void blank(stralloc *);

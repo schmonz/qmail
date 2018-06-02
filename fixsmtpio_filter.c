@@ -2,6 +2,7 @@
 #include "fixsmtpio_filter.h"
 #include "fixsmtpio_common.h"
 #include "fixsmtpio_munge.h"
+#include "fixsmtpio_glob.h"
 
 /*
  "&fixsmtpio" -> yes
