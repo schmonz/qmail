@@ -403,6 +403,7 @@ fixsmtpio_common.o
 fixsmtpio_eventq.o
 fixsmtpio_readwrite.o
 fixsmtpio_munge.o
+fixsmtpio_glob.o
 check.h
 check_stdint.h
 sysqueue.h

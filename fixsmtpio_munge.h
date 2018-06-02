@@ -1,5 +1,4 @@
 #include "fixsmtpio_filter.h"
-// #include "stralloc.h"
 
 void munge_exitcode(int *,filter_rule *);
 void munge_greeting(stralloc *,int,stralloc *);
