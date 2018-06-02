@@ -401,6 +401,7 @@ fixsmtpio_filter.o
 fixsmtpio_proxy.o
 fixsmtpio_common.o
 fixsmtpio_eventq.o
+fixsmtpio_readwrite.o
 check.h
 check_stdint.h
 sysqueue.h

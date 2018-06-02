@@ -60,12 +60,12 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 
 fixsmtpio: \
 load fixsmtpio.o fixsmtpio_common.o fixsmtpio_filter.o \
-fixsmtpio_eventq.o \
+fixsmtpio_eventq.o fixsmtpio_readwrite.o \
 fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a
 	./load fixsmtpio fixsmtpio_common.o fixsmtpio_filter.o \
-	fixsmtpio_eventq.o \
+	fixsmtpio_eventq.o fixsmtpio_readwrite.o \
 	fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a
@@ -76,12 +76,12 @@ select.h fixsmtpio.h1
 
 fixsmtpio.o: \
 compile fixsmtpio.c fixsmtpio.h fixsmtpio_common.h fixsmtpio_filter.h \
-fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h error.h \
-fd.h readwrite.h scan.h select.h str.h stralloc.h substdio.h wait.h
+fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h \
+fd.h scan.h str.h stralloc.h substdio.h wait.h
 	./compile fixsmtpio.c
 
 fixsmtpio_common.o: \
-compile fixsmtpio_common.c fixsmtpio_common.h
+compile fixsmtpio_common.c fixsmtpio_common.h fixsmtpio.h readwrite.h
 	./compile fixsmtpio_common.c
 
 fixsmtpio_eventq.o: \
@@ -96,16 +96,20 @@ fixsmtpio_proxy.o: \
 compile fixsmtpio_proxy.c fixsmtpio_proxy.h
 	./compile fixsmtpio_proxy.c
 
+fixsmtpio_readwrite.o: \
+compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h error.h readwrite.h select.h stralloc.h
+	./compile fixsmtpio_readwrite.c
+
 fixsmtpio-tests: \
 fixsmtpio \
 load fixsmtpio-tests.o fixsmtpio_common.o \
-fixsmtpio_eventq.o \
+fixsmtpio_eventq.o fixsmtpio_readwrite.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
 	./load fixsmtpio-tests fixsmtpio_common.o \
-	fixsmtpio_eventq.o \
+	fixsmtpio_eventq.o fixsmtpio_readwrite.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \

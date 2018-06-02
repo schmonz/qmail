@@ -1,5 +1,6 @@
 #include "fixsmtpio.h"
 #include "fixsmtpio_common.h"
+#include "readwrite.h"
 
 void die() { _exit(1); }
 

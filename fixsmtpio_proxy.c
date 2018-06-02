@@ -1,55 +1,8 @@
 #include "fixsmtpio_proxy.h"
+#include "fixsmtpio_readwrite.h"
 #include "fixsmtpio_common.h"
 #include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
-
-int accepted_data(stralloc *response) { return starts(response,"354 "); }
-
-int ends_with_newline(stralloc *sa) {
-  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
-}
-
-int is_last_line_of_response(stralloc *line) {
-  return line->len >= 4 && line->s[3] == ' ';
-}
-
-void strip_last_eol(stralloc *sa) {
-  if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
-  if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
-}
-
-fd_set fds;
-
-int max(int a,int b) { return a > b ? a : b; }
-
-void want_to_read(int fd1,int fd2) {
-  FD_ZERO(&fds);
-  FD_SET(fd1,&fds);
-  FD_SET(fd2,&fds);
-}
-
-int can_read(int fd) { return FD_ISSET(fd,&fds); }
-
-int block_efficiently_until_can_read(int fd1,int fd2) {
-  int ready;
-  ready = select(1+max(fd1,fd2),&fds,(fd_set *)0,(fd_set *)0,(struct timeval *) 0);
-  if (ready == -1 && errno != error_intr) die_read();
-  return ready;
-}
-
-int saferead(int fd,char *buf,int len) {
-  int r;
-  r = read(fd,buf,len);
-  if (r == -1) if (errno != error_intr) die_read();
-  return r;
-}
-
-int safeappend(stralloc *sa,int fd,char *buf,int len) {
-  int r;
-  r = saferead(fd,buf,len);
-  catb(sa,buf,r);
-  return r;
-}
 
 /*
   NULL: false
@@ -67,6 +20,11 @@ static int find_first_space(stralloc *request) {
   return -1;
 }
 
+void strip_last_eol(stralloc *sa) {
+  if (sa->len > 0 && sa->s[sa->len-1] == '\n') sa->len--;
+  if (sa->len > 0 && sa->s[sa->len-1] == '\r') sa->len--;
+}
+
 static void all_verb_no_arg(stralloc *verb,stralloc *arg,stralloc *request) {
   copy(verb,request);
   strip_last_eol(verb);
@@ -80,16 +38,12 @@ static void verb_and_arg(stralloc *verb,stralloc *arg,int pos,stralloc *request)
 }
 
 void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
-  int pos = find_first_space(request);
+  int pos;
+  pos = find_first_space(request);
   if (pos == -1)
     all_verb_no_arg(verb,arg,request);
   else
     verb_and_arg(verb,arg,++pos,request);
-}
-
-void safewrite(int fd,stralloc *sa) {
-  if (write(fd,sa->s,sa->len) == -1) die_write();
-  blank(sa);
 }
 
 /*
@@ -118,6 +72,8 @@ void construct_proxy_request(stralloc *proxy_request,
   }
 }
 
+static int accepted_data(stralloc *response) { return starts(response,"354 "); }
+
 /*
   not sure whether to test:
   not want_data, not in_data, no request_received, no verb: it's a timeout
@@ -135,6 +91,10 @@ void construct_proxy_response(stralloc *proxy_response,
   }
   copy(proxy_response,server_response);
   munge_response(proxy_response,proxy_exitcode,greeting,rules,event);
+}
+
+int ends_with_newline(stralloc *sa) {
+  return sa->len > 0 && sa->s[sa->len - 1] == '\n';
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -179,6 +139,10 @@ int get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
 
 int get_one_request(stralloc *one,stralloc *pile) {
   return get_one(one,pile,0);
+}
+
+int is_last_line_of_response(stralloc *line) {
+  return line->len >= 4 && line->s[3] == ' ';
 }
 
 int get_one_response(stralloc *one,stralloc *pile) {
