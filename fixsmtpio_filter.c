@@ -8,13 +8,6 @@ int want_munge_internally(char *response) {
   return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
 }
 
-/*
- "&nofixsmtpio" -> no
- "&fixsmtpio" -> yes
- "" -> yes
- NULL -> yes
- "whatever else" -> yes
- */
 int want_munge_from_config(char *response) {
   return 0 != str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
 }

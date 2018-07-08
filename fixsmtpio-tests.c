@@ -204,6 +204,15 @@ START_TEST (test_want_munge_internally) {
 }
 END_TEST
 
+START_TEST (test_want_munge_from_config) {
+  ck_assert_int_eq(0, want_munge_from_config("&nofixsmtpio"));
+  ck_assert_int_eq(1, want_munge_from_config("&fixsmtpio"));
+  ck_assert_int_eq(1, want_munge_from_config(""));
+  //ck_assert_int_eq(1, want_munge_from_config(NULL));
+  ck_assert_int_eq(1, want_munge_from_config("random other text\r\n"));
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
@@ -230,6 +239,7 @@ Suite * fixsmtpio_suite(void)
   tc_filter = tcase_create("filter");
   tcase_add_test(tc_filter, test_filter_rule_applies);
   tcase_add_test(tc_filter, test_want_munge_internally);
+  tcase_add_test(tc_filter, test_want_munge_from_config);
   suite_add_tcase(s, tc_filter);
 
   return s;
