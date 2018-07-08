@@ -12,14 +12,12 @@ int want_munge_from_config(char *response) {
   return 0 != str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
 }
 
-/*
- "VERY_UNLIKELY_TO_BE_SET": no
- "": yes
- NULL: yes
- */
 int envvar_exists_if_needed(char *envvar) {
-  if (envvar && env_get(envvar)) return 1;
-  else if (envvar) return 0;
+  if (envvar) {
+    if (!str_diff("",envvar)) return 1;
+    if (env_get(envvar)) return 1;
+    return 0;
+  }
   return 1;
 }
 

@@ -213,6 +213,13 @@ START_TEST (test_want_munge_from_config) {
 }
 END_TEST
 
+START_TEST (test_envvar_exists_if_needed) {
+  ck_assert_int_eq(0, envvar_exists_if_needed("VERY_UNLIKELY_TO_BE_SET"));
+  ck_assert_int_eq(1, envvar_exists_if_needed(""));
+  ck_assert_int_eq(1, envvar_exists_if_needed(NULL));
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
@@ -240,6 +247,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_filter, test_filter_rule_applies);
   tcase_add_test(tc_filter, test_want_munge_internally);
   tcase_add_test(tc_filter, test_want_munge_from_config);
+  tcase_add_test(tc_filter, test_envvar_exists_if_needed);
   suite_add_tcase(s, tc_filter);
 
   return s;
