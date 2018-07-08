@@ -183,10 +183,13 @@ void assert_filter_rule(filter_rule *filter_rule, const char *event, int expecte
 START_TEST (test_filter_rule_applies)
 {
   filter_rule rule = {
-    NULL,
-    ENV_ANY,                  "caliente",
-    REQUEST_PASSTHRU          "*",
-    EXIT_LATER_NORMALLY,      ""
+    .next = NULL,
+    .env = ENV_ANY,
+    .event = "caliente",
+    .request_prepend = REQUEST_PASSTHRU,
+    .response_line_glob = "*",
+    .exitcode = EXIT_LATER_NORMALLY,
+    .response = "",
   };
   assert_filter_rule(&rule, "clienteof", 0);
 
