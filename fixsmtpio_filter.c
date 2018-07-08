@@ -4,13 +4,6 @@
 #include "fixsmtpio_munge.h"
 #include "fixsmtpio_glob.h"
 
-/*
- "&fixsmtpio" -> yes
- "&nofixsmtpio" -> no
- "" -> no
- NULL -> no
- "whatever else" -> no
- */
 int want_munge_internally(char *response) {
   return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
 }

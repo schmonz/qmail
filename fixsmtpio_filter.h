@@ -13,6 +13,7 @@ typedef struct filter_rule {
   char *response;
 } filter_rule;
 
+extern int want_munge_internally(char *);
 extern filter_rule * load_filter_rules(void);
 extern int filter_rule_applies(filter_rule *,const char *);
 
