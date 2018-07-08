@@ -198,8 +198,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
   eventq_put(EVENT_GREETING);
 
   for (;;) {
-    want_to_read(from_client,from_server);
-    if (!block_efficiently_until_can_read(from_client,from_server)) break;
+    if (!block_efficiently_until_can_read_either(from_client,from_server)) break;
 
     if (can_read(from_client)) {
       if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
