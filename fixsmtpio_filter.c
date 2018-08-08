@@ -47,14 +47,6 @@ void munge_response_line(int lineno,
   if (line->len) if (!ends_with_newline(line)) cats(line,"\r\n");
 }
 
-/*
- correctly splitting into lines?
-
- response is NULL
- response is empty
- response does not end with a newline
- response is multiline, first line ends with newline, second line does not
- */
 void munge_response(stralloc *response,int *exitcode,
                     stralloc *greeting,filter_rule *rules,const char *event) {
   stralloc munged = {0};

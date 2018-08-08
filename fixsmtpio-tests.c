@@ -250,6 +250,27 @@ START_TEST (test_munge_response_line) {
 }
 END_TEST
 
+void assert_munge_response(char *expected_output, char *response, int exitcode, char *greeting, filter_rule *rules, char *event) {
+  stralloc response_sa = {0}; stralloc_copys(&response_sa, response);
+  stralloc greeting_sa = {0}; stralloc_copys(&greeting_sa, greeting);
+
+  munge_response(&response_sa, &exitcode, &greeting_sa, rules, event);
+
+  stralloc_0(&response_sa);
+
+  ck_assert_str_eq(response_sa.s, expected_output);
+}
+
+START_TEST (test_munge_response) {
+  filter_rule *rules = 0;
+
+  // annoying to test NULL, unlikely to be bug
+  assert_munge_response("", "", EXIT_LATER_NORMALLY, "yo.sup.local", rules, "ehlo");
+  assert_munge_response("512 grump\r\n", "512 grump", EXIT_LATER_NORMALLY, "yo.sup.local", rules, "ehlo");
+  assert_munge_response("512-grump\r\n256 mump\r\n", "512 grump\r\n256 mump", EXIT_LATER_NORMALLY, "yo.sup.local", rules, "ehlo");
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
@@ -279,6 +300,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_filter, test_want_munge_from_config);
   tcase_add_test(tc_filter, test_envvar_exists_if_needed);
   tcase_add_test(tc_filter, test_munge_response_line);
+  tcase_add_test(tc_filter, test_munge_response);
   suite_add_tcase(s, tc_filter);
 
   return s;
