@@ -223,6 +223,33 @@ START_TEST (test_envvar_exists_if_needed) {
 }
 END_TEST
 
+void assert_munge_response_line(char *expected_output, int lineno, char *line, int exitcode, char *greeting, filter_rule *rules, char *event) {
+  stralloc line_sa = {0}; stralloc_copys(&line_sa, line);
+  stralloc greeting_sa = {0}; stralloc_copys(&greeting_sa, greeting);
+
+  munge_response_line(lineno, &line_sa, &exitcode, &greeting_sa, rules, event);
+
+  stralloc_0(&line_sa);
+
+  ck_assert_str_eq(line_sa.s, expected_output);
+}
+
+START_TEST (test_munge_response_line) {
+
+  filter_rule *rules = 0;
+  assert_munge_response_line("222 sup duuuude\r\n", 0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo");
+  assert_munge_response_line("222 OUTSTANDING\r\n", 1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo");
+
+  rules = prepend_rule(rules, ENV_ANY, "helo", REQUEST_PASSTHRU, "2*", EXIT_LATER_NORMALLY, MUNGE_INTERNALLY);
+  assert_munge_response_line("222 sup duuuude\r\n", 0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo");
+  assert_munge_response_line("222 OUTSTANDING\r\n", 1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo");
+
+  rules = prepend_rule(rules, ENV_ANY, "ehlo", REQUEST_PASSTHRU, "2*", EXIT_LATER_NORMALLY, MUNGE_INTERNALLY);
+  assert_munge_response_line("250 yo.sup.local\r\n", 0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo");
+  assert_munge_response_line("222 OUTSTANDING\r\n", 1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo");
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
@@ -251,6 +278,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_filter, test_want_munge_internally);
   tcase_add_test(tc_filter, test_want_munge_from_config);
   tcase_add_test(tc_filter, test_envvar_exists_if_needed);
+  tcase_add_test(tc_filter, test_munge_response_line);
   suite_add_tcase(s, tc_filter);
 
   return s;

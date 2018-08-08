@@ -26,26 +26,6 @@ int filter_rule_applies(filter_rule *rule,const char *event) {
   return (event_matches(rule->event,event) && envvar_exists_if_needed(rule->env));
 }
 
-/*
- already tested:
- - filter_rule_applies()
- - string_matches_glob()
- - want_munge_internally()
- - munge_line_internally()
- - want_munge_from_config()
-
- so just a couple integrated examples. with no rules:
- (0, "222 sup duuuude", 0, "yo.sup.local", (filter_rule *)0, "ehlo") -> "222 sup duuuude"
- (1, "222 OUTSTANDING", 0, "yo.sup.local", (filter_rule *)0, "ehlo") -> "222 OUTSTANDING"
-
- with a couple filter rules that don't apply:
- (0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo") -> "222 sup duuuude"
- (1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo") -> "222 OUTSTANDING"
-
- with a couple more filter rules and some do apply:
- (0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo") -> "222 yo.sup.local"
- (1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo") -> ""
- */
 void munge_response_line(int lineno,
                          stralloc *line,int *exitcode,
                          stralloc *greeting,filter_rule *rules,const char *event) {

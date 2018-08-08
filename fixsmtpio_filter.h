@@ -24,5 +24,6 @@ extern int event_matches(char *,const char *);
 
 extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,const char *);
 extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,const char *);
+extern filter_rule *prepend_rule(filter_rule *,char *,char *,char *,char *,int,char *);
 
 #endif
