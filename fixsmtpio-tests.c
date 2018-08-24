@@ -338,6 +338,51 @@ START_TEST (test_change_every_line_fourth_char_to_dash) {
 }
 END_TEST
 
+void assert_change_last_line_fourth_char_to_space(char* input, char *expected_response) {
+  stralloc response_sa = {0}; stralloc_copys(&response_sa, input);
+  change_last_line_fourth_char_to_space(&response_sa);
+  stralloc_0(&response_sa);
+  ck_assert_str_eq(response_sa.s, expected_response );
+}
+
+START_TEST (test_change_last_line_fourth_char_to_space) {
+  // annoying to test, currently don't believe I have this bug:
+  // assert_change_last_line_fourth_char_to_space(NULL, "");
+
+  assert_change_last_line_fourth_char_to_space("", "");
+
+  assert_change_last_line_fourth_char_to_space("ab", "ab");
+
+  assert_change_last_line_fourth_char_to_space("abc", "abc");
+
+  assert_change_last_line_fourth_char_to_space("abcd", "abc ");
+
+  assert_change_last_line_fourth_char_to_space("abcd efgh\n", "abc  efgh\n");
+
+  assert_change_last_line_fourth_char_to_space(
+      "abcd efgh\nij\n", "abcd efgh\nij\n");
+
+  assert_change_last_line_fourth_char_to_space(
+      "abcd efgh\nijk\n", "abcd efgh\nijk ");
+
+  assert_change_last_line_fourth_char_to_space(
+      "ijk\n"
+      "abcd efgh\n",
+
+      "ijk\n"
+      "abc  efgh\n");
+
+  assert_change_last_line_fourth_char_to_space(
+      "abcd efgh\n"
+      "ijk\n"
+      "bcde fghi\n",
+
+      "abcd efgh\n"
+      "ijk\n"
+      "bcd  fghi\n");
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
@@ -374,6 +419,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_glob, test_string_matches_glob);
   tc_munge = tcase_create("munge");
   tcase_add_test(tc_munge, test_change_every_line_fourth_char_to_dash);
+  tcase_add_test(tc_munge, test_change_last_line_fourth_char_to_space);
   suite_add_tcase(s, tc_glob);
   suite_add_tcase(s, tc_munge);
 
