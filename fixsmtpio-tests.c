@@ -271,10 +271,33 @@ START_TEST (test_munge_response) {
 }
 END_TEST
 
+START_TEST (test_string_matches_glob) {
+  ck_assert(string_matches_glob("*", ""));
+  ck_assert(string_matches_glob("*", "foob;;ar"));
+  ck_assert(string_matches_glob("4*", "450 tempfail"));
+  ck_assert(string_matches_glob("4*", "4"));
+  ck_assert(string_matches_glob("250?STARTTLS", "250?STARTTLS"));
+  ck_assert(string_matches_glob("250?AUTH*", "250 AUTH "));
+  ck_assert(string_matches_glob("250?AUTH*", "250 AUTH"));
+  ck_assert(string_matches_glob("250?auth*", "250 auth"));
+  ck_assert(string_matches_glob("2*", "250-auth login"));
+  ck_assert(string_matches_glob("250?auth*", "250-auth login"));
+  ck_assert(string_matches_glob("", ""));
+ 
+  ck_assert(!string_matches_glob("250 auth", "the anthology contains works by 250 authors"));
+  ck_assert(!string_matches_glob("250?AUTH*", "250  AUTH"));
+  ck_assert(!string_matches_glob("250?AUTH*", " 250  AUTH"));
+  ck_assert(!string_matches_glob("250?AUTH*", " 250 AUTH"));
+  ck_assert(!string_matches_glob("4*", "foob;;ar"));
+  ck_assert(!string_matches_glob("", " 250 AUTH"));
+  ck_assert(!string_matches_glob("4*", "I have eaten 450 french fries"));
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_proxy, *tc_eventq, *tc_filter;
+  TCase *tc_common, *tc_proxy, *tc_eventq, *tc_filter, *tc_glob;
 
   s = suite_create("fixsmtpio");
 
@@ -302,6 +325,10 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_filter, test_munge_response_line);
   tcase_add_test(tc_filter, test_munge_response);
   suite_add_tcase(s, tc_filter);
+
+  tc_glob = tcase_create("glob");
+  tcase_add_test(tc_glob, test_string_matches_glob);
+  suite_add_tcase(s, tc_glob);
 
   return s;
 }
