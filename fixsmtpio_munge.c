@@ -28,17 +28,7 @@ void munge_quit(stralloc *response,int lineno,stralloc *greeting) {
   copys(response,"221 "); cat(response,greeting);
 }
 
-/*
- * input is null
- * input is empty
- * input is less than four chars long
- * input is exactly four chars long
- * input is longer than four, but still one line
- * input is multiple lines, first one long enough, second one not
- * input is multiple lines, first one short, second one long enough
- * input is multiple lines, first one long enough, second one not, third one long enough
- */
-static void change_every_line_fourth_char_to_dash(stralloc *multiline) {
+void change_every_line_fourth_char_to_dash(stralloc *multiline) {
   int pos = 0;
   int i;
   for (i = 0; i < multiline->len; i++) {

@@ -284,6 +284,7 @@ START_TEST (test_string_matches_glob) {
   ck_assert(string_matches_glob("250?auth*", "250-auth login"));
   ck_assert(string_matches_glob("", ""));
  
+ 
   ck_assert(!string_matches_glob("250 auth", "the anthology contains works by 250 authors"));
   ck_assert(!string_matches_glob("250?AUTH*", "250  AUTH"));
   ck_assert(!string_matches_glob("250?AUTH*", " 250  AUTH"));
@@ -294,10 +295,53 @@ START_TEST (test_string_matches_glob) {
 }
 END_TEST
 
+void assert_change_every_line_fourth_char_to_dash( char* input, char *expected_response) {
+  stralloc response_sa = {0}; stralloc_copys(&response_sa, input);
+  change_every_line_fourth_char_to_dash(&response_sa);
+  stralloc_0(&response_sa);
+  ck_assert_str_eq(response_sa.s, expected_response );
+
+}
+
+START_TEST (test_change_every_line_fourth_char_to_dash) {
+  // annoying to test, currently don't believe I have this bug:
+  // assert_change_every_line_fourth_char_to_dash(NULL, "");
+
+  assert_change_every_line_fourth_char_to_dash("", "");
+
+  assert_change_every_line_fourth_char_to_dash("ab", "ab");
+
+  assert_change_every_line_fourth_char_to_dash("abc", "abc");
+
+  assert_change_every_line_fourth_char_to_dash("abcd", "abc-");
+
+  assert_change_every_line_fourth_char_to_dash("abcd efgh\n", "abc- efgh\n");
+
+  assert_change_every_line_fourth_char_to_dash(
+      "abcd efgh\nijk\n", "abc- efgh\nijk\n");
+
+  assert_change_every_line_fourth_char_to_dash(
+      "ijk\n"
+      "abcd efgh\n",
+
+      "ijk\n"
+      "abc- efgh\n");
+
+  assert_change_every_line_fourth_char_to_dash(
+      "abcd efgh\n"
+      "ijk\n"
+      "bcde fghi\n",
+
+      "abc- efgh\n"
+      "ijk\n"
+      "bcd- fghi\n");
+}
+END_TEST
+
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_proxy, *tc_eventq, *tc_filter, *tc_glob;
+  TCase *tc_common, *tc_proxy, *tc_eventq, *tc_filter, *tc_glob, *tc_munge;
 
   s = suite_create("fixsmtpio");
 
@@ -328,7 +372,10 @@ Suite * fixsmtpio_suite(void)
 
   tc_glob = tcase_create("glob");
   tcase_add_test(tc_glob, test_string_matches_glob);
+  tc_munge = tcase_create("munge");
+  tcase_add_test(tc_munge, test_change_every_line_fourth_char_to_dash);
   suite_add_tcase(s, tc_glob);
+  suite_add_tcase(s, tc_munge);
 
   return s;
 }
