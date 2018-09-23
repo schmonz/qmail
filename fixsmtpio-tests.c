@@ -386,21 +386,13 @@ END_TEST
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_proxy, *tc_eventq, *tc_filter, *tc_glob, *tc_munge;
+  TCase *tc_common, *tc_eventq, *tc_filter, *tc_glob, *tc_munge, *tc_proxy;
 
   s = suite_create("fixsmtpio");
 
   tc_common = tcase_create("common");
   tcase_add_test(tc_common, test_prepends);
   suite_add_tcase(s, tc_common);
-
-  tc_proxy = tcase_create("proxy");
-  tcase_add_test(tc_proxy, test_strip_last_eol);
-  tcase_add_test(tc_proxy, test_ends_with_newline);
-  tcase_add_test(tc_proxy, test_is_last_line_of_response);
-  tcase_add_test(tc_proxy, test_parse_client_request);
-  tcase_add_test(tc_proxy, test_get_one_response);
-  suite_add_tcase(s, tc_proxy);
 
   tc_eventq = tcase_create("eventq");
   tcase_add_test(tc_eventq, test_eventq_put_and_get);
@@ -417,11 +409,20 @@ Suite * fixsmtpio_suite(void)
 
   tc_glob = tcase_create("glob");
   tcase_add_test(tc_glob, test_string_matches_glob);
+
   tc_munge = tcase_create("munge");
   tcase_add_test(tc_munge, test_change_every_line_fourth_char_to_dash);
   tcase_add_test(tc_munge, test_change_last_line_fourth_char_to_space);
   suite_add_tcase(s, tc_glob);
   suite_add_tcase(s, tc_munge);
+
+  tc_proxy = tcase_create("proxy");
+  tcase_add_test(tc_proxy, test_strip_last_eol);
+  tcase_add_test(tc_proxy, test_ends_with_newline);
+  tcase_add_test(tc_proxy, test_is_last_line_of_response);
+  tcase_add_test(tc_proxy, test_parse_client_request);
+  tcase_add_test(tc_proxy, test_get_one_response);
+  suite_add_tcase(s, tc_proxy);
 
   return s;
 }
