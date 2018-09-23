@@ -124,7 +124,9 @@ libcheck.a rt.lib
 	libcheck.a -lpthread -lm `cat rt.lib`
 
 fixsmtpio-tests.o: \
-compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h
+compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h \
+test_fixsmtpio_common.c test_fixsmtpio_eventq.c test_fixsmtpio_filter.c \
+test_fixsmtpio_glob.c test_fixsmtpio_munge.c test_fixsmtpio_proxy.c
 	./compile fixsmtpio-tests.c
 
 libcheck.a: \
