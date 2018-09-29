@@ -85,7 +85,7 @@ compile fixsmtpio_common.c fixsmtpio.h fixsmtpio_common.h readwrite.h
 	./compile fixsmtpio_common.c
 
 fixsmtpio_eventq.o: \
-compile fixsmtpio_eventq.c alloc.h str.h sysqueue.h fixsmtpio.h fixsmtpio_common.h fixsmtpio_eventq.h
+compile fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_common.h fixsmtpio_eventq.h
 	./compile fixsmtpio_eventq.c
 
 fixsmtpio_filter.o: \
@@ -147,10 +147,6 @@ compile load
 	./load tryrt -lrt ) >/dev/null 2>&1 \
 	&& echo -lrt || exit 0 ) > rt.lib
 	rm -f tryrt.c tryrt.o tryrt
-
-sysqueue.h:
-	( echo '#define NULL 0'; \
-	cat /usr/include/sys/queue.h ) > sysqueue.h
 
 addresses.0: \
 addresses.5

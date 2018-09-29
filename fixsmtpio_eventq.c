@@ -1,10 +1,12 @@
 #include "alloc.h"
 #include "str.h"
-#include "sysqueue.h"
 #include "fixsmtpio.h"
 #include "fixsmtpio_common.h"
 
 #include "fixsmtpio_eventq.h"
+
+#define NULL 0
+#include <sys/queue.h>
 
 typedef struct node {
   const char *event;
