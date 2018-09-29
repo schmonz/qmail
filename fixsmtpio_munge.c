@@ -55,18 +55,8 @@ void reformat_multiline_response(stralloc *response) {
   change_last_line_fourth_char_to_space(response);
 }
 
-/*
- * s is NULL
- * s is not 0-terminated
- * s is empty
- * sa is NULL
- * sa->len is 0
- * strings differ, don't match
- * strings same, do match
- * strings same except case, do match
- */
 int event_matches(char *s,const char *s2) {
-  if (!str_len(s2)) return 0;
+  if (!s || !s2) return 0;
   return !case_diffs(s,s2);
 }
 
