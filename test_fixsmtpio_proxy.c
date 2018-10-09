@@ -147,3 +147,45 @@ START_TEST (test_is_last_line_of_data)
   assert_is_last_line_of_data(".\r\n", 1);
 }
 END_TEST
+
+START_TEST (test_construct_proxy_request)
+{
+  stralloc proxy_request = {0},
+           arg = {0},
+           client_request = {0};
+  int want_data = 0,
+      in_data = 0;
+
+  filter_rule *test_rules = prepend_rule(0,
+      "SPECIFIC_ENV_VAR",   "specific_verb",
+      "prepend me: ",       "*",
+      EXIT_LATER_NORMALLY,  "337 hello friend"
+  );
+
+  env_put2("SPECIFIC_ENV_VAR","");
+
+  copys(&proxy_request, ""); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
+  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,&want_data,&in_data);
+  stralloc_0(&proxy_request); stralloc_0(&client_request);
+  ck_assert_str_ne(proxy_request.s, client_request.s);
+
+  in_data = 1;
+  copys(&proxy_request, ""); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
+  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,&want_data,&in_data);
+  stralloc_0(&proxy_request); stralloc_0(&client_request);
+  ck_assert_str_eq(proxy_request.s, client_request.s);
+
+  env_unset("SPECIFIC_ENV_VAR");
+
+  // XXX not in_data, a rule says to prepend: proxy request is equal to prepended + client_request
+  // XXX not in_data, two rules prepend: proxy request is equal to p1 + p2 + client_request (WILL FAIL)
+}
+END_TEST
+
+START_TEST (test_construct_proxy_response)
+{
+  ck_assert(1);
+  // not sure whether to test:
+  // not want_data, not in_data, no request_received, no verb: it's a timeout
+}
+END_TEST

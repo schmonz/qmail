@@ -40,13 +40,6 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
     verb_and_arg(verb,arg,++pos,request);
 }
 
-/*
-  in_data: whatever client_request is, proxy_request is exactly the same
-  not in_data, a rule says to prepend: proxy request is equal to prepended + client_request
-  not in_data, two rules prepend: proxy request is equal to p1 + p2 + client_request (WILL FAIL)
-
-  not sure whether to test in_data/want_data state changes
- */
 void construct_proxy_request(stralloc *proxy_request,
                              filter_rule *rules,
                              char *event,stralloc *arg,
@@ -68,10 +61,6 @@ void construct_proxy_request(stralloc *proxy_request,
 
 static int accepted_data(stralloc *response) { return starts(response,"354 "); }
 
-/*
-  not sure whether to test:
-  not want_data, not in_data, no request_received, no verb: it's a timeout
- */
 void construct_proxy_response(stralloc *proxy_response,
                               stralloc *greeting,
                               filter_rule *rules,

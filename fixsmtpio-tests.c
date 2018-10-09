@@ -55,6 +55,8 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_proxy, test_parse_client_request);
   tcase_add_test(tc_proxy, test_get_one_response);
   tcase_add_test(tc_proxy, test_is_last_line_of_data);
+  tcase_add_test(tc_proxy, test_construct_proxy_request);
+  tcase_add_test(tc_proxy, test_construct_proxy_response);
   suite_add_tcase(s, tc_proxy);
 
   return s;
