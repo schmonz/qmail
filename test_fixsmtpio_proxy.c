@@ -43,13 +43,12 @@ START_TEST (test_ends_with_newline)
 }
 END_TEST
 
-
 void assert_is_last_line_of_response(const char *input, int expected)
 {
   stralloc sa = {0}; stralloc_copys(&sa, input);
   int actual = is_last_line_of_response(&sa);
-  ck_assert_int_eq(actual, expected); }
-
+  ck_assert_int_eq(actual, expected);
+}
 
 START_TEST (test_is_last_line_of_response)
 {
@@ -127,5 +126,24 @@ START_TEST (test_get_one_response)
   assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n", 1);
   assert_get_one_response("777-two\r\n777 lines\r\n888 three\r\n999 four\r\n", "777-two\r\n777 lines\r\n", "888 three\r\n999 four\r\n", 1);
   assert_get_one_response("777-two\r\n", "", "777-two\r\n", 0);
+}
+END_TEST
+
+static void assert_is_last_line_of_data(const char *input, const int expected) {
+  stralloc input_sa = {0}; stralloc_copys(&input_sa, input);
+
+  int actual = is_last_line_of_data(&input_sa);
+
+  ck_assert_int_eq(actual, expected);
+}
+
+START_TEST (test_is_last_line_of_data)
+{
+  // annoying to test, currently don't believe I have this bug:
+  // assert_is_last_line_of_data(NULL, 0);
+  assert_is_last_line_of_data("", 0);
+  assert_is_last_line_of_data("\r\n", 0);
+  assert_is_last_line_of_data(" \r\n", 0);
+  assert_is_last_line_of_data(".\r\n", 1);
 }
 END_TEST

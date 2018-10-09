@@ -4,12 +4,6 @@
 #include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
 
-/*
-  NULL: false
-  empty: false
-  " \r\n": false
-  ".\r\n": true
- */
 int is_last_line_of_data(stralloc *r) {
   return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
 }
