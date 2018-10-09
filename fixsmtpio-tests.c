@@ -45,6 +45,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_munge, test_change_every_line_fourth_char_to_dash);
   tcase_add_test(tc_munge, test_change_last_line_fourth_char_to_space);
   tcase_add_test(tc_munge, test_event_matches);
+  tcase_add_test(tc_munge, test_munge_line_internally);
   suite_add_tcase(s, tc_munge);
 
   tc_proxy = tcase_create("proxy");

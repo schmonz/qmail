@@ -21,7 +21,7 @@ fixsmtpio-tests
 
 acceptutils-tests-run: \
 acceptutils-tests
-	@prove -v -e '' ./fixsmtpio-tests
+	@prove -v -e '' ./fixsmtpio-tests | grep -v '^ok'
 
 authup: \
 load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o \

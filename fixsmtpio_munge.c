@@ -82,21 +82,6 @@ static void *munge_line_fn(const char *event) {
   return 0;
 }
 
-/*
- not requests, response lines!
-
- ("250 word up, kids", 0, "yo.sup.local", "word") -> "250 word up, kids"
-
- ("250-applesauce",     0, "yo.sup.local", "ehlo") -> "250-yo.sup.local"
- ("250-STARTSOMETHING", 1, "yo.sup.local", "ehlo") -> "250-STARTSOMETHING"
- ("250 ENDSOMETHING",   2, "yo.sup.local", "ehlo") -> "250 ENDSOMETHING"
-
- ("250 applesauce",     0, "yo.sup.local", "helo") -> "250-yo.sup.local"
-
- ("214 ask your grandmother", 0, "yo.sup.local", "help") -> "214 https://....\r\n214 ask your grandmother\r\n"
-
- ("221 get outta here", 0, "yo.sup.local", "quit") -> "221 yo.sup.local"
- */
 void munge_line_internally(stralloc *line,int lineno,
                            stralloc *greeting,const char *event) {
   void (*munger)() = munge_line_fn(event);
