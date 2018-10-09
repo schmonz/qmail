@@ -57,6 +57,7 @@ void reformat_multiline_response(stralloc *response) {
 
 int event_matches(char *s,const char *s2) {
   if (!s || !s2) return 0;
+  if (!str_len(s) || !str_len(s2)) return 0;
   return !case_diffs(s,s2);
 }
 

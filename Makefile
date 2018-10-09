@@ -13,8 +13,8 @@ compile acceptutils_base64.c acceptutils_base64.h
 
 acceptutils-memcheck: \
 fixsmtpio-tests
-	valgrind --leak-check=full --error-exitcode=99 ./fixsmtpio-tests >/dev/null
-	#valgrind --leak-check=full --error-exitcode=88 ./fixsmtpio echo hi >/dev/null
+	valgrind --track-origins=yes --leak-check=full --error-exitcode=99 ./fixsmtpio-tests >/dev/null
+	#valgrind --track-origins=yes --leak-check=full --error-exitcode=88 ./fixsmtpio echo hi >/dev/null
 
 acceptutils-tests: \
 fixsmtpio-tests
