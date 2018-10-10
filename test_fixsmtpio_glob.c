@@ -1,3 +1,5 @@
+#include "fixsmtpio_glob.h"
+
 START_TEST (test_string_matches_glob) {
   ck_assert(string_matches_glob("*", ""));
   ck_assert(string_matches_glob("*", "foob;;ar"));
