@@ -1,21 +1,20 @@
 #include "check.h"
 #include <stdlib.h>
 
+extern TCase *tc_eventq(void);
 extern TCase *tc_filter(void);
 extern TCase *tc_glob(void);
 extern TCase *tc_munge(void);
 extern TCase *tc_proxy(void);
 
 #include "fixsmtpio_common.h"
-#include "fixsmtpio_eventq.h"
 #include "stralloc.h"
 #include "test_fixsmtpio_common.c"
-#include "test_fixsmtpio_eventq.c"
 
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_eventq;
+  TCase *tc_common;
 
   s = suite_create("fixsmtpio");
 
@@ -23,10 +22,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_common, test_prepends);
   suite_add_tcase(s, tc_common);
 
-  tc_eventq = tcase_create("eventq");
-  tcase_add_test(tc_eventq, test_eventq_put_and_get);
-  suite_add_tcase(s, tc_eventq);
-
+  suite_add_tcase(s, tc_eventq());
   suite_add_tcase(s, tc_filter());
   suite_add_tcase(s, tc_glob());
   suite_add_tcase(s, tc_munge());
