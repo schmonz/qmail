@@ -1,3 +1,7 @@
+#include "check.h"
+
+#include "fixsmtpio_filter.h"
+
 void assert_filter_rule(filter_rule *filter_rule, const char *event, int expected) {
   ck_assert_int_eq(filter_rule_applies(filter_rule, event), expected);
 }
@@ -92,3 +96,16 @@ START_TEST (test_munge_response) {
   assert_munge_response("512-grump\r\n256 mump\r\n", "512 grump\r\n256 mump", EXIT_LATER_NORMALLY, "yo.sup.local", rules, "ehlo");
 }
 END_TEST
+
+TCase *tc_filter(void) {
+  TCase *tc = tcase_create("");
+
+  tcase_add_test(tc, test_filter_rule_applies);
+  tcase_add_test(tc, test_want_munge_internally);
+  tcase_add_test(tc, test_want_munge_from_config);
+  tcase_add_test(tc, test_envvar_exists_if_needed);
+  tcase_add_test(tc, test_munge_response_line);
+  tcase_add_test(tc, test_munge_response);
+
+  return tc;
+}

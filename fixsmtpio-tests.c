@@ -1,22 +1,21 @@
 #include "check.h"
 #include <stdlib.h>
 
+extern TCase *tc_filter(void);
 extern TCase *tc_glob(void);
 extern TCase *tc_munge(void);
 extern TCase *tc_proxy(void);
 
 #include "fixsmtpio_common.h"
 #include "fixsmtpio_eventq.h"
-#include "fixsmtpio_filter.h"
 #include "stralloc.h"
 #include "test_fixsmtpio_common.c"
 #include "test_fixsmtpio_eventq.c"
-#include "test_fixsmtpio_filter.c"
 
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_eventq, *tc_filter;
+  TCase *tc_common, *tc_eventq;
 
   s = suite_create("fixsmtpio");
 
@@ -28,19 +27,9 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_eventq, test_eventq_put_and_get);
   suite_add_tcase(s, tc_eventq);
 
-  tc_filter = tcase_create("filter");
-  tcase_add_test(tc_filter, test_filter_rule_applies);
-  tcase_add_test(tc_filter, test_want_munge_internally);
-  tcase_add_test(tc_filter, test_want_munge_from_config);
-  tcase_add_test(tc_filter, test_envvar_exists_if_needed);
-  tcase_add_test(tc_filter, test_munge_response_line);
-  tcase_add_test(tc_filter, test_munge_response);
-  suite_add_tcase(s, tc_filter);
-
+  suite_add_tcase(s, tc_filter());
   suite_add_tcase(s, tc_glob());
-
   suite_add_tcase(s, tc_munge());
-
   suite_add_tcase(s, tc_proxy());
 
   return s;
