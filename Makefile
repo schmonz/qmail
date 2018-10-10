@@ -12,16 +12,16 @@ compile acceptutils_base64.c acceptutils_base64.h
 	./compile acceptutils_base64.c
 
 acceptutils-memcheck: \
-fixsmtpio-tests
-	valgrind --track-origins=yes --leak-check=full --error-exitcode=99 ./fixsmtpio-tests >/dev/null
+test_fixsmtpio
+	valgrind --track-origins=yes --leak-check=full --error-exitcode=99 ./test_fixsmtpio >/dev/null
 	#valgrind --track-origins=yes --leak-check=full --error-exitcode=88 ./fixsmtpio echo hi >/dev/null
 
 acceptutils-tests: \
-fixsmtpio-tests
+test_fixsmtpio
 
 acceptutils-tests-run: \
 acceptutils-tests
-	@prove -v -e '' ./fixsmtpio-tests | grep -v '^ok'
+	@prove -v -e '' ./test_fixsmtpio | grep -v '^ok'
 
 authup: \
 load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o \
@@ -140,9 +140,9 @@ fixsmtpio_readwrite.o: \
 compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_common.h error.h readwrite.h select.h
 	./compile fixsmtpio_readwrite.c
 
-fixsmtpio-tests: \
+test_fixsmtpio: \
 fixsmtpio \
-load fixsmtpio-tests.o fixsmtpio_common.o \
+load test_fixsmtpio.o fixsmtpio_common.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o \
 test_fixsmtpio_common.o test_fixsmtpio_eventq.o test_fixsmtpio_filter.o \
@@ -151,7 +151,7 @@ auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
-	./load fixsmtpio-tests fixsmtpio_common.o \
+	./load test_fixsmtpio fixsmtpio_common.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o \
 	test_fixsmtpio_common.o test_fixsmtpio_eventq.o test_fixsmtpio_filter.o \
@@ -161,9 +161,9 @@ libcheck.a rt.lib
 	case.a open.a fs.a \
 	libcheck.a -lpthread -lm `cat rt.lib`
 
-fixsmtpio-tests.o: \
-compile fixsmtpio-tests.c fixsmtpio.h check.h
-	./compile fixsmtpio-tests.c
+test_fixsmtpio.o: \
+compile test_fixsmtpio.c fixsmtpio.h check.h
+	./compile test_fixsmtpio.c
 
 libcheck.a: \
 conf-check
