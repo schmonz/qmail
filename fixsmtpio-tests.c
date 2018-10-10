@@ -1,6 +1,7 @@
 #include "check.h"
 #include <stdlib.h>
 
+extern TCase *tc_glob(void);
 extern TCase *tc_munge(void);
 extern TCase *tc_proxy(void);
 
@@ -11,12 +12,11 @@ extern TCase *tc_proxy(void);
 #include "test_fixsmtpio_common.c"
 #include "test_fixsmtpio_eventq.c"
 #include "test_fixsmtpio_filter.c"
-#include "test_fixsmtpio_glob.c"
 
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_eventq, *tc_filter, *tc_glob;
+  TCase *tc_common, *tc_eventq, *tc_filter;
 
   s = suite_create("fixsmtpio");
 
@@ -37,9 +37,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_filter, test_munge_response);
   suite_add_tcase(s, tc_filter);
 
-  tc_glob = tcase_create("glob");
-  tcase_add_test(tc_glob, test_string_matches_glob);
-  suite_add_tcase(s, tc_glob);
+  suite_add_tcase(s, tc_glob());
 
   suite_add_tcase(s, tc_munge());
 

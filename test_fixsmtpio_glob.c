@@ -1,3 +1,5 @@
+#include "check.h"
+
 #include "fixsmtpio_glob.h"
 
 START_TEST (test_string_matches_glob) {
@@ -23,3 +25,11 @@ START_TEST (test_string_matches_glob) {
   ck_assert(!string_matches_glob("4*", "I have eaten 450 french fries"));
 }
 END_TEST
+
+TCase *tc_glob(void) {
+  TCase *tc = tcase_create("");
+
+  tcase_add_test(tc, test_string_matches_glob);
+
+  return tc;
+}
