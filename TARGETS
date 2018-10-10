@@ -408,3 +408,4 @@ check.h
 check_stdint.h
 libcheck.a
 rt.lib
+test_fixsmtpio_proxy.o

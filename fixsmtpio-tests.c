@@ -1,8 +1,9 @@
 #include "check.h"
 #include <stdlib.h>
 
+#include "test_fixsmtpio_proxy.h"
+
 #include "fixsmtpio_common.h"
-#include "fixsmtpio_proxy.h"
 #include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
 #include "stralloc.h"
@@ -11,12 +12,11 @@
 #include "test_fixsmtpio_filter.c"
 #include "test_fixsmtpio_glob.c"
 #include "test_fixsmtpio_munge.c"
-#include "test_fixsmtpio_proxy.c"
 
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_eventq, *tc_filter, *tc_glob, *tc_munge, *tc_proxy;
+  TCase *tc_common, *tc_eventq, *tc_filter, *tc_glob, *tc_munge;
 
   s = suite_create("fixsmtpio");
 
@@ -48,16 +48,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_munge, test_munge_line_internally);
   suite_add_tcase(s, tc_munge);
 
-  tc_proxy = tcase_create("proxy");
-  tcase_add_test(tc_proxy, test_strip_last_eol);
-  tcase_add_test(tc_proxy, test_ends_with_newline);
-  tcase_add_test(tc_proxy, test_is_last_line_of_response);
-  tcase_add_test(tc_proxy, test_parse_client_request);
-  tcase_add_test(tc_proxy, test_get_one_response);
-  tcase_add_test(tc_proxy, test_is_last_line_of_data);
-  tcase_add_test(tc_proxy, test_construct_proxy_request);
-  tcase_add_test(tc_proxy, test_construct_proxy_response);
-  suite_add_tcase(s, tc_proxy);
+  suite_add_tcase(s, tc_proxy());
 
   return s;
 }

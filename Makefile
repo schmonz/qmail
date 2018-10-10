@@ -104,6 +104,11 @@ fixsmtpio_proxy.o: \
 compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h
 	./compile fixsmtpio_proxy.c
 
+test_fixsmtpio_proxy.o: \
+compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h \
+test_fixsmtpio_proxy.c test_fixsmtpio_proxy.h
+	./compile test_fixsmtpio_proxy.c
+
 fixsmtpio_readwrite.o: \
 compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_common.h error.h readwrite.h select.h
 	./compile fixsmtpio_readwrite.c
@@ -115,18 +120,21 @@ fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
+test_fixsmtpio_proxy.o \
 libcheck.a rt.lib
 	./load fixsmtpio-tests fixsmtpio_common.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \
+	test_fixsmtpio_proxy.o \
 	libcheck.a -lpthread -lm `cat rt.lib`
 
 fixsmtpio-tests.o: \
 compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h \
 test_fixsmtpio_common.c test_fixsmtpio_eventq.c test_fixsmtpio_filter.c \
-test_fixsmtpio_glob.c test_fixsmtpio_munge.c test_fixsmtpio_proxy.c
+test_fixsmtpio_glob.c test_fixsmtpio_munge.c \
+test_fixsmtpio_proxy.h
 	./compile fixsmtpio-tests.c
 
 libcheck.a: \

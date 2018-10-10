@@ -1,3 +1,8 @@
+#include "check.h"
+#include "fixsmtpio_common.h"
+
+#include "fixsmtpio_proxy.h"
+
 void assert_strip_last_eol(const char *input, const char *expected_output) {
   stralloc sa = {0}; stralloc_copys(&sa, input);
 
@@ -189,3 +194,18 @@ START_TEST (test_construct_proxy_response)
   // not want_data, not in_data, no request_received, no verb: it's a timeout
 }
 END_TEST
+
+TCase *tc_proxy(void) {
+  TCase *tcase = tcase_create("proxy");
+
+  tcase_add_test(tcase, test_strip_last_eol);
+  tcase_add_test(tcase, test_ends_with_newline);
+  tcase_add_test(tcase, test_is_last_line_of_response);
+  tcase_add_test(tcase, test_parse_client_request);
+  tcase_add_test(tcase, test_get_one_response);
+  tcase_add_test(tcase, test_is_last_line_of_data);
+  tcase_add_test(tcase, test_construct_proxy_request);
+  tcase_add_test(tcase, test_construct_proxy_response);
+
+  return tcase;
+}
