@@ -41,7 +41,7 @@ env.h control.h error.h scan.h auto_qmail.h
 	./compile authup.c
 
 check.h: \
-conf-check
+conf-check check_stdint.h
 	cat `head -1 conf-check`/include/check.h \
 	| sed 's}<check_stdint\.h>}"check_stdint.h"}g' \
 	> check.h
@@ -100,13 +100,20 @@ fixsmtpio_munge.o: \
 compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_common.h
 	./compile fixsmtpio_munge.c
 
+test_fixsmtpio_munge.o: \
+compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_common.h \
+fixsmtpio.h check.h \
+test_fixsmtpio_munge.c
+	./compile test_fixsmtpio_munge.c
+
 fixsmtpio_proxy.o: \
 compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h
 	./compile fixsmtpio_proxy.c
 
 test_fixsmtpio_proxy.o: \
 compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h \
-test_fixsmtpio_proxy.c test_fixsmtpio_proxy.h
+fixsmtpio.h check.h \
+test_fixsmtpio_proxy.c
 	./compile test_fixsmtpio_proxy.c
 
 fixsmtpio_readwrite.o: \
@@ -118,7 +125,7 @@ fixsmtpio \
 load fixsmtpio-tests.o fixsmtpio_common.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o \
-test_fixsmtpio_proxy.o \
+test_fixsmtpio_munge.o test_fixsmtpio_proxy.o \
 auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
@@ -126,17 +133,16 @@ libcheck.a rt.lib
 	./load fixsmtpio-tests fixsmtpio_common.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o \
-	test_fixsmtpio_proxy.o \
+	test_fixsmtpio_munge.o test_fixsmtpio_proxy.o \
 	auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \
 	libcheck.a -lpthread -lm `cat rt.lib`
 
 fixsmtpio-tests.o: \
-compile fixsmtpio-tests.c fixsmtpio.h check_stdint.h check.h \
+compile fixsmtpio-tests.c fixsmtpio.h check.h \
 test_fixsmtpio_common.c test_fixsmtpio_eventq.c test_fixsmtpio_filter.c \
-test_fixsmtpio_glob.c test_fixsmtpio_munge.c \
-test_fixsmtpio_proxy.h
+test_fixsmtpio_glob.c test_fixsmtpio_munge.c
 	./compile fixsmtpio-tests.c
 
 libcheck.a: \

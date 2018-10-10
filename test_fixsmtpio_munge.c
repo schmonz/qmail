@@ -1,3 +1,7 @@
+#include "check.h"
+
+#include "fixsmtpio_munge.h"
+
 void assert_change_every_line_fourth_char_to_dash( char *input, char *expected_response) {
   stralloc response_sa = {0}; stralloc_copys(&response_sa, input);
   change_every_line_fourth_char_to_dash(&response_sa);
@@ -135,3 +139,14 @@ START_TEST (test_munge_line_internally) {
   assert_munge_line_internally("221 get outta here", 0, "yo.sup.local", "quit", "221 yo.sup.local");
 }
 END_TEST
+
+TCase *tc_munge(void) {
+  TCase *tc = tcase_create("");
+
+  tcase_add_test(tc, test_change_every_line_fourth_char_to_dash);
+  tcase_add_test(tc, test_change_last_line_fourth_char_to_space);
+  tcase_add_test(tc, test_event_matches);
+  tcase_add_test(tc, test_munge_line_internally);
+
+  return tc;
+}

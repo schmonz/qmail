@@ -9,3 +9,5 @@ void munge_quit(stralloc *,int,stralloc *);
 void reformat_multiline_response(stralloc *);
 int event_matches(char *,const char *);
 void munge_line_internally(stralloc *,int,stralloc *,const char *);
+void change_every_line_fourth_char_to_dash(stralloc *);
+void change_last_line_fourth_char_to_space(stralloc *);

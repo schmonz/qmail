@@ -1,7 +1,8 @@
 #include "check.h"
 #include <stdlib.h>
 
-#include "test_fixsmtpio_proxy.h"
+extern TCase *tc_munge(void);
+extern TCase *tc_proxy(void);
 
 #include "fixsmtpio_common.h"
 #include "fixsmtpio_eventq.h"
@@ -11,12 +12,11 @@
 #include "test_fixsmtpio_eventq.c"
 #include "test_fixsmtpio_filter.c"
 #include "test_fixsmtpio_glob.c"
-#include "test_fixsmtpio_munge.c"
 
 Suite * fixsmtpio_suite(void)
 {
   Suite *s;
-  TCase *tc_common, *tc_eventq, *tc_filter, *tc_glob, *tc_munge;
+  TCase *tc_common, *tc_eventq, *tc_filter, *tc_glob;
 
   s = suite_create("fixsmtpio");
 
@@ -41,12 +41,7 @@ Suite * fixsmtpio_suite(void)
   tcase_add_test(tc_glob, test_string_matches_glob);
   suite_add_tcase(s, tc_glob);
 
-  tc_munge = tcase_create("munge");
-  tcase_add_test(tc_munge, test_change_every_line_fourth_char_to_dash);
-  tcase_add_test(tc_munge, test_change_last_line_fourth_char_to_space);
-  tcase_add_test(tc_munge, test_event_matches);
-  tcase_add_test(tc_munge, test_munge_line_internally);
-  suite_add_tcase(s, tc_munge);
+  suite_add_tcase(s, tc_munge());
 
   suite_add_tcase(s, tc_proxy());
 
