@@ -86,7 +86,8 @@ compile fixsmtpio_common.c fixsmtpio.h fixsmtpio_common.h readwrite.h
 
 test_fixsmtpio_common.o: \
 compile fixsmtpio_common.c fixsmtpio.h fixsmtpio_common.h readwrite.h \
-fixsmtpio.h check.h
+check.h \
+test_fixsmtpio_common.c
 	./compile test_fixsmtpio_common.c
 
 fixsmtpio_eventq.o: \
@@ -95,7 +96,8 @@ compile fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_common.h fixsmtpi
 
 test_fixsmtpio_eventq.o: \
 compile fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_common.h fixsmtpio_eventq.h \
-fixsmtpio.h check.h
+check.h \
+test_fixsmtpio_eventq.c
 	./compile test_fixsmtpio_eventq.c
 
 fixsmtpio_filter.o: \
@@ -104,7 +106,8 @@ compile fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_common.h fixsmtpio_munge
 
 test_fixsmtpio_filter.o: \
 compile fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_common.h fixsmtpio_munge.h fixsmtpio_glob.h \
-fixsmtpio.h check.h
+check.h \
+test_fixsmtpio_filter.c
 	./compile test_fixsmtpio_filter.c
 
 fixsmtpio_glob.o: \
@@ -113,7 +116,8 @@ compile fixsmtpio_glob.c fixsmtpio_glob.h
 
 test_fixsmtpio_glob.o: \
 compile fixsmtpio_glob.c fixsmtpio_glob.h \
-fixsmtpio.h check.h
+check.h \
+test_fixsmtpio_glob.c
 	./compile test_fixsmtpio_glob.c
 
 fixsmtpio_munge.o: \
@@ -122,7 +126,7 @@ compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_common.h
 
 test_fixsmtpio_munge.o: \
 compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_common.h \
-fixsmtpio.h check.h \
+check.h \
 test_fixsmtpio_munge.c
 	./compile test_fixsmtpio_munge.c
 
@@ -132,7 +136,7 @@ compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_comm
 
 test_fixsmtpio_proxy.o: \
 compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h \
-fixsmtpio.h check.h \
+check.h \
 test_fixsmtpio_proxy.c
 	./compile test_fixsmtpio_proxy.c
 
