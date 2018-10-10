@@ -117,17 +117,19 @@ fixsmtpio-tests: \
 fixsmtpio \
 load fixsmtpio-tests.o fixsmtpio_common.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
-fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
+fixsmtpio_filter.o fixsmtpio_proxy.o \
+test_fixsmtpio_proxy.o \
+auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
-test_fixsmtpio_proxy.o \
 libcheck.a rt.lib
 	./load fixsmtpio-tests fixsmtpio_common.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
-	fixsmtpio_filter.o fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
+	fixsmtpio_filter.o fixsmtpio_proxy.o \
+	test_fixsmtpio_proxy.o \
+	auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a \
-	test_fixsmtpio_proxy.o \
 	libcheck.a -lpthread -lm `cat rt.lib`
 
 fixsmtpio-tests.o: \
