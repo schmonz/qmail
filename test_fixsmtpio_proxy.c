@@ -196,16 +196,16 @@ START_TEST (test_construct_proxy_response)
 END_TEST
 
 TCase *tc_proxy(void) {
-  TCase *tcase = tcase_create("proxy");
+  TCase *tc = tcase_create("");
 
-  tcase_add_test(tcase, test_strip_last_eol);
-  tcase_add_test(tcase, test_ends_with_newline);
-  tcase_add_test(tcase, test_is_last_line_of_response);
-  tcase_add_test(tcase, test_parse_client_request);
-  tcase_add_test(tcase, test_get_one_response);
-  tcase_add_test(tcase, test_is_last_line_of_data);
-  tcase_add_test(tcase, test_construct_proxy_request);
-  tcase_add_test(tcase, test_construct_proxy_response);
+  tcase_add_test(tc, test_strip_last_eol);
+  tcase_add_test(tc, test_ends_with_newline);
+  tcase_add_test(tc, test_is_last_line_of_response);
+  tcase_add_test(tc, test_parse_client_request);
+  tcase_add_test(tc, test_get_one_response);
+  tcase_add_test(tc, test_is_last_line_of_data);
+  tcase_add_test(tc, test_construct_proxy_request);
+  tcase_add_test(tc, test_construct_proxy_response);
 
-  return tcase;
+  return tc;
 }
