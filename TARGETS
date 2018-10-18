@@ -409,6 +409,7 @@ check_stdint.h
 libcheck.a
 rt.lib
 test_fixsmtpio_common.o
+test_fixsmtpio_control.o
 test_fixsmtpio_eventq.o
 test_fixsmtpio_filter.o
 test_fixsmtpio_glob.o

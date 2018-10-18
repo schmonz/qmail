@@ -90,6 +90,12 @@ check.h \
 test_fixsmtpio_common.c
 	./compile test_fixsmtpio_common.c
 
+test_fixsmtpio_control.o: \
+compile fixsmtpio_filter.h \
+check.h \
+test_fixsmtpio_control.c
+	./compile test_fixsmtpio_control.c
+
 fixsmtpio_eventq.o: \
 compile fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_common.h fixsmtpio_eventq.h
 	./compile fixsmtpio_eventq.c
@@ -149,6 +155,7 @@ fixsmtpio \
 load test_fixsmtpio.o fixsmtpio_common.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o \
+test_fixsmtpio_control.o \
 test_fixsmtpio_common.o test_fixsmtpio_eventq.o test_fixsmtpio_filter.o \
 test_fixsmtpio_glob.o test_fixsmtpio_munge.o test_fixsmtpio_proxy.o \
 auto_qmail.o control.o getln.a \
@@ -158,6 +165,7 @@ libcheck.a rt.lib
 	./load test_fixsmtpio fixsmtpio_common.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o \
+	test_fixsmtpio_control.o \
 	test_fixsmtpio_common.o test_fixsmtpio_eventq.o test_fixsmtpio_filter.o \
 	test_fixsmtpio_glob.o test_fixsmtpio_munge.o test_fixsmtpio_proxy.o \
 	auto_qmail.o control.o getln.a \
