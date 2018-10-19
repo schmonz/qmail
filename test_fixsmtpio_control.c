@@ -40,9 +40,9 @@ filter_rule *parse_control_line(stralloc *control_line) {
         stralloc_0(&value);
         if (0 == fields_seen) rule->env = value.s;
         if (1 == fields_seen) rule->event = value.s;
+        stralloc_copys(&value, "");
       }
       fields_seen++;
-      stralloc_copys(&value, "");
     } else {
       stralloc_append(&value, c);
     }
