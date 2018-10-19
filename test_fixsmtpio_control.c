@@ -23,13 +23,13 @@ void assert_parsed_line(filter_rule *rule,
 filter_rule *parse_control_line(stralloc *control_line) {
   filter_rule *rule = (filter_rule *)alloc(sizeof(filter_rule));
 
-  rule->next	              = NULL;
-  rule->env	                = NULL;
-  rule->event	              = NULL;
-  rule->request_prepend	    = NULL;
-  rule->response_line_glob	= NULL;
-  rule->exitcode	          = 0;
-  rule->response	          = NULL;
+  rule->next                = NULL;
+  rule->env                 = NULL;
+  rule->event               = NULL;
+  rule->request_prepend     = NULL;
+  rule->response_line_glob  = NULL;
+  rule->exitcode            = 0;
+  rule->response            = NULL;
 
   stralloc value = {0}; stralloc_copys(&value, "");
   int fields_seen = 0;
