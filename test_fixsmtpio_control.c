@@ -76,48 +76,59 @@ filter_rule *parse_control_line(stralloc *line) {
 START_TEST (test_blank_line)
 {
   stralloc line = {0};
-  filter_rule *rule = parse_control_line(&line);
-  assert_parsed_line(rule, NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL);
+  assert_parsed_line(
+      parse_control_line(&line),
+      NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
+  );
 }
 END_TEST
 
 START_TEST (test_nonblank_line)
 {
   stralloc line = {0}; stralloc_copys(&line, ",");
-  filter_rule *rule = parse_control_line(&line);
-  assert_parsed_line(rule, NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL);
+  assert_parsed_line(
+      parse_control_line(&line),
+      NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
+  );
 }
 END_TEST
 
 START_TEST (test_no_env_or_event)
 {
   stralloc line = {0}; stralloc_copys(&line, ":");
-  filter_rule *rule = parse_control_line(&line);
-  assert_parsed_line(rule, NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL);
+  assert_parsed_line(
+      parse_control_line(&line),
+      NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
+  );
 }
 END_TEST
 
 START_TEST (test_no_env_yes_event)
 {
   stralloc line = {0}; stralloc_copys(&line, ":smtp_verb");
-  filter_rule *rule = parse_control_line(&line);
-  assert_parsed_line(rule, NULL, "smtp_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL);
+  assert_parsed_line(
+      parse_control_line(&line),
+      NULL, "smtp_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL
+  );
 }
 END_TEST
 
 START_TEST (test_yes_env_yes_event)
 {
   stralloc line = {0}; stralloc_copys(&line, "ENV_VAR:some_verb");
-  filter_rule *rule = parse_control_line(&line);
-  assert_parsed_line(rule, "ENV_VAR", "some_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL);
+  assert_parsed_line(
+      parse_control_line(&line),
+      "ENV_VAR", "some_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL
+  );
 }
 END_TEST
 
 START_TEST (test_realistic_line)
 {
   stralloc line = {0}; stralloc_copys(&line, ":word:NOOP :*::250 indeed");
-  filter_rule *rule = parse_control_line(&line);
-  assert_parsed_line(rule, NULL, "word", "NOOP ", "*", EXIT_LATER_NORMALLY, "250 indeed");
+  assert_parsed_line(
+      parse_control_line(&line),
+      NULL, "word", "NOOP ", "*", EXIT_LATER_NORMALLY, "250 indeed");
 }
 END_TEST
 
