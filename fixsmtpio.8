@@ -1,4 +1,4 @@
-.TH fixsmtpio 8
+.TH FIXSMTPIO 8 2018-10-19
 .SH NAME
 fixsmtpio \- filter SMTP I/O and exit status
 .SH SYNOPSIS
@@ -7,20 +7,20 @@ fixsmtpio \- filter SMTP I/O and exit status
 .SH DESCRIPTION
 .B fixsmtpio
 is an SMTP proxy.
-It wraps a program that runs from
-.B tcpserver
-and provides SMTP service, such as
-.B ofmipd
-or
-.BR qmail-smtpd .
-When
-.B authup
-has already initiated an authenticated SMTP session,
+It synchronously and transparently wraps
+.BR ofmipd ,
+.BR qmail-smtpd ,
+or any other SMTP server designed to run from
+.BR tcpserver .
 .B fixsmtpio
-can be configured to adjust the remainder of the conversation:
-exit codes, responses, and occasionally even requests.
+can be configured to adjust certain
+client requests,
+server responses,
+and exit codes,
+most commonly to continue authenticated SMTP sessions started by
+.BR authup .
 
-Until it's been configured,
+With no configuration,
 .B fixsmtpio
 changes no observable behavior.
 If you observe otherwise, please report the bug.
@@ -28,80 +28,83 @@ If you observe otherwise, please report the bug.
 The
 .B "EXIT CODES"
 section is especially important for this program.
-Here it is.
 .SH "EXIT CODES"
-If its configuration file fails to parse,
-.B fixsmtpio
-exits 18.
 .B authup
-understands this.
+expects
+.B fixsmtpio
+to exit 18
+when its configuration fails to parse.
+.B fixsmtpio
+does so.
 
 .B authup
-needs to distinguish authentication failures from other kinds.
-Without
-.BR fixsmtpio ,
-a child exiting 1 could mean either "incorrect
-password" from
-.B checkpassword
-or "any error condition whatsoever" from
+expects
+.B fixsmtpio
+to exit with distinct codes for distinct conditions,
+even though
 .B ofmipd
-or
-.BR qmail-smtpd .
-With
-.BR fixsmtpio ,
-non-authentication failures can exit with the unique codes understood by
-.BR authup .
+and
+.B qmail-smtpd
+exit 1 for any error whatsoever --
+which happens to be the same code
+.B checkpassword
+uses to indicate a password is unacceptable!
+.B fixsmtpio
+can and should be configured
+to exit 16
+when the server times out,
+(XXX then what is 17?)
+XXX other condition,
+XXX another condition.
 See
 .BR EXAMPLES .
-
 .SH "ENVIRONMENT VARIABLES"
-Typical filter rules (see
-.BR "CONTROL FILES" ,
-below)
-apply if and only if
-.B AUTHUP_USER
-is set.
 .B authup
-sets it.
+sets
+.B AUTHUP_USER
+in the environment.
+Typical filter rules apply if and only if this variable is present.
+.SH "FILTER RULES"
+Filter rules follow the format:
 
-.SH "CONTROL FILES"
 [env]:event:[request-prepend]:response-line-glob:[exitcode][:response]
+
+(Values may not contain ":", the field separator.)
 .TP 5
-.I fixsmtpio
-Filter rules in the above format.
-Default: none.
-Values may not contain ":", the field separator.
-
 .I env
+.br
 (optional)
-is an environment variable that must be present for the rule to apply.
+Environment variable that must be present for the rule to apply.
 If empty, no environment variable is required.
-
+.TP 5
 .I event
+.br
 (required)
-is an SMTP verb (or "clienteof", "greeting", or "timeout")
+SMTP verb (or "clienteof", "greeting", or "timeout")
 for which requests, responses, or both are to be filtered.
 This field is matched case-insensitively.
-
+.TP 5
 .I request-prepend
+.br
 (optional)
-is a string to be prepended to the request before it's seen by the server.
+String to be prepended to the request before it's seen by the server.
 Since
 .B NOOP
 is an SMTP verb that servers accept and do nothing interesting with,
 "NOOP" followed by a space prevents the server from taking unwanted action.
 If empty, the request is sent as is.
-
+.TP 5
 .I response-line-glob
+.br
 (required)
-is an
 .BR fnmatch(3) -style
 glob pattern, with no special options set.
 The rule applies to every matching line of the server response.
-
+.TP 5
 .I exitcode
+.br
 (optional)
-is a numeric code with which
+Numeric code with which
 .B fixsmtpio
 is to immediately exit.
 If empty, it exits when it normally would.
@@ -109,44 +112,48 @@ If no rules override it,
 .B fixsmtpio
 exits with the same code as
 .IR prog .
-
+.TP 5
 .I response
+.br
 (optional)
-is a string that replaces every matching line of the server response.
+String that replaces every matching line of the server response.
 If empty, matching lines are removed.
 
-As a special case, if
-.B response
-is set to "&fixsmtpio",
-the replacement string is computed by an internal routine for that event.
-(If no such internal routine exists,
+Special case:
+"&nofixsmtpio"
+causes the response to be sent as is.
+
+Special case:
+"&fixsmtpio"
+computes the replacement string via an event-specific internal routine.
+(If no corresponding routine exists,
 .B fixsmtpio
 emits an error and exits.)
-For
-.BR HELP ,
+Routines exist for
+.TP 10
+.BR HELP :
+.br
+Prepend this program's home page,
 in an attempt to direct support requests to
-.BR AUTHOR ,
-an internal routine can
-prepend this program's home page.
+.BR AUTHOR .
 Please enable it!
-For "greeting",
+.TP 10
+.BR "greeting",
 .BR EHLO ,
 .BR HELO ,
 and
-.BR QUIT ,
-internal routines can include
+.BR QUIT :
+.br
+Include
 .I smtpgreeting
-in the response, just as
-.B qmail-smtpd
-already does.
-These are therefore primarily useful with
-.BR ofmipd .
-
-As another special case, if
-.B response
-is "&nofixsmtpio",
-the response is sent as is.
-
+in the response.
+This is harmless with
+.BR qmail-smtpd ,
+which already does so,
+and makes
+.BR ofmipd 's
+behavior match.
+.TP 0
 Rules are applied in the order written. For instance, if two rules
 match, the later rule modifies the response returned by the
 earlier rule.
@@ -157,7 +164,14 @@ the last one wins.
 Not all rules (alone or in combination) make practical sense.
 An earlier rule can cause a later one to start (or stop) matching.
 Keep your configuration as simple as possible, and test it well.
-
+See
+.BR EXAMPLES .
+.SH "CONTROL FILES"
+.TP 5
+.I fixsmtpio
+Filter rules as described in
+.BR "FILTER RULES" .
+Default: none.
 .TP 5
 .I smtpgreeting
 SMTP greeting message.
@@ -170,12 +184,9 @@ will refuse to run.
 The first word of
 .I smtpgreeting
 should be the current host's name.
-
-
 .SH "EXAMPLES"
 See
 .IR https://schmonz.com/qmail/acceptutils .
-
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
