@@ -91,7 +91,7 @@ String to be prepended to the request before it's seen by the server.
 Since
 .B NOOP
 is an SMTP verb that servers accept and do nothing interesting with,
-"NOOP" followed by a space prevents the server from taking unwanted action.
+"NOOP " (with trailing space) prevents the server from taking unwanted action.
 If empty, the request is sent as is.
 .TP 5
 .I response-line-glob
@@ -150,9 +150,9 @@ in the response.
 This is harmless with
 .BR qmail-smtpd ,
 which already does so,
-and makes
+and updates
 .BR ofmipd 's
-behavior match.
+behavior to match.
 .TP 0
 Rules are applied in the order written. For instance, if two rules
 match, the later rule modifies the response returned by the
