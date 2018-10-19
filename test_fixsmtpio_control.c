@@ -2,28 +2,22 @@
 
 #include "fixsmtpio_filter.h"
 
+#define assert_str_null_or_eq(s1,s2) \
+  if (s1 == NULL) \
+    ck_assert_ptr_null(s2); \
+  else \
+    ck_assert_str_eq(s1, s2);
+
 void assert_parsed_line(filter_rule *rule,
                         char *env,char *event,char *request_prepend,
                         char *response_line_glob,int exitcode,char *response) {
   ck_assert_ptr_null(rule->next);
-
-  if (env == NULL) ck_assert_ptr_null(rule->env);
-  else ck_assert_str_eq(env, rule->env);
-
-  if (event == NULL) ck_assert_ptr_null(rule->event);
-  else ck_assert_str_eq(event, rule->event);
-
-  if (request_prepend == NULL) ck_assert_ptr_null(rule->request_prepend);
-  else ck_assert_str_eq(request_prepend, rule->request_prepend);
-
-  if (response_line_glob == NULL) ck_assert_ptr_null(rule->response_line_glob);
-  else ck_assert_str_eq(response_line_glob, rule->response_line_glob);
-
+  assert_str_null_or_eq(env, rule->env);
+  assert_str_null_or_eq(event, rule->event);
+  assert_str_null_or_eq(request_prepend, rule->request_prepend);
+  assert_str_null_or_eq(response_line_glob, rule->response_line_glob);
   ck_assert_int_eq(exitcode, rule->exitcode);
-
-  if (response == NULL) ck_assert_ptr_null(rule->response);
-  else ck_assert_str_eq(response, rule->response);
-
+  assert_str_null_or_eq(response, rule->response);
 }
 
 filter_rule *parse_control_line(stralloc *control_line) {
