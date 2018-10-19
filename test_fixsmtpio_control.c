@@ -20,7 +20,7 @@ void assert_parsed_line(filter_rule *rule,
   assert_str_null_or_eq(response, rule->response);
 }
 
-filter_rule *parse_control_line(stralloc *control_line) {
+filter_rule *parse_control_line(stralloc *line) {
   filter_rule *rule = (filter_rule *)alloc(sizeof(filter_rule));
 
   rule->next                = NULL;
@@ -33,22 +33,36 @@ filter_rule *parse_control_line(stralloc *control_line) {
 
   stralloc value = {0}; stralloc_copys(&value, "");
   int fields_seen = 0;
-  for (int i = 0; i < control_line->len; i++) {
-    char *c = &control_line->s[i];
-    if (':' == *c) {
+  char *s;
+  for (int i = 0; i < line->len; i++) {
+    char c = line->s[i];
+    if (':' == c) {
+      fields_seen++;
       if (value.len) {
         stralloc_0(&value);
-        if (0 == fields_seen) rule->env = value.s;
-        if (1 == fields_seen) rule->event = value.s;
+        s = (char *)alloc(value.len);
+        str_copy(s, value.s);
         stralloc_copys(&value, "");
+        switch (fields_seen) {
+          case 1: rule->env   = s; break;
+          case 2: rule->event = s; break;
+        }
       }
-      fields_seen++;
     } else {
-      stralloc_append(&value, c);
+      stralloc_append(&value, &c);
     }
   }
+
+  fields_seen++;
   if (value.len) {
-    if (1 == fields_seen) rule->event = value.s;
+    stralloc_0(&value);
+    s = (char *)alloc(value.len);
+    str_copy(s, value.s);
+    stralloc_copys(&value, "");
+    switch (fields_seen) {
+      case 2:
+        rule->event = s; break;
+    }
   }
 
   return rule;
@@ -56,41 +70,41 @@ filter_rule *parse_control_line(stralloc *control_line) {
 
 START_TEST (test_blank_line)
 {
-  stralloc control_line = {0};
-
-  filter_rule *rule = parse_control_line(&control_line);
-
+  stralloc line = {0};
+  filter_rule *rule = parse_control_line(&line);
   assert_parsed_line(rule, NULL, NULL, NULL, NULL, 0, NULL);
 }
 END_TEST
 
 START_TEST (test_nonblank_line)
 {
-  stralloc control_line = {0}; stralloc_copys(&control_line, ",");
-
-  filter_rule *rule = parse_control_line(&control_line);
-
+  stralloc line = {0}; stralloc_copys(&line, ",");
+  filter_rule *rule = parse_control_line(&line);
   assert_parsed_line(rule, NULL, NULL, NULL, NULL, 0, NULL);
 }
 END_TEST
 
 START_TEST (test_no_env_or_event)
 {
-  stralloc control_line = {0}; stralloc_copys(&control_line, ":");
-
-  filter_rule *rule = parse_control_line(&control_line);
-
+  stralloc line = {0}; stralloc_copys(&line, ":");
+  filter_rule *rule = parse_control_line(&line);
   assert_parsed_line(rule, NULL, NULL, NULL, NULL, 0, NULL);
 }
 END_TEST
 
 START_TEST (test_no_env_yes_event)
 {
-  stralloc control_line = {0}; stralloc_copys(&control_line, ":smtp_verb");
-
-  filter_rule *rule = parse_control_line(&control_line);
-
+  stralloc line = {0}; stralloc_copys(&line, ":smtp_verb");
+  filter_rule *rule = parse_control_line(&line);
   assert_parsed_line(rule, NULL, "smtp_verb", NULL, NULL, 0, NULL);
+}
+END_TEST
+
+START_TEST (test_yes_env_yes_event)
+{
+  stralloc line = {0}; stralloc_copys(&line, "ENV_VAR:some_verb");
+  filter_rule *rule = parse_control_line(&line);
+  assert_parsed_line(rule, "ENV_VAR", "some_verb", NULL, NULL, 0, NULL);
 }
 END_TEST
 
@@ -101,6 +115,7 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_nonblank_line);
   tcase_add_test(tc, test_no_env_or_event);
   tcase_add_test(tc, test_no_env_yes_event);
+  tcase_add_test(tc, test_yes_env_yes_event);
 
   return tc;
 }
