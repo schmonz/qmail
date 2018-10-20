@@ -6,6 +6,7 @@ filter_rule *parse_control_line(stralloc *line) {
   filter_rule *rule = (filter_rule *)alloc(sizeof(filter_rule));
 
   rule->next                = NULL;
+
   rule->env                 = NULL;
   rule->event               = NULL;
   rule->request_prepend     = NULL;
@@ -55,6 +56,8 @@ filter_rule *parse_control_line(stralloc *line) {
     }
   }
 
+  if (fields_seen < 6) return NULL;
+
   return rule;
 }
 
@@ -70,6 +73,7 @@ void assert_parsed_line(char *input,
   stralloc line = {0}; stralloc_copys(&line, input);
   filter_rule *rule = parse_control_line(&line);
 
+  ck_assert_ptr_nonnull(rule);
   ck_assert_ptr_null(rule->next);
   assert_str_null_or_eq(env, rule->env);
   assert_str_null_or_eq(event, rule->event);
@@ -84,73 +88,48 @@ void assert_non_parsed_line(char *input) {
   ck_assert_ptr_null(parse_control_line(&line));
 }
 
-START_TEST (test_blank_line) {
-  assert_parsed_line(
-      "",
-      NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
-  );
+START_TEST (test_reject_blank_line) {
+  assert_non_parsed_line("");
 } END_TEST
 
-START_TEST (test_nonblank_line) {
-  assert_parsed_line(
-      ",",
-      NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
-  );
+START_TEST (test_reject_just_a_comma) {
+  assert_non_parsed_line(",");
 } END_TEST
 
-START_TEST (test_no_env_or_event) {
-  assert_parsed_line(
-      ":",
-      NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
-  );
+START_TEST (test_reject_just_a_colon) {
+  assert_non_parsed_line(":");
 } END_TEST
 
-START_TEST (test_no_env_yes_event) {
-  assert_parsed_line(
-      ":smtp_verb",
-      NULL, "smtp_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL
-  );
-} END_TEST
-
-START_TEST (test_yes_env_yes_event) {
-  assert_parsed_line(
-      "ENV_VAR:some_verb",
-      "ENV_VAR", "some_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL
-  );
-} END_TEST
-
-START_TEST (test_realistic_line) {
+START_TEST (test_accept_realistic_line) {
   assert_parsed_line(
       ":word:NOOP :*::250 indeed",
       NULL, "word", "NOOP ", "*", EXIT_LATER_NORMALLY, "250 indeed");
 } END_TEST
 
-START_TEST (test_valid_exitcode) {
+START_TEST (test_accept_valid_exitcode) {
   assert_parsed_line(
       ":sup::*:5:250 yo",
       NULL, "sup", NULL, "*", 5, "250 yo");
 } END_TEST
 
-START_TEST (test_exitcode_too_large) {
+START_TEST (test_reject_exitcode_too_large) {
   assert_non_parsed_line(":e::*:500:r");
 } END_TEST
 
-START_TEST (test_exitcode_non_numeric) {
+START_TEST (test_reject_exitcode_non_numeric) {
   assert_non_parsed_line(":e::*:-5:r");
 } END_TEST
 
 TCase *tc_control(void) {
   TCase *tc = tcase_create("");
 
-  tcase_add_test(tc, test_blank_line);
-  tcase_add_test(tc, test_nonblank_line);
-  tcase_add_test(tc, test_no_env_or_event);
-  tcase_add_test(tc, test_no_env_yes_event);
-  tcase_add_test(tc, test_yes_env_yes_event);
-  tcase_add_test(tc, test_realistic_line);
-  tcase_add_test(tc, test_valid_exitcode);
-  tcase_add_test(tc, test_exitcode_too_large);
-  tcase_add_test(tc, test_exitcode_non_numeric);
+  tcase_add_test(tc, test_reject_blank_line);
+  tcase_add_test(tc, test_reject_just_a_comma);
+  tcase_add_test(tc, test_reject_just_a_colon);
+  tcase_add_test(tc, test_accept_realistic_line);
+  tcase_add_test(tc, test_accept_valid_exitcode);
+  tcase_add_test(tc, test_reject_exitcode_too_large);
+  tcase_add_test(tc, test_reject_exitcode_non_numeric);
 
   return tc;
 }
