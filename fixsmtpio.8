@@ -33,31 +33,35 @@ section is especially important for this program.
 expects
 .B fixsmtpio
 to exit 18
-when its configuration fails to parse.
+when
+.I control/fixsmtpio
+exists and fails to parse.
 .B fixsmtpio
 does so.
 
 .B authup
-expects
-.B fixsmtpio
-to exit with distinct codes for distinct conditions,
-even though
+expects distinct exit codes for distinct conditions.
+.B checkpassword
+exits 1 when a password is unacceptable.
 .B ofmipd
 and
 .B qmail-smtpd
-exit 1 for any error whatsoever --
-which happens to be the same code
-.B checkpassword
-uses to indicate a password is unacceptable!
+exit 1 when any error occurs.
 .B fixsmtpio
-can and should be configured
-to exit 16
+can and should be configured to exit
+.TP 3
+14
+when the server greeting code starts with 4 (temporary failure),
+.TP 3
+15
+when the server greeting code starts with 5 (permanent failure),
+.TP 3
+16
 when the server times out,
-(XXX then what is 17?)
-XXX other condition,
-XXX another condition.
-See
-.BR EXAMPLES .
+and
+.TP 3
+0
+when the server receives EOF from the client.
 .SH "ENVIRONMENT VARIABLES"
 .B authup
 sets

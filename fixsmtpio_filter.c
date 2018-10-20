@@ -100,7 +100,7 @@ filter_rule *load_filter_rules(void) {
   for (linestart = 0, pos = 0; pos < lines.len; pos++) {
     if (lines.s[pos] == '\0') {
       filter_rule *rule = parse_control_line(lines.s + linestart);
-      if (0 == rule) die_control(); // XXX die_18("error");
+      if (0 == rule) die_parse();
       backwards_rules = prepend_rule(backwards_rules, rule);
       linestart = pos + 1;
     }
