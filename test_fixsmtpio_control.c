@@ -44,7 +44,7 @@ static filter_rule *parse_control_line(stralloc *line) {
 
   for (i = 0; i < line->len; i++) {
     char c = line->s[i];
-    if (':' == c) parse_field(&fields_seen, &value, rule);
+    if (':' == c && fields_seen < 5) parse_field(&fields_seen, &value, rule);
     else stralloc_append(&value, &c);
   }
   parse_field(&fields_seen, &value, rule);
@@ -161,6 +161,26 @@ START_TEST (test_accept_empty_response) {
   );
 } END_TEST
 
+START_TEST (test_reject_response_not_specified) {
+  assert_non_parsed_line(
+    "env:event:prepend:glob:55"
+  );
+} END_TEST
+
+START_TEST (test_accept_response_containing_space) {
+  assert_parsed_line(
+    "env:event:prepend:glob:55:response 250 ok",
+    "env","event","prepend","glob",55,"response 250 ok"
+  );
+} END_TEST
+
+START_TEST (test_accept_response_containing_colon) {
+  assert_parsed_line(
+    "env:event:prepend:glob:55:response: 250 ok",
+    "env","event","prepend","glob",55,"response: 250 ok"
+  );
+} END_TEST
+
 START_TEST (test_accept_realistic_line) {
   assert_parsed_line(
     ":word:NOOP :*::250 indeed",
@@ -183,6 +203,9 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_reject_exitcode_too_large);
   tcase_add_test(tc, test_accept_valid_exitcode);
   tcase_add_test(tc, test_accept_empty_response);
+  tcase_add_test(tc, test_reject_response_not_specified);
+  tcase_add_test(tc, test_accept_response_containing_space);
+  tcase_add_test(tc, test_accept_response_containing_colon);
   tcase_add_test(tc, test_accept_realistic_line);
 
   return tc;
