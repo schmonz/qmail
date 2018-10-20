@@ -9,8 +9,8 @@ int want_munge_internally(char *response) {
   return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
 }
 
-int want_munge_from_config(char *response) {
-  return 0 != str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
+int want_leave_line_as_is(char *response) {
+  return 0 == str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
 }
 
 int envvar_exists_if_needed(char *envvar) {
@@ -42,7 +42,7 @@ void munge_response_line(int lineno,
     munge_exitcode(exitcode,rule);
     if (want_munge_internally(rule->response))
       munge_line_internally(line,lineno,greeting,event);
-    else if (want_munge_from_config(rule->response))
+    else if (!want_leave_line_as_is(rule->response))
       copys(line,rule->response);
   }
   if (line->len) if (!ends_with_newline(line)) cats(line,"\r\n");

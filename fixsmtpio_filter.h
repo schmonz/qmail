@@ -14,7 +14,7 @@ typedef struct filter_rule {
 } filter_rule;
 
 extern int want_munge_internally(char *);
-extern int want_munge_from_config(char *);
+extern int want_leave_line_as_is(char *);
 extern int envvar_exists_if_needed(char *);
 
 extern filter_rule * load_filter_rules(void);

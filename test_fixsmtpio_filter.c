@@ -30,12 +30,12 @@ START_TEST (test_want_munge_internally) {
 }
 END_TEST
 
-START_TEST (test_want_munge_from_config) {
-  ck_assert_int_eq(0, want_munge_from_config("&nofixsmtpio"));
-  ck_assert_int_eq(1, want_munge_from_config("&fixsmtpio"));
-  ck_assert_int_eq(1, want_munge_from_config(""));
-  //ck_assert_int_eq(1, want_munge_from_config(NULL));
-  ck_assert_int_eq(1, want_munge_from_config("random other text\r\n"));
+START_TEST (test_want_leave_line_as_is) {
+  ck_assert_int_eq(1, want_leave_line_as_is("&nofixsmtpio"));
+  ck_assert_int_eq(0, want_leave_line_as_is("&fixsmtpio"));
+  ck_assert_int_eq(0, want_leave_line_as_is(""));
+  //ck_assert_int_eq(0, want_leave_line_as_is(NULL));
+  ck_assert_int_eq(0, want_leave_line_as_is("random other text\r\n"));
 }
 END_TEST
 
@@ -111,7 +111,7 @@ TCase *tc_filter(void) {
 
   tcase_add_test(tc, test_filter_rule_applies);
   tcase_add_test(tc, test_want_munge_internally);
-  tcase_add_test(tc, test_want_munge_from_config);
+  tcase_add_test(tc, test_want_leave_line_as_is);
   tcase_add_test(tc, test_envvar_exists_if_needed);
   tcase_add_test(tc, test_munge_response_line);
   tcase_add_test(tc, test_munge_response);
