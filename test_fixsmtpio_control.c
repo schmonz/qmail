@@ -34,7 +34,8 @@ filter_rule *parse_control_line(stralloc *line) {
   stralloc value = {0}; stralloc_copys(&value, "");
   int fields_seen = 0;
   char *s;
-  for (int i = 0; i < line->len; i++) {
+  int i;
+  for (i = 0; i < line->len; i++) {
     char c = line->s[i];
     if (':' == c) {
       fields_seen++;
