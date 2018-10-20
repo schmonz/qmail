@@ -11,8 +11,7 @@
 void assert_parsed_line(char *input,
                         char *env,char *event,char *request_prepend,
                         char *response_line_glob,int exitcode,char *response) {
-  stralloc line = {0}; stralloc_copys(&line, input);
-  filter_rule *rule = parse_control_line(&line);
+  filter_rule *rule = parse_control_line(input);
 
   ck_assert_ptr_nonnull(rule);
   ck_assert_ptr_null(rule->next);
@@ -25,8 +24,7 @@ void assert_parsed_line(char *input,
 }
 
 void assert_non_parsed_line(char *input) {
-  stralloc line = {0}; stralloc_copys(&line, input);
-  ck_assert_ptr_null(parse_control_line(&line));
+  ck_assert_ptr_null(parse_control_line(input));
 }
 
 START_TEST (test_reject_blank_line) {

@@ -25,8 +25,9 @@ static void parse_field(int *fields_seen, stralloc *value, filter_rule *rule) {
   }
 }
 
-filter_rule *parse_control_line(stralloc *line) {
+filter_rule *parse_control_line(char *line) {
   filter_rule *rule = (filter_rule *)alloc(sizeof(filter_rule));
+  int line_length = str_len(line);
   stralloc value = {0};
   int fields_seen = 0;
   int i;
@@ -40,8 +41,8 @@ filter_rule *parse_control_line(stralloc *line) {
   rule->exitcode            = EXIT_LATER_NORMALLY;
   rule->response            = 0;
 
-  for (i = 0; i < line->len; i++) {
-    char c = line->s[i];
+  for (i = 0; i < line_length; i++) {
+    char c = line[i];
     if (':' == c && fields_seen < 5) parse_field(&fields_seen, &value, rule);
     else stralloc_append(&value, &c);
   }
