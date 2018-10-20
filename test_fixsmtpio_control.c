@@ -131,6 +131,12 @@ START_TEST (test_accept_realistic_line) {
   );
 } END_TEST
 
+START_TEST (test_reject_clienteof_with_custom_response) {
+  assert_non_parsed_line(
+    "env:clienteof:prepend:glob:55:custom response"
+  );
+} END_TEST
+
 TCase *tc_control(void) {
   TCase *tc = tcase_create("");
 
@@ -150,6 +156,7 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_accept_response_containing_space);
   tcase_add_test(tc, test_accept_response_containing_colon);
   tcase_add_test(tc, test_accept_realistic_line);
+  tcase_add_test(tc, test_reject_clienteof_with_custom_response);
 
   return tc;
 }

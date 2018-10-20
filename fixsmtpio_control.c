@@ -52,6 +52,8 @@ filter_rule *parse_control_line(char *line) {
   if (!rule->event)               return 0;
   if (!rule->response_line_glob)  return 0;
   if ( rule->exitcode > 255)      return 0;
+  if (!case_diffs(rule->event,"clienteof") && rule->response)
+                                  return 0;
   if (!rule->response)            rule->response = "";
 
   return rule;
