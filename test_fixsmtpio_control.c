@@ -33,10 +33,9 @@ filter_rule *parse_control_line(stralloc *line) {
           case 3: rule->request_prepend    = s; break;
           case 4: rule->response_line_glob = s; break;
           case 5:
-            if (!scan_ulong(s,&rule->exitcode)) return NULL;
-            if (rule->exitcode > 255) return NULL;
-            break;
-          case 6: rule->response           = s; break;
+            if (!scan_ulong(s,&rule->exitcode))
+              rule->exitcode = 777;
+                                                break;
         }
       }
     } else {
@@ -51,12 +50,14 @@ filter_rule *parse_control_line(stralloc *line) {
     str_copy(s, value.s);
     stralloc_copys(&value, "");
     switch (fields_seen) {
-      case 2: rule->event    = s; break;
       case 6: rule->response = s; break;
     }
   }
 
-  if (fields_seen < 6) return NULL;
+  if (fields_seen < 6)            return NULL;
+  if (!rule->event)               return NULL;
+  if (!rule->response_line_glob)  return NULL;
+  if (rule->exitcode > 255)       return NULL;
 
   return rule;
 }
@@ -89,35 +90,87 @@ void assert_non_parsed_line(char *input) {
 }
 
 START_TEST (test_reject_blank_line) {
-  assert_non_parsed_line("");
+  assert_non_parsed_line(
+    ""
+  );
 } END_TEST
 
 START_TEST (test_reject_just_a_comma) {
-  assert_non_parsed_line(",");
+  assert_non_parsed_line(
+    ","
+  );
 } END_TEST
 
 START_TEST (test_reject_just_a_colon) {
-  assert_non_parsed_line(":");
+  assert_non_parsed_line(
+    ":"
+  );
 } END_TEST
 
-START_TEST (test_accept_realistic_line) {
+START_TEST (test_accept_empty_env) {
   assert_parsed_line(
-      ":word:NOOP :*::250 indeed",
-      NULL, "word", "NOOP ", "*", EXIT_LATER_NORMALLY, "250 indeed");
+    ":event:prepend:glob:55:response",
+    NULL,"event","prepend","glob",55,"response"
+  );
+} END_TEST
+
+START_TEST (test_reject_empty_event) {
+  assert_non_parsed_line(
+    "env::prepend:glob:55:response"
+  );
+} END_TEST
+
+START_TEST (test_accept_empty_request_prepend) {
+  assert_parsed_line(
+    "env:event::glob:55:response",
+    "env","event",NULL,"glob",55,"response"
+  );
+} END_TEST
+
+START_TEST (test_reject_empty_response_line_glob) {
+  assert_non_parsed_line(
+    "env:event:prepend::55:response"
+  );
+} END_TEST
+
+START_TEST (test_accept_empty_exitcode) {
+  assert_parsed_line(
+    "env:event:prepend:glob::response",
+    "env","event","prepend","glob",EXIT_LATER_NORMALLY,"response"
+  );
+} END_TEST
+
+START_TEST (test_reject_exitcode_non_numeric) {
+  assert_non_parsed_line(
+    "env:event:prepend:glob:exitcode:response"
+  );
+} END_TEST
+
+START_TEST (test_reject_exitcode_too_large) {
+  assert_non_parsed_line(
+    "env:event:prepend:glob:500:response"
+  );
 } END_TEST
 
 START_TEST (test_accept_valid_exitcode) {
   assert_parsed_line(
-      ":sup::*:5:250 yo",
-      NULL, "sup", NULL, "*", 5, "250 yo");
+    "env:event:prepend:glob:5:response",
+    "env","event","prepend","glob",5,"response"
+  );
 } END_TEST
 
-START_TEST (test_reject_exitcode_too_large) {
-  assert_non_parsed_line(":e::*:500:r");
+START_TEST (test_accept_empty_response) {
+  assert_parsed_line(
+    "env:event:prepend:glob:55:",
+    "env","event","prepend","glob",55,NULL
+  );
 } END_TEST
 
-START_TEST (test_reject_exitcode_non_numeric) {
-  assert_non_parsed_line(":e::*:-5:r");
+START_TEST (test_accept_realistic_line) {
+  assert_parsed_line(
+    ":word:NOOP :*::250 indeed",
+    NULL,"word","NOOP ","*",EXIT_LATER_NORMALLY,"250 indeed"
+  );
 } END_TEST
 
 TCase *tc_control(void) {
@@ -126,10 +179,16 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_reject_blank_line);
   tcase_add_test(tc, test_reject_just_a_comma);
   tcase_add_test(tc, test_reject_just_a_colon);
-  tcase_add_test(tc, test_accept_realistic_line);
-  tcase_add_test(tc, test_accept_valid_exitcode);
-  tcase_add_test(tc, test_reject_exitcode_too_large);
+  tcase_add_test(tc, test_accept_empty_env);
+  tcase_add_test(tc, test_reject_empty_event);
+  tcase_add_test(tc, test_accept_empty_request_prepend);
+  tcase_add_test(tc, test_reject_empty_response_line_glob);
+  tcase_add_test(tc, test_accept_empty_exitcode);
   tcase_add_test(tc, test_reject_exitcode_non_numeric);
+  tcase_add_test(tc, test_reject_exitcode_too_large);
+  tcase_add_test(tc, test_accept_valid_exitcode);
+  tcase_add_test(tc, test_accept_empty_response);
+  tcase_add_test(tc, test_accept_realistic_line);
 
   return tc;
 }
