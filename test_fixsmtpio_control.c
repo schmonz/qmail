@@ -79,6 +79,11 @@ void assert_parsed_line(char *input,
   assert_str_null_or_eq(response, rule->response);
 }
 
+void assert_non_parsed_line(char *input) {
+  stralloc line = {0}; stralloc_copys(&line, input);
+  ck_assert_ptr_null(parse_control_line(&line));
+}
+
 START_TEST (test_blank_line) {
   assert_parsed_line(
       "",
@@ -127,15 +132,11 @@ START_TEST (test_valid_exitcode) {
 } END_TEST
 
 START_TEST (test_exitcode_too_large) {
-  stralloc line = {0}; stralloc_copys(&line, ":e::*:500:r");
-  filter_rule *rule = parse_control_line(&line);
-  ck_assert_ptr_null(rule);
+  assert_non_parsed_line(":e::*:500:r");
 } END_TEST
 
 START_TEST (test_exitcode_non_numeric) {
-  stralloc line = {0}; stralloc_copys(&line, ":e::*:-5:r");
-  filter_rule *rule = parse_control_line(&line);
-  ck_assert_ptr_null(rule);
+  assert_non_parsed_line(":e::*:-5:r");
 } END_TEST
 
 TCase *tc_control(void) {
