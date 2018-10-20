@@ -31,7 +31,10 @@ filter_rule *parse_control_line(stralloc *line) {
           case 2: rule->event              = s; break;
           case 3: rule->request_prepend    = s; break;
           case 4: rule->response_line_glob = s; break;
-          case 5:scan_ulong(s,&rule->exitcode); break;
+          case 5:
+            scan_ulong(s,&rule->exitcode);
+            if (rule->exitcode > 255) return NULL;
+            break;
           case 6: rule->response           = s; break;
         }
       }
@@ -123,6 +126,12 @@ START_TEST (test_valid_exitcode) {
       NULL, "sup", NULL, "*", 5, "250 yo");
 } END_TEST
 
+START_TEST (test_exitcode_too_large) {
+  stralloc line = {0}; stralloc_copys(&line, ":sup::*:500:250 yo");
+  filter_rule *rule = parse_control_line(&line);
+  ck_assert_ptr_null(rule);
+} END_TEST
+
 TCase *tc_control(void) {
   TCase *tc = tcase_create("");
 
@@ -133,6 +142,7 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_yes_env_yes_event);
   tcase_add_test(tc, test_realistic_line);
   tcase_add_test(tc, test_valid_exitcode);
+  tcase_add_test(tc, test_exitcode_too_large);
 
   return tc;
 }
