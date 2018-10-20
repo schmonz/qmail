@@ -2,8 +2,36 @@
 
 #include "fixsmtpio_filter.h"
 
-filter_rule *parse_control_line(stralloc *line) {
+static void parse_field(int *fields_seen, stralloc *value, filter_rule *rule) {
+  char *s;
+
+  (*fields_seen)++;
+
+  if (!value->len) return;
+
+  stralloc_0(value);
+  s = (char *)alloc(value->len);
+  str_copy(s, value->s);
+  stralloc_copys(value, "");
+
+  switch (*fields_seen) {
+    case 1: rule->env                = s; break;
+    case 2: rule->event              = s; break;
+    case 3: rule->request_prepend    = s; break;
+    case 4: rule->response_line_glob = s; break;
+    case 5:
+      if (!scan_ulong(s,&rule->exitcode))
+        rule->exitcode = 777;
+                                          break;
+    case 6: rule->response           = s; break;
+  }
+}
+
+static filter_rule *parse_control_line(stralloc *line) {
   filter_rule *rule = (filter_rule *)alloc(sizeof(filter_rule));
+  stralloc value = {0};
+  int fields_seen = 0;
+  int i;
 
   rule->next                = NULL;
 
@@ -14,45 +42,12 @@ filter_rule *parse_control_line(stralloc *line) {
   rule->exitcode            = EXIT_LATER_NORMALLY;
   rule->response            = NULL;
 
-  stralloc value = {0}; stralloc_copys(&value, "");
-  int fields_seen = 0;
-  char *s;
-  int i;
   for (i = 0; i < line->len; i++) {
     char c = line->s[i];
-    if (':' == c) {
-      fields_seen++;
-      if (value.len) {
-        stralloc_0(&value);
-        s = (char *)alloc(value.len);
-        str_copy(s, value.s);
-        stralloc_copys(&value, "");
-        switch (fields_seen) {
-          case 1: rule->env                = s; break;
-          case 2: rule->event              = s; break;
-          case 3: rule->request_prepend    = s; break;
-          case 4: rule->response_line_glob = s; break;
-          case 5:
-            if (!scan_ulong(s,&rule->exitcode))
-              rule->exitcode = 777;
-                                                break;
-        }
-      }
-    } else {
-      stralloc_append(&value, &c);
-    }
+    if (':' == c) parse_field(&fields_seen, &value, rule);
+    else stralloc_append(&value, &c);
   }
-
-  fields_seen++;
-  if (value.len) {
-    stralloc_0(&value);
-    s = (char *)alloc(value.len);
-    str_copy(s, value.s);
-    stralloc_copys(&value, "");
-    switch (fields_seen) {
-      case 6: rule->response = s; break;
-    }
-  }
+  parse_field(&fields_seen, &value, rule);
 
   if (fields_seen < 6)            return NULL;
   if (!rule->event)               return NULL;
