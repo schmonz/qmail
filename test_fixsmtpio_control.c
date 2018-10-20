@@ -2,24 +2,6 @@
 
 #include "fixsmtpio_filter.h"
 
-#define assert_str_null_or_eq(s1,s2) \
-  if (s1 == NULL) \
-    ck_assert_ptr_null(s2); \
-  else \
-    ck_assert_str_eq(s1, s2);
-
-void assert_parsed_line(filter_rule *rule,
-                        char *env,char *event,char *request_prepend,
-                        char *response_line_glob,int exitcode,char *response) {
-  ck_assert_ptr_null(rule->next);
-  assert_str_null_or_eq(env, rule->env);
-  assert_str_null_or_eq(event, rule->event);
-  assert_str_null_or_eq(request_prepend, rule->request_prepend);
-  assert_str_null_or_eq(response_line_glob, rule->response_line_glob);
-  ck_assert_int_eq(exitcode, rule->exitcode);
-  assert_str_null_or_eq(response, rule->response);
-}
-
 filter_rule *parse_control_line(stralloc *line) {
   filter_rule *rule = (filter_rule *)alloc(sizeof(filter_rule));
 
@@ -73,64 +55,67 @@ filter_rule *parse_control_line(stralloc *line) {
   return rule;
 }
 
-START_TEST (test_blank_line)
-{
-  stralloc line = {0};
+#define assert_str_null_or_eq(s1,s2) \
+  if (s1 == NULL) \
+    ck_assert_ptr_null(s2); \
+  else \
+    ck_assert_str_eq(s1, s2);
+
+void assert_parsed_line(char *input,
+                        char *env,char *event,char *request_prepend,
+                        char *response_line_glob,int exitcode,char *response) {
+  stralloc line = {0}; stralloc_copys(&line, input);
+  filter_rule *rule = parse_control_line(&line);
+
+  ck_assert_ptr_null(rule->next);
+  assert_str_null_or_eq(env, rule->env);
+  assert_str_null_or_eq(event, rule->event);
+  assert_str_null_or_eq(request_prepend, rule->request_prepend);
+  assert_str_null_or_eq(response_line_glob, rule->response_line_glob);
+  ck_assert_int_eq(exitcode, rule->exitcode);
+  assert_str_null_or_eq(response, rule->response);
+}
+
+START_TEST (test_blank_line) {
   assert_parsed_line(
-      parse_control_line(&line),
+      "",
       NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
   );
-}
-END_TEST
+} END_TEST
 
-START_TEST (test_nonblank_line)
-{
-  stralloc line = {0}; stralloc_copys(&line, ",");
+START_TEST (test_nonblank_line) {
   assert_parsed_line(
-      parse_control_line(&line),
+      ",",
       NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
   );
-}
-END_TEST
+} END_TEST
 
-START_TEST (test_no_env_or_event)
-{
-  stralloc line = {0}; stralloc_copys(&line, ":");
+START_TEST (test_no_env_or_event) {
   assert_parsed_line(
-      parse_control_line(&line),
+      ":",
       NULL, NULL, NULL, NULL, EXIT_LATER_NORMALLY, NULL
   );
-}
-END_TEST
+} END_TEST
 
-START_TEST (test_no_env_yes_event)
-{
-  stralloc line = {0}; stralloc_copys(&line, ":smtp_verb");
+START_TEST (test_no_env_yes_event) {
   assert_parsed_line(
-      parse_control_line(&line),
+      ":smtp_verb",
       NULL, "smtp_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL
   );
-}
-END_TEST
+} END_TEST
 
-START_TEST (test_yes_env_yes_event)
-{
-  stralloc line = {0}; stralloc_copys(&line, "ENV_VAR:some_verb");
+START_TEST (test_yes_env_yes_event) {
   assert_parsed_line(
-      parse_control_line(&line),
+      "ENV_VAR:some_verb",
       "ENV_VAR", "some_verb", NULL, NULL, EXIT_LATER_NORMALLY, NULL
   );
-}
-END_TEST
+} END_TEST
 
-START_TEST (test_realistic_line)
-{
-  stralloc line = {0}; stralloc_copys(&line, ":word:NOOP :*::250 indeed");
+START_TEST (test_realistic_line) {
   assert_parsed_line(
-      parse_control_line(&line),
+      ":word:NOOP :*::250 indeed",
       NULL, "word", "NOOP ", "*", EXIT_LATER_NORMALLY, "250 indeed");
-}
-END_TEST
+} END_TEST
 
 TCase *tc_control(void) {
   TCase *tc = tcase_create("");
