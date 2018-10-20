@@ -28,4 +28,6 @@
 #define EXIT_NOW_SUCCESS         0
 #define EXIT_NOW_TEMPFAIL        14
 #define EXIT_NOW_PERMFAIL        15
-#define EXIT_NOW_TIMEOUT         17
+/* sync with authup.c */
+#define EXIT_NOW_TIMEOUT         16
+#define EXIT_NOW_PARSEFAIL       18
