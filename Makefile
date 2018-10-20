@@ -70,10 +70,6 @@ case.a open.a fs.a
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 	case.a open.a fs.a
 
-fixsmtpio.h: \
-select.h fixsmtpio.h1
-	cat fixsmtpio.h1 > fixsmtpio.h
-
 fixsmtpio.o: \
 compile fixsmtpio.c fixsmtpio.h fixsmtpio_common.h fixsmtpio_filter.h \
 fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h \

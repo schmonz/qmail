@@ -393,7 +393,6 @@ checknotroot.o
 reup
 reup.o
 fixsmtpio
-fixsmtpio.h
 fixsmtpio.o
 test_fixsmtpio
 test_fixsmtpio.o
