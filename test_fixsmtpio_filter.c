@@ -9,13 +9,10 @@ void assert_filter_rule(filter_rule *filter_rule, const char *event, int expecte
 START_TEST (test_filter_rule_applies)
 {
   filter_rule rule = {
-    .next = NULL,
-    .env = ENV_ANY,
-    .event = "caliente",
-    .request_prepend = REQUEST_PASSTHRU,
-    .response_line_glob = "*",
-    .exitcode = EXIT_LATER_NORMALLY,
-    .response = "",
+    0,
+    ENV_ANY, "caliente",
+    REQUEST_PASSTHRU, "*",
+    EXIT_LATER_NORMALLY, "",
   };
   assert_filter_rule(&rule, "clienteof", 0);
 
@@ -61,16 +58,28 @@ void assert_munge_response_line(char *expected_output, int lineno, char *line, i
 }
 
 START_TEST (test_munge_response_line) {
-
   filter_rule *rules = 0;
+  filter_rule helo = {
+    0,
+    ENV_ANY, "helo",
+    REQUEST_PASSTHRU, "2*",
+    EXIT_LATER_NORMALLY, MUNGE_INTERNALLY,
+  };
+  filter_rule ehlo = {
+    0,
+    ENV_ANY, "ehlo",
+    REQUEST_PASSTHRU, "2*",
+    EXIT_LATER_NORMALLY, MUNGE_INTERNALLY,
+  };
+
   assert_munge_response_line("222 sup duuuude\r\n", 0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo");
   assert_munge_response_line("222 OUTSTANDING\r\n", 1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo");
 
-  rules = prepend_rule(rules, ENV_ANY, "helo", REQUEST_PASSTHRU, "2*", EXIT_LATER_NORMALLY, MUNGE_INTERNALLY);
+  rules = prepend_rule(rules, &helo);
   assert_munge_response_line("222 sup duuuude\r\n", 0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo");
   assert_munge_response_line("222 OUTSTANDING\r\n", 1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo");
 
-  rules = prepend_rule(rules, ENV_ANY, "ehlo", REQUEST_PASSTHRU, "2*", EXIT_LATER_NORMALLY, MUNGE_INTERNALLY);
+  rules = prepend_rule(rules, &ehlo);
   assert_munge_response_line("250 yo.sup.local\r\n", 0, "222 sup duuuude", 0, "yo.sup.local", rules, "ehlo");
   assert_munge_response_line("222 OUTSTANDING\r\n", 1, "222 OUTSTANDING", 0, "yo.sup.local", rules, "ehlo");
 }

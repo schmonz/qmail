@@ -59,12 +59,12 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 	./compile checknotroot.c
 
 fixsmtpio: \
-load fixsmtpio.o fixsmtpio_common.o fixsmtpio_filter.o \
+load fixsmtpio.o fixsmtpio_control.o fixsmtpio_common.o fixsmtpio_filter.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a
-	./load fixsmtpio fixsmtpio_common.o fixsmtpio_filter.o \
+	./load fixsmtpio fixsmtpio_control.o fixsmtpio_common.o fixsmtpio_filter.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
 	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
@@ -90,8 +90,12 @@ check.h \
 test_fixsmtpio_common.c
 	./compile test_fixsmtpio_common.c
 
+fixsmtpio_control.o: \
+compile fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h
+	./compile fixsmtpio_control.c
+
 test_fixsmtpio_control.o: \
-compile fixsmtpio_filter.h \
+compile fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h \
 check.h \
 test_fixsmtpio_control.c
 	./compile test_fixsmtpio_control.c
@@ -152,7 +156,7 @@ compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_common.h error.h r
 
 test_fixsmtpio: \
 fixsmtpio \
-load test_fixsmtpio.o fixsmtpio_common.o \
+load test_fixsmtpio.o fixsmtpio_control.o fixsmtpio_common.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o \
 test_fixsmtpio_control.o \
@@ -162,7 +166,7 @@ auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
-	./load test_fixsmtpio fixsmtpio_common.o \
+	./load test_fixsmtpio fixsmtpio_control.o fixsmtpio_common.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o \
 	test_fixsmtpio_control.o \

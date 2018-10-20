@@ -404,6 +404,7 @@ fixsmtpio_eventq.o
 fixsmtpio_readwrite.o
 fixsmtpio_munge.o
 fixsmtpio_glob.o
+fixsmtpio_control.o
 check.h
 check_stdint.h
 libcheck.a

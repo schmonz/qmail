@@ -161,11 +161,13 @@ START_TEST (test_construct_proxy_request)
   int want_data = 0,
       in_data = 0;
 
-  filter_rule *test_rules = prepend_rule(0,
-      "SPECIFIC_ENV_VAR",   "specific_verb",
-      "prepend me: ",       "*",
-      EXIT_LATER_NORMALLY,  "337 hello friend"
-  );
+  filter_rule test_rule = {
+    0,
+    "SPECIFIC_ENV_VAR",   "specific_verb",
+    "prepend me: ",       "*",
+    EXIT_LATER_NORMALLY,  "337 hello friend",
+  };
+  filter_rule *test_rules = prepend_rule(0, &test_rule);
 
   env_put2("SPECIFIC_ENV_VAR","");
 
