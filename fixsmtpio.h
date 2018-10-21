@@ -18,11 +18,11 @@
 #define EVENT_GREETING           "greeting"
 #define EVENT_TIMEOUT            "timeout"
 #define EVENT_CLIENTEOF          "clienteof"
-#define MUNGE_INTERNALLY         "&" PROGNAME
+#define MUNGE_INTERNALLY         "&" PROGNAME "_fixup"
 #define REQUEST_PASSTHRU         ""
 #define REQUEST_NOOP             "NOOP "
 
-#define RESPONSELINE_NOCHANGE    "&no" PROGNAME
+#define RESPONSELINE_NOCHANGE    "&" PROGNAME "_noop"
 
 #define EXIT_LATER_NORMALLY      -1
 #define EXIT_NOW_SUCCESS         0

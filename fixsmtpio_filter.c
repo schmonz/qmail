@@ -6,11 +6,11 @@
 #include "fixsmtpio_glob.h"
 
 int want_munge_internally(char *response) {
-  return 0 == str_diffn(MUNGE_INTERNALLY,response,sizeof(MUNGE_INTERNALLY)-1);
+  return !str_diff(MUNGE_INTERNALLY,response);
 }
 
 int want_leave_line_as_is(char *response) {
-  return 0 == str_diffn(RESPONSELINE_NOCHANGE,response,sizeof(RESPONSELINE_NOCHANGE)-1);
+  return !str_diff(RESPONSELINE_NOCHANGE,response);
 }
 
 int envvar_exists_if_needed(char *envvar) {

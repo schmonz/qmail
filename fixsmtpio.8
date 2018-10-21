@@ -71,31 +71,30 @@ Typical filter rules apply if and only if this variable is present.
 .SH "FILTER RULES"
 Filter rules follow the format:
 
-[env]:event:[request-prepend]:response-line-glob:[exitcode][:response]
+.I [env]:event:[request-prepend]:response-line-glob:[exitcode]:[response]
 
-(Values may not contain ":", the field separator.)
+(Values other than
+.I response
+may not contain ":", the field separator.)
 .TP 5
 .I env
 .br
 (optional)
-Environment variable that must be present for the rule to apply.
-If empty, no environment variable is required.
+Environment variable which must be present for the rule to apply.
+If empty, none is required.
 .TP 5
 .I event
 .br
 (required)
-SMTP verb (or "clienteof", "greeting", or "timeout")
-for which requests, responses, or both are to be filtered.
+SMTP verb (or "clienteof", "greeting", or "timeout") to which the rule applies.
 This field is matched case-insensitively.
 .TP 5
 .I request-prepend
 .br
 (optional)
-String to be prepended to the request before it's seen by the server.
-Since
-.B NOOP
-is an SMTP verb that servers accept and do nothing interesting with,
-"NOOP " (with trailing space) prevents the server from taking unwanted action.
+String to prepend to the request before passing it to the server.
+"NOOP " (with trailing space) causes the server to trivially accept a request,
+performing no action.
 If empty, the request is sent as is.
 .TP 5
 .I response-line-glob
@@ -103,7 +102,7 @@ If empty, the request is sent as is.
 (required)
 .BR fnmatch(3) -style
 glob pattern, with no special options set.
-The rule applies to every matching line of the server response.
+The rule applies to each matching line of the server response.
 .TP 5
 .I exitcode
 .br
@@ -114,7 +113,7 @@ is to immediately exit.
 If empty, it exits when it normally would.
 If no rules override it,
 .B fixsmtpio
-exits with the same code as
+exits with the same code as its child
 .IR prog .
 .TP 5
 .I response
@@ -124,15 +123,17 @@ String that replaces every matching line of the server response.
 If empty, matching lines are removed.
 
 Special case:
-"&nofixsmtpio"
+"&fixsmtpio_noop"
 causes the response to be sent as is.
 
 Special case:
-"&fixsmtpio"
+"&fixsmtpio_fixup"
 computes the replacement string via an event-specific internal routine.
 (If no corresponding routine exists,
 .B fixsmtpio
-emits an error and exits.)
+fails to parse
+.I control/fixsmtpio
+and exits.)
 Routines exist for
 .TP 10
 .BR HELP :

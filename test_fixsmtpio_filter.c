@@ -22,8 +22,8 @@ START_TEST (test_filter_rule_applies)
 END_TEST
 
 START_TEST (test_want_munge_internally) {
-  ck_assert_int_eq(1, want_munge_internally("&fixsmtpio"));
-  ck_assert_int_eq(0, want_munge_internally("&nofixsmtpio"));
+  ck_assert_int_eq(1, want_munge_internally("&fixsmtpio_fixup"));
+  ck_assert_int_eq(0, want_munge_internally("&fixsmtpio_noop"));
   ck_assert_int_eq(0, want_munge_internally(""));
   //ck_assert_int_eq(0, want_munge_internally(NULL));
   ck_assert_int_eq(0, want_munge_internally("random other text\r\n"));
@@ -31,8 +31,8 @@ START_TEST (test_want_munge_internally) {
 END_TEST
 
 START_TEST (test_want_leave_line_as_is) {
-  ck_assert_int_eq(1, want_leave_line_as_is("&nofixsmtpio"));
-  ck_assert_int_eq(0, want_leave_line_as_is("&fixsmtpio"));
+  ck_assert_int_eq(1, want_leave_line_as_is("&fixsmtpio_noop"));
+  ck_assert_int_eq(0, want_leave_line_as_is("&fixsmtpio_fixup"));
   ck_assert_int_eq(0, want_leave_line_as_is(""));
   //ck_assert_int_eq(0, want_leave_line_as_is(NULL));
   ck_assert_int_eq(0, want_leave_line_as_is("random other text\r\n"));
