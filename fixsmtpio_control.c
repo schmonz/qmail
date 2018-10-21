@@ -1,5 +1,7 @@
 #include "fixsmtpio_control.h"
 
+#include "fixsmtpio_munge.h"
+
 static void parse_field(int *fields_seen, stralloc *value, filter_rule *rule) {
   char *s;
 
@@ -52,9 +54,15 @@ filter_rule *parse_control_line(char *line) {
   if (!rule->event)               return 0;
   if (!rule->response_line_glob)  return 0;
   if ( rule->exitcode > 255)      return 0;
-  if (!case_diffs(rule->event,"clienteof") && rule->response)
+  if ( rule->response) {
+    if (!case_diffs(rule->event,"clienteof"))
                                   return 0;
-  if (!rule->response)            rule->response = "";
+    if (!str_diff(MUNGE_INTERNALLY,rule->response)
+        && !munge_line_fn(rule->event))
+                                  return 0;
+  } else {
+    rule->response = "";
+  }
 
   return rule;
 }

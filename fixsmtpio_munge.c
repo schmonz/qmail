@@ -75,7 +75,7 @@ struct munge_command m[] = {
 , { 0, 0 }
 };
 
-static void *munge_line_fn(const char *event) {
+void *munge_line_fn(const char *event) {
   int i;
   for (i = 0; m[i].event; ++i)
     if (event_matches(m[i].event,event))
