@@ -157,6 +157,19 @@ START_TEST (test_reject_fixup_for_inapplicable_event) {
   );
 } END_TEST
 
+START_TEST (test_reject_unknown_response_thingy) {
+  assert_non_parsed_line(
+    "env:event:prepend:glob:55:&fixsmtpio_unknown_thingy"
+  );
+} END_TEST
+
+START_TEST (test_accept_other_ampersand_response) {
+  assert_parsed_line(
+    "env:event:prepend:glob:55:&other_ampersand_response",
+    "env","event","prepend","glob",55,"&other_ampersand_response"
+  );
+} END_TEST
+
 TCase *tc_control(void) {
   TCase *tc = tcase_create("");
 
@@ -180,6 +193,8 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_reject_clienteof_with_custom_response);
   tcase_add_test(tc, test_accept_fixup_for_applicable_event);
   tcase_add_test(tc, test_reject_fixup_for_inapplicable_event);
+  tcase_add_test(tc, test_reject_unknown_response_thingy);
+  tcase_add_test(tc, test_accept_other_ampersand_response);
 
   return tc;
 }

@@ -122,11 +122,13 @@ exits with the same code as its child
 String that replaces every matching line of the server response.
 If empty, matching lines are removed.
 
-Special case:
+Strings starting with
+"&fixsmtpio_"
+are reserved for special handling.
+
 "&fixsmtpio_noop"
 causes the response to be sent as is.
 
-Special case:
 "&fixsmtpio_fixup"
 computes the replacement string via an event-specific internal routine.
 (If no corresponding routine exists,
@@ -153,9 +155,9 @@ in the response.
 This is harmless with
 .BR qmail-smtpd ,
 which already does so,
-and updates
+and brings
 .BR ofmipd 's
-behavior to match.
+behavior up to par.
 .TP 0
 Rules are applied in the order written. For instance, if two rules
 match, the later rule modifies the response returned by the

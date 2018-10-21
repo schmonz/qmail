@@ -57,8 +57,12 @@ filter_rule *parse_control_line(char *line) {
   if ( rule->response) {
     if (!case_diffs(rule->event,"clienteof"))
                                   return 0;
-    if (!str_diff(MUNGE_INTERNALLY,rule->response)
+    if (want_munge_internally(rule->response)
         && !munge_line_fn(rule->event))
+                                  return 0;
+    if (str_start(rule->response,"&fixsmtpio_")
+        && !want_munge_internally(rule->response)
+        && !want_leave_line_as_is(rule->response))
                                   return 0;
   } else {
     rule->response = "";
