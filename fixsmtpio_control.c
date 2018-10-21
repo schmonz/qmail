@@ -60,7 +60,7 @@ filter_rule *parse_control_line(char *line) {
     if (want_munge_internally(rule->response)
         && !munge_line_fn(rule->event))
                                   return 0;
-    if (str_start(rule->response,"&fixsmtpio_")
+    if (str_start(rule->response,"&fixsmtpio")
         && !want_munge_internally(rule->response)
         && !want_leave_line_as_is(rule->response))
                                   return 0;
