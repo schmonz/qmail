@@ -58,6 +58,13 @@ START_TEST (test_reject_empty_event) {
   );
 } END_TEST
 
+START_TEST (test_accept_invented_event) {
+  assert_parsed_line(
+    "env:flibbertigibbet:prepend:glob:55:response",
+    "env","flibbertigibbet","prepend","glob",55,"response"
+  );
+} END_TEST
+
 START_TEST (test_accept_empty_request_prepend) {
   assert_parsed_line(
     "env:event::glob:55:response",
@@ -145,6 +152,7 @@ TCase *tc_control(void) {
   tcase_add_test(tc, test_reject_just_a_colon);
   tcase_add_test(tc, test_accept_empty_env);
   tcase_add_test(tc, test_reject_empty_event);
+  tcase_add_test(tc, test_accept_invented_event);
   tcase_add_test(tc, test_accept_empty_request_prepend);
   tcase_add_test(tc, test_reject_empty_response_line_glob);
   tcase_add_test(tc, test_accept_empty_exitcode);
