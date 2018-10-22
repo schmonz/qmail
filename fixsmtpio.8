@@ -6,28 +6,21 @@ fixsmtpio \- filter SMTP I/O and exit status
 .I prog
 .SH DESCRIPTION
 .B fixsmtpio
-is an SMTP proxy.
-It synchronously and transparently wraps
-.BR ofmipd ,
-.BR qmail-smtpd ,
-or any other SMTP server designed to run from
-.BR tcpserver .
-.B fixsmtpio
-can be configured to adjust certain
+is a proxy for changing how an SMTP service behaves without changing its code.
+By default, with no configuration, it changes no observable behavior.
+In a typical configuration, it makes
+.B ofmipd
+or
+.B qmail-smtpd
+behave as though they were designed to run under
+.B authup
+by adjusting certain
 client requests,
 server responses,
-and exit codes,
-most commonly to continue authenticated SMTP sessions started by
-.BR authup .
-
-With no configuration,
-.B fixsmtpio
-changes no observable behavior.
-If you observe otherwise, please report the bug.
-
+and exit codes.
 The
 .B "EXIT CODES"
-section is especially important for this program.
+section is important enough to be all the way up here.
 .SH "EXIT CODES"
 .B authup
 expects
