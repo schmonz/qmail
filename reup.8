@@ -9,9 +9,9 @@ reup \- run a program repeatedly
 .I prog
 .SH DESCRIPTION
 .B reup
-is most commonly used to invoke
+is typically used to invoke
 .B authup
-so that a user isn't disconnected immediately on the first authentication failure.
+so that a user is given more than one authentication attempt before being disconnected.
 
 .B reup
 prints an error message if
@@ -48,6 +48,9 @@ no more than
 .I tries
 times.
 Default: 0 (unlimited).
+.SH "EXAMPLES"
+See
+.IR https://schmonz.com/qmail/acceptutils .
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"

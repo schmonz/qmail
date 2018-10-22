@@ -7,63 +7,43 @@ authup \- offer SMTP or POP3 authentication
 .I prog
 .SH DESCRIPTION
 .B authup
-speaks just enough SMTP or POP3
-to read a username and password from the network.
+speaks just enough SMTP (AUTH LOGIN or PLAIN)
+or POP3 (USER-PASS)
+to parse a username and password.
 It then runs
-.IR prog .
+.I prog
+via the
+.B checkpassword
+interface.
 
 .B authup
 is most commonly invoked from
 .B tcpserver
 or
 .B sslserver
-as
-
-.EX
-  reup -t 5     \\
-  authup smtp   \\
-  checkpassword \\
-  checknotroot  \\
-  fixsmtpio     \\
-  env RELAYCLIENT="" ofmipd
-.EE
-
-or
-
-.EX
-  authup pop3   \\
-  checkpassword \\
-  checknotroot  \\
-  qmail-pop3d
-.EE
-
 as root, so that
 .B checkpassword
 can run
 .B ofmipd
+(or
+.BR qmail-smtpd )
 or
 .B qmail-pop3d
 under the UID of the authenticated user.
 
 .B authup
-speaks just enough SMTP to parse usernames and passwords
-from AUTH LOGIN or AUTH PLAIN,
-or just enough POP3 to understand USER-PASS.
-It invokes
-.I prog
-via the checkpassword interface.
-.B authup
-then waits for
+waits for
 .I prog
 to finish.
 It prints an error message if
 .I prog
 crashes or exits nonzero.
+If authentication failed, it waits 5 seconds before printing the message.
 
 .B authup
-does not perform any encryption of its own.
+neither performs encryption nor refuses to operate without it.
 For security, make it available over the network only by means of
-another program that encrypts the network connection.
+another program that encrypts the connection.
 .SH "ENVIRONMENT VARIABLES"
 The authenticated user is available to child processes as
 .BR AUTHUP_USER .
@@ -72,20 +52,20 @@ If
 .B AUTHUP_SASL_BROKEN_CLIENTS
 is set,
 .B authup
-will advertise AUTH support in a second, non-standard way
+will additionally advertise AUTH support in a second, non-standard way
 to interoperate with Outlook Express 4, Exchange 5,
 and other SMTP clients that implement an obsolete version of the AUTH command.
 
-Because
+Under
+.BR authup,
+.B qmail-queue
+runs with the privileges of the authenticated user.
+Therefore, if
 .B ofmipd
 (or
 .BR qmail-smtpd )
-runs as the authenticated user,
-so does
-.BR qmail-queue ,
-as well as any custom
-.B QMAILQUEUE
-wrapper.
+has the QMAILQUEUE patch applied,
+your configured queue wrapper will too.
 This can be useful for user-controlled filtering.
 .SH "CONTROL FILES"
 .TP 5
@@ -114,7 +94,10 @@ is available in
 .BR qmail-popup ,
 neither is currently supported by
 .BR authup .
-If you need them, please share your use case with the author.
+If you rely on them, please share your use case with the author.
+.SH "EXAMPLES"
+See
+.IR https://schmonz.com/qmail/acceptutils .
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
