@@ -95,24 +95,25 @@ If empty, the request is sent as is.
 (required)
 .BR fnmatch(3) -style
 glob pattern, with no special options set.
-The rule applies to each matching line of the server response.
+Each line of the response is compared against this glob.
 .TP 5
 .I exitcode
 .br
 (optional)
 Numeric code with which
 .B fixsmtpio
-is to immediately exit.
-If empty, it exits when it normally would.
-If no rules override it,
+is to exit immediately.
+If empty, it will exit whenever it normally would.
+If there are no rules specifying a value for this field,
 .B fixsmtpio
-exits with the same code as its child
+will always exit with the same code as its child
 .IR prog .
 .TP 5
 .I response
 .br
 (optional)
 String that replaces every matching line of the server response.
+
 If empty, matching lines are removed.
 
 Strings starting with
@@ -162,8 +163,6 @@ the last one wins.
 Not all rules (alone or in combination) make practical sense.
 An earlier rule can cause a later one to start (or stop) matching.
 Keep your configuration as simple as possible, and test it well.
-See
-.BR EXAMPLES .
 .SH "CONTROL FILES"
 .TP 5
 .I fixsmtpio
