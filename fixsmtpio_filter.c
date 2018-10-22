@@ -22,7 +22,6 @@ int envvar_exists_if_needed(char *envvar) {
   return 1;
 }
 
-// XXX don't test this directly
 int filter_rule_applies(filter_rule *rule,const char *event) {
   return (event_matches(rule->event,event) && envvar_exists_if_needed(rule->env));
 }
