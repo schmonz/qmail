@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <idn2.h>
 #include "sig.h"
 #include "stralloc.h"
 #include "substdio.h"
@@ -42,7 +43,9 @@ stralloc helohost = {0};
 stralloc routes = {0};
 struct constmap maproutes;
 stralloc host = {0};
+stralloc asciihost = {0};
 stralloc sender = {0};
+int smtputf8 = 0;
 
 saa reciplist = {0};
 
@@ -156,6 +159,7 @@ char smtpfrombuf[128];
 substdio smtpfrom = SUBSTDIO_FDBUF(saferead,-1,smtpfrombuf,sizeof smtpfrombuf);
 
 stralloc smtptext = {0};
+stralloc firstpart = {0};
 
 void get(ch)
 char *ch;
@@ -190,6 +194,7 @@ unsigned long smtpcode()
 }
 
 #ifdef EHLO
+
 saa ehlokw = {0}; /* list of EHLO keywords and parameters */
 int maxehlokwlen = 0;
 
@@ -307,6 +312,8 @@ void blast()
 {
   int r;
   char ch;
+
+  substdio_put(&smtpto,firstpart.s,firstpart.len);
 
   for (;;) {
     r = substdio_get(&ssin,&ch,1);
@@ -530,6 +537,102 @@ int tls_init()
 
 stralloc recip = {0};
 
+int containsutf8(p, l) unsigned char * p; int l;
+{
+  int i = 0;
+  while (i<l)
+    if(p[i++] > 127) return 1;
+  return 0;
+}
+
+int utf8message;
+
+void checkutf8message()
+{
+  int pos;
+  int i;
+  int r;
+  char ch;
+  int state;
+
+  if (containsutf8(sender.s, sender.len)) { utf8message = 1; return; }
+  for (i = 0;i < reciplist.len;++i)
+    if (containsutf8(reciplist.sa[i].s, reciplist.sa[i].len)) {
+      utf8message = 1;
+      return;
+    }
+
+  state = 0;
+  pos = 0;
+  for (;;) {
+    r = substdio_get(&ssin,&ch,1);
+    if (r == 0) break;
+    if (r == -1) temp_read();
+
+    if (ch == '\n' && !stralloc_cats(&firstpart,"\r")) temp_nomem();
+    if (!stralloc_append(&firstpart,&ch)) temp_nomem();
+
+    if (ch == '\r')
+      continue;
+    if (ch == '\t')
+      ch = ' ';
+
+    switch (state) {
+    case 6: /* in Received, at LF but before WITH clause */
+      if (ch == ' ') { state = 3; pos = 1; continue; }
+      state = 0;
+      /* FALL THROUGH */
+
+    case 0: /* start of header field */
+      if (ch == '\n') return;
+      state = 1;
+      pos = 0;
+      /* FALL THROUGH */
+
+    case 1: /* partway through "Received:" */
+      if (ch != "RECEIVED:"[pos] && ch != "received:"[pos]) { state = 2; continue; }
+      if (++pos == 9) { state = 3; pos = 0; }
+      continue;
+
+    case 2: /* other header field */
+      if (ch == '\n') state = 0;
+      continue;
+
+    case 3: /* in Received, before WITH clause or partway though " with " */
+      if (ch == '\n') { state = 6; continue; }
+      if (ch != " WITH "[pos] && ch != " with "[pos]) { pos = 0; continue; }
+      if (++pos == 6) { state = 4; pos = 0; }
+      continue;
+
+    case 4: /* in Received, having seen with, before the argument */
+      if (pos == 0 && (ch == ' ' || ch == '\t')) continue;
+      if (ch != "UTF8"[pos] && ch != "utf8"[pos]) { state = 5; continue; }
+      if(++pos == 4) { utf8message = 1; state = 5; continue; }
+      continue;
+
+    case 5: /* after the RECEIVED WITH argument */
+      /* blast() assumes that it copies whole lines */
+      if (ch == '\n') return;
+      state = 1;
+      pos = 0;
+      continue;
+    }
+  }
+}
+
+void checkutf8server()
+{
+  stralloc *sa;
+  unsigned int len;
+
+  sa = ehlokw.sa;
+  len = ehlokw.len;
+
+  for (; len && case_diffs(sa->s, "SMTPUTF8"); ++sa, --len);
+
+  if (len) smtputf8 = 1;
+}
+
 void smtp()
 {
   unsigned long code;
@@ -583,9 +686,15 @@ void smtp()
   }
 #endif
  
+  checkutf8message();
+  checkutf8server();
+  if (utf8message && !smtputf8) quit("DConnected to "," but server does not support unicode in email addresses");
+
   substdio_puts(&smtpto,"MAIL FROM:<");
   substdio_put(&smtpto,sender.s,sender.len);
-  substdio_puts(&smtpto,">\r\n");
+  substdio_puts(&smtpto,">");
+  if (utf8message) substdio_puts(&smtpto," SMTPUTF8");
+  substdio_puts(&smtpto,"\r\n");
   substdio_flush(&smtpto);
   code = smtpcode();
   if (code >= 500) quit("DConnected to "," but sender was rejected");
@@ -714,6 +823,15 @@ char **argv;
       relayhost[i] = 0;
     }
     if (!stralloc_copys(&host,relayhost)) temp_nomem();
+  } else {
+    char * ascii = 0;
+    host.s[host.len] = '\0';
+    switch (idn2_lookup_u8(host.s, (uint8_t**)&ascii, IDN2_NFC_INPUT)) {
+      case IDN2_OK: break;
+      case IDN2_MALLOC: temp_nomem();
+      default: perm_dns();
+    }
+    if (!stralloc_copys(&asciihost, ascii)) temp_nomem();
   }
 
 
@@ -735,7 +853,7 @@ char **argv;
 
  
   random = now() + (getpid() << 16);
-  switch (relayhost ? dns_ip(&ip,&host) : dns_mxip(&ip,&host,random)) {
+  switch (relayhost ? dns_ip(&ip,&host) : dns_mxip(&ip,&asciihost,random)) {
     case DNS_MEM: temp_nomem();
     case DNS_SOFT: temp_dns();
     case DNS_HARD: perm_dns();
