@@ -194,7 +194,6 @@ unsigned long smtpcode()
 }
 
 #ifdef EHLO
-
 saa ehlokw = {0}; /* list of EHLO keywords and parameters */
 int maxehlokwlen = 0;
 
