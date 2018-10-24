@@ -226,6 +226,28 @@ int flagbarf; /* defined if seenmail */
 int allowed;
 stralloc mailfrom = {0};
 stralloc rcptto = {0};
+stralloc mfparms = {0};
+int smtputf8 = 0;
+
+void mailfrom_parms(arg) char *arg;
+{
+  int i;
+  int len;
+
+  len = str_len(arg);
+  if (!stralloc_copys(&mfparms,"")) die_nomem();
+  i = byte_chr(arg,len,'>');
+  if (i > 4 && i < len) {
+    while (len) {
+      arg++; len--;
+      if (*arg == ' ' || *arg == '\0' ) {
+         if (case_starts(mfparms.s,"SMTPUTF8")) smtputf8 = 1;
+      }
+      else
+        if (!stralloc_catb(&mfparms,arg,1)) die_nomem();
+    }
+  }
+}
 
 void smtp_helo(arg) char *arg;
 {
@@ -236,7 +258,7 @@ void smtp_helo(arg) char *arg;
 void smtp_ehlo(arg) char *arg;
 {
   if(!spp_helo(arg)) return;
-  smtp_greet("250-"); out("\r\n250-PIPELINING\r\n250 8BITMIME\r\n");
+  smtp_greet("250-"); out("\r\n250-PIPELINING\r\n250-SMTPUTF8\r\n250 8BITMIME\r\n");
   seenmail = 0; dohelo(arg);
 }
 void smtp_rset(arg) char *arg;
@@ -251,6 +273,7 @@ void smtp_mail(arg) char *arg;
   if (!(spp_val = spp_mail())) return;
   if (spp_val == 1)
   flagbarf = bmfcheck();
+  mailfrom_parms(arg);
   seenmail = 1;
   if (!stralloc_copys(&rcptto,"")) die_nomem();
   if (!stralloc_copys(&mailfrom,addr.s)) die_nomem();
@@ -394,7 +417,7 @@ void smtp_data(arg) char *arg; {
   qp = qmail_qp(&qqt);
   out("354 go ahead\r\n");
  
-  received(&qqt,"SMTP",local,remoteip,remotehost,remoteinfo,fakehelo);
+  received(&qqt,smtputf8 ? "UTF8SMTP" : "SMTP",local,remoteip,remotehost,remoteinfo,fakehelo);
   qmail_put(&qqt,sppheaders.s,sppheaders.len); /* set in qmail-spp.c */
   spp_rset();
   blast(&hops);
