@@ -341,9 +341,9 @@ void pop3_stls(char *arg) {
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
-  if (!starttls_init()) authup_die("starttls");
-
+  if (!starttls_init() || !starttls_info()) authup_die("starttls");
   seentls = 1;
+
   /* reset state */
   seenuser = 0;
 }
@@ -413,14 +413,10 @@ void smtp_starttls() {
     return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
-  if (!starttls_init()) authup_die("starttls");
-
+  if (!starttls_init() || !starttls_info()) authup_die("starttls");
   seentls = 1;
 
-  // XXX if (!starttls_info()) authup_die("starttls");
-
-  /* reset SMTP state */
-
+  /* reset state */
   ssin.p = 0;
 }
 
