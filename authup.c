@@ -326,8 +326,7 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  if (starttls && !seentls)
-    puts("STLS\r\n");
+  if (starttls && !seentls) puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
   flush();
@@ -336,16 +335,15 @@ void pop3_capa(char *arg) {
 static int seenuser = 0;
 
 void pop3_stls(char *arg) {
-  if (!starttls || seentls)
-    return pop3_err("STLS not available");
+  if (!starttls || seentls) return pop3_err("STLS not available");
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
   if (!starttls_init() || !starttls_info()) authup_die("starttls");
-  seentls = 1;
-
   /* reset state */
   seenuser = 0;
+
+  seentls = 1;
 }
 
 void pop3_user(char *arg) {
@@ -399,8 +397,7 @@ void smtp_format_ehlo(stralloc *multiline) {
 void smtp_ehlo(char *arg) {
   char *x;
   puts("250-"); puts(greeting.s); puts("\r\n");
-  if (starttls && !seentls)
-    puts("250-STARTTLS\r\n");
+  if (starttls && !seentls) puts("250-STARTTLS\r\n");
   puts("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
     puts("250-AUTH=LOGIN PLAIN\r\n");
@@ -409,15 +406,14 @@ void smtp_ehlo(char *arg) {
 }
 
 void smtp_starttls() {
-  if (!starttls || seentls)
-    return smtp_out("502 unimplemented (#5.5.1)");
+  if (!starttls || seentls) return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
   if (!starttls_init() || !starttls_info()) authup_die("starttls");
-  seentls = 1;
-
   /* reset state */
   ssin.p = 0;
+
+  seentls = 1;
 }
 
 static stralloc authin = {0};
