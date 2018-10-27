@@ -99,7 +99,7 @@ void (*protocol_error)();
 void authup_die(const char *name) {
   int i;
   for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
-  sleep(e[i].sleep);
+  if (!str_diff(e[i].name,"smtp")) sleep(e[i].sleep);
   protocol_error(e[i]);
   puts("\r\n");
   flush();
