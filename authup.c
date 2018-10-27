@@ -33,7 +33,7 @@
 #define EXITCODE_FIXSMTPIO_PARSEFAIL         18
 
 static int timeout = 1200;
-int stls = 0;
+int starttls = 0;
 int seenstls = 0;
 int seentls = 0;
 stralloc tlsinfo = {0};
@@ -364,7 +364,7 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  if (stls > 0 && !seenstls)
+  if (starttls > 0 && !seenstls)
     puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
@@ -374,7 +374,7 @@ void pop3_capa(char *arg) {
 static int seenuser = 0;
 
 void pop3_stls(char *arg) {
-  if (stls == 0 || seenstls == 1)
+  if (starttls == 0 || seenstls == 1)
     return pop3_err("STLS not available");
   puts("+OK starting TLS negotiation\r\n");
   flush();
@@ -387,7 +387,7 @@ void pop3_stls(char *arg) {
 }
 
 void pop3_user(char *arg) {
-  if (stls == 2 && !seenstls) authup_die("notls");
+  if (starttls == 2 && !seenstls) authup_die("notls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -437,7 +437,7 @@ void smtp_format_ehlo(stralloc *multiline) {
 void smtp_ehlo(char *arg) {
   char *x;
   puts("250-"); puts(greeting.s); puts("\r\n");
-  if (stls > 0 && !seentls)
+  if (starttls > 0 && !seentls)
     puts("250-STARTTLS\r\n");
   puts("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
@@ -447,7 +447,7 @@ void smtp_ehlo(char *arg) {
 }
 
 void smtp_starttls() {
-  if (stls == 0) return smtp_out("502 unimplemented (#5.5.1)");
+  if (starttls == 0) return smtp_out("502 unimplemented (#5.5.1)");
 
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
@@ -536,7 +536,7 @@ void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
-  if ((stls > 1) && !seentls) authup_die("notls");
+  if ((starttls > 1) && !seentls) authup_die("notls");
 
   i = str_chr(cmd,' ');
   arg = cmd + i;
@@ -690,9 +690,9 @@ int main(int argc,char **argv) {
   if (!seentls) {
     ucspitls = env_get("UCSPITLS");
     if (ucspitls) {
-      stls = 1;
-      if (!case_diffs(ucspitls,"-")) stls = 0;
-      if (!case_diffs(ucspitls,"!")) stls = 2;
+      starttls = 1;
+      if (!case_diffs(ucspitls,"-")) starttls = 0;
+      if (!case_diffs(ucspitls,"!")) starttls = 2;
     }
   }
 
