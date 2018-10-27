@@ -9,54 +9,82 @@ static char *b64alpha =
 
 /* returns 0 ok, 1 illegal, -1 problem */
 
-int b64decode(in,l,out)
-const unsigned char *in;
-int l;
-stralloc *out; /* not null terminated */
+int b64decode(const unsigned char *in,int l,stralloc *out)
+/* stralloc *out =>  not null terminated */
 {
+  int p = 0;
+  int n;
+  unsigned int x;
   int i, j;
-  unsigned char a[4];
-  unsigned char b[3];
   char *s;
+  unsigned char b[3];
 
-  if (l == 0)
-  {
+  if (l == 0) {
     if (!stralloc_copys(out,"")) return -1;
     return 0;
   }
 
-  if (!stralloc_ready(out,l + 2)) return -1; /* XXX generous */
+  while (in[l-1] == B64PAD) {
+    p ++;
+    l--;
+  }
+
+  n = (l + p) / 4;
+  i = (n * 3) - p;
+  if (!stralloc_ready(out,i)) return -1;
+  out->len = i;
   s = out->s;
 
-  for (i = 0;i < l;i += 4) {
-    for (j = 0;j < 4;j++)
-      if ((i + j) < l && in[i + j] != B64PAD)
-      {
-        a[j] = str_chr(b64alpha,in[i + j]);
-        if (a[j] > 63) return 1;
-      }
-      else a[j] = 0;
+  for (i = 0; i < n - 1; i++) {
+    x = 0;
+    for (j = 0; j < 4; j++) {
+      if (in[j] >= 'A' && in[j] <= 'Z')
+        x = (x << 6) + (unsigned int)(in[j] - 'A' + 0);
+      else if (in[j] >= 'a' && in[j] <= 'z')
+        x = (x << 6) + (unsigned int)(in[j] - 'a' + 26);
+      else if (in[j] >= '0' && in[j] <= '9')
+        x = (x << 6) + (unsigned int)(in[j] - '0' + 52);
+      else if (in[j] == '+')
+        x = (x << 6) + 62;
+      else if (in[j] == '/')
+        x = (x << 6) + 63;
+      else if (in[j] == '=')
+        x = (x << 6);
+    }
 
-    b[0] = (a[0] << 2) | (a[1] >> 4);
-    b[1] = (a[1] << 4) | (a[2] >> 2);
-    b[2] = (a[2] << 6) | (a[3]);
-
-    *s++ = b[0];
-
-    if (in[i + 1] == B64PAD) break;
-    *s++ = b[1];
-
-    if (in[i + 2] == B64PAD) break;
-    *s++ = b[2];
+    s[2] = (unsigned char)(x & 255); x >>= 8;
+    s[1] = (unsigned char)(x & 255); x >>= 8;
+    s[0] = (unsigned char)(x & 255); x >>= 8;
+    s += 3; in += 4;
   }
-  out->len = s - out->s;
-  while (out->len && !out->s[out->len - 1]) --out->len; /* XXX avoid? */
+
+  x = 0;
+  for (j = 0; j < 4; j++) {
+    if (in[j] >= 'A' && in[j] <= 'Z')
+      x = (x << 6) + (unsigned int)(in[j] - 'A' + 0);
+    else if (in[j] >= 'a' && in[j] <= 'z')
+      x = (x << 6) + (unsigned int)(in[j] - 'a' + 26);
+    else if (in[j] >= '0' && in[j] <= '9')
+      x = (x << 6) + (unsigned int)(in[j] - '0' + 52);
+    else if (in[j] == '+')
+      x = (x << 6) + 62;
+    else if (in[j] == '/')
+      x = (x << 6) + 63;
+    else if (in[j] == '=')
+      x = (x << 6);
+  }
+
+  b[2] = (unsigned char)(x & 255); x >>= 8;
+  b[1] = (unsigned char)(x & 255); x >>= 8;
+  b[0] = (unsigned char)(x & 255); x >>= 8;
+
+  for (i = 0; i < 3 - p; i++)
+    s[i] = b[i];
+
   return 0;
 }
 
-int b64encode(in,out)
-stralloc *in;
-stralloc *out; /* not null terminated */
+int b64encode(stralloc *in,stralloc *out)
 {
   unsigned char a, b, c;
   int i;
@@ -68,10 +96,11 @@ stralloc *out; /* not null terminated */
     return 0;
   }
 
-  if (!stralloc_ready(out,in->len / 3 * 4 + 4)) return -1;
+  i = in->len / 3 * 4 + 4;
+  if (!stralloc_ready(out,i)) return -1;
   s = out->s;
 
-  for (i = 0;i < in->len;i += 3) {
+  for (i = 0; i < in->len; i += 3) {
     a = in->s[i];
     b = i + 1 < in->len ? in->s[i + 1] : 0;
     c = i + 2 < in->len ? in->s[i + 2] : 0;
