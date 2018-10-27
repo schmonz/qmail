@@ -81,8 +81,8 @@ struct authup_error e[] = {
 , { "input",   "malformed auth input",         "501", "5.5.4", 5, die         }
 , { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
 , { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
-, { "starttls","TLS temporarily not available","454", "5.7.3", 0, die         }
-, { "notls",   "TLS required",                 "535", "5.7.1", 0, die         }
+, { "starttls","TLS temporarily not available","454", "5.7.3", 5, die         }
+, { "notls",   "TLS required",                 "535", "5.7.1", 5, die         }
 , { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
 };
 
@@ -103,15 +103,36 @@ void smtp_auth_error(struct authup_error ae) {
 
 void (*protocol_error)();
 
+void pop3_sleep(int s) { return; }
+void smtp_sleep(int s) { sleep(s); }
+void (*protocol_sleep)();
+
+char sserrbuf[SUBSTDIO_OUTSIZE];
+substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
+
+void errflush(char *s) {
+  substdio_puts(&sserr,PROGNAME ": ");
+  substdio_puts(&sserr,s);
+  substdio_putsflush(&sserr,"\n");
+}
+
 void authup_die(const char *name) {
   int i;
   for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
-  if (!str_diff(e[i].name,"smtp")) sleep(e[i].sleep);
+  protocol_sleep(e[i].sleep);
   protocol_error(e[i]);
   puts("\r\n");
   flush();
   e[i].die();
 }
+
+void die_usage() { errflush("usage: " PROGNAME " <smtp|pop3> prog"); die(); }
+
+void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
+void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
+
+void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
+void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
 
 int modssl_info() {
   char *tlsversion;
@@ -148,25 +169,6 @@ int modssl_info() {
 
   return 1;
 }
-
-char sserrbuf[SUBSTDIO_OUTSIZE];
-substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
-
-void errflush(char *s) {
-  substdio_puts(&sserr,PROGNAME ": ");
-  substdio_puts(&sserr,s);
-  substdio_putsflush(&sserr,"\n");
-}
-
-void die_usage() { errflush("usage: " PROGNAME " <smtp|pop3> prog"); die(); }
-
-void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
-void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
-
-void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
-void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
-
-void die_tls() { pop3_err("TLS startup failed"); die(); }
 
 int saferead(int fd,char *buf,int len) {
   int r;
@@ -377,7 +379,7 @@ void pop3_stls(char *arg) {
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
-  if (!starttls_init()) die_tls();
+  if (!starttls_init()) authup_die("starttls");
 
   seenstls = 1;
   /* reset state */
@@ -580,14 +582,15 @@ struct protocol {
   char *cap_prefix;
   void (*cap_format_response)();
   void (*error)();
+  void (*sleep)();
   void (*greet)();
   struct commands *c;
 };
 
 struct protocol p[] = {
-  {"pop3", "",     pop3_format_capa, pop3_auth_error, pop3_greet, pop3commands}
-, {"smtp", "250-", smtp_format_ehlo, smtp_auth_error, smtp_greet, smtpcommands}
-, {0,      "",     0,                die_usage,       die_usage,  0           }
+  { "pop3", "",     pop3_format_capa, pop3_auth_error, pop3_sleep, pop3_greet, pop3commands }
+, { "smtp", "250-", smtp_format_ehlo, smtp_auth_error, smtp_sleep, smtp_greet, smtpcommands }
+, { 0,      "",     0,                die_usage,       0,     die_usage,  0            }
 };
 
 int control_readgreeting(char *p) {
@@ -658,6 +661,7 @@ int should_greet() {
 
 void doprotocol(struct protocol p) {
   protocol_error = p.error;
+  protocol_sleep = p.sleep;
 
   if (chdir(auto_qmail) == -1) authup_die("control");
   if (control_init() == -1) authup_die("control");
