@@ -4,6 +4,7 @@ authup \- offer SMTP or POP3 authentication
 .SH SYNOPSIS
 .B authup
 .I protocol
+.I checkpassword
 .I prog
 .SH DESCRIPTION
 .B authup
@@ -11,15 +12,13 @@ speaks just enough SMTP (AUTH LOGIN or PLAIN)
 or POP3 (USER-PASS)
 to parse a username and password.
 It then runs
-.I prog
+.I checkpassword
 via the
 .B checkpassword
 interface.
 
 .B authup
 is most commonly invoked from
-.B tcpserver
-or
 .B sslserver
 as root, so that
 .B checkpassword
@@ -33,20 +32,30 @@ under the UID of the authenticated user.
 
 .B authup
 waits for
+.I checkpassword
+and
 .I prog
 to finish.
 It prints an error message if
-.I prog
+.I checkpassword
+or
+.IR prog
 crashes or exits nonzero.
-If authentication failed, it waits 5 seconds before printing the message.
+If authentication failed, and
+.I protocol
+is SMTP, it waits 5 seconds
+before printing the message.
 
+When run under
+.BR sslserver ,
 .B authup
-neither performs encryption nor refuses to operate without it.
-For security, make it available over the network only by means of
-another program that encrypts the connection.
+can be configured to offer TLS and/or refuse to authenticate without it.
 .SH "ENVIRONMENT VARIABLES"
-The authenticated user is available to child processes as
-.BR AUTHUP_USER .
+If
+.B UCSPITLS
+is set to "!",
+.B authup
+will require the client to negotiate TLS before attempting to authenticate.
 
 If
 .B AUTHUP_SASL_BROKEN_CLIENTS
@@ -56,16 +65,18 @@ will additionally advertise AUTH support in a second, non-standard way
 to interoperate with Outlook Express 4, Exchange 5,
 and other SMTP clients that implement an obsolete version of the AUTH command.
 
-Under
-.BR authup,
+If authentication succeeds,
+.IR prog 's
+environment will contain the username in
+.BR AUTHUP_USER .
+
+Since
+.I prog
+will run with the privileges of the authenticated user, so will
+any
 .B qmail-queue
-runs with the privileges of the authenticated user.
-Therefore, if
-.B ofmipd
-(or
-.BR qmail-smtpd )
-has the QMAILQUEUE patch applied,
-your configured queue wrapper will too.
+wrapper configured as
+.BR QMAILQUEUE .
 This can be useful for user-controlled filtering.
 .SH "CONTROL FILES"
 .TP 5
@@ -79,6 +90,38 @@ otherwise
 will refuse to run.
 The first word of the greeting
 should be the current host's name.
+.TP 5
+.I smtpcapabilities / pop3capabilities
+SMTP and POP3 capabilities (one per line) to advertise in
+.I EHLO
+and
+.IR CAPA ,
+respectively.
+Default:
+.IR none .
+Without the needed file,
+.B authup
+will refuse to run.
+
+Typical POP3 capabilities: TOP, UIDL. (Omit STLS and USER.)
+
+Typical SMTP capabilities: PIPELINING, 8BITMIME. (Omit STARTTLS and AUTH.)
+
+Correct values for your system depend on what
+.I prog
+offers.
+For instance, to inspect your installed
+.BR qmail-smtpd :
+
+$ echo EHLO | qmail-smtpd \\
+     | sed -e '1,2d' -e 's|^....||' | egrep -v '^(STARTTLS|AUTH)'
+
+.B authup
+will automatically advertise TLS support when run under
+.B sslserver
+with the
+.B -n
+flag.
 .TP 5
 .I timeoutsmtpd / timeoutpop3d
 Number of seconds
@@ -94,7 +137,8 @@ is available in
 .BR qmail-popup ,
 neither is currently supported by
 .BR authup .
-If you rely on them, please share your use case with the author.
+Nor is authenticating with a client certificate.
+If you rely on any of these, please share your use case with the author.
 .SH "EXAMPLES"
 See
 .IR https://schmonz.com/qmail/acceptutils .
@@ -104,8 +148,10 @@ See
 reup(8),
 checknotroot(8),
 fixsmtpio(8),
-stunnel(8),
+sslserver(1),
+ucspi-tls(2),
 qmail-qfilter-ofmipd-queue(8),
 ofmipd(8),
+qmail-smtpd(8),
 qmail-pop3d(8),
 qmail-popup(8).
