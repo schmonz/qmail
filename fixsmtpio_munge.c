@@ -38,6 +38,7 @@ void change_every_line_fourth_char_to_dash(stralloc *multiline) {
   }
 }
 
+// copy to with authup.c:smtp_ehlo_format()
 void change_last_line_fourth_char_to_space(stralloc *multiline) {
   int pos = 0;
   int i;
