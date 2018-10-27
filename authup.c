@@ -135,6 +135,7 @@ char ssinbuf[SUBSTDIO_INSIZE];
 substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
 
 stralloc greeting = {0};
+stralloc capabilities = {0};
 char **childargs;
 
 void pop3_okay() { puts("+OK \r\n"); flush(); }
@@ -230,12 +231,14 @@ void pop3_greet() {
   flush();
 }
 
+void pop3_format_capa(stralloc *multiline) {
+  if (!stralloc_cats(multiline,".\r\n")) authup_die("nomem");
+}
+
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  puts("TOP\r\n");
   puts("USER\r\n");
-  puts("UIDL\r\n");
-  puts(".\r\n");
+  puts(capabilities.s);
   flush();
 }
 
@@ -275,14 +278,28 @@ void smtp_helo(char *arg) {
   smtp_out(greeting.s);
 }
 
+// copy from fixsmtpio_munge.c:change_last_line_fourth_char_to_space()
+void smtp_format_ehlo(stralloc *multiline) {
+  int pos = 0;
+  int i;
+  for (i = multiline->len - 2; i >= 0; i--) {
+    if (multiline->s[i] == '\n') {
+      pos = i + 1;
+      break;
+    }
+  }
+  capabilities.s[pos+3] = ' ';
+}
+
 void smtp_ehlo(char *arg) {
   char *x;
   puts("250-");
   puts(greeting.s);
-  puts("\r\n250-AUTH LOGIN PLAIN");
+  puts("\r\n250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
-    puts("\r\n250-AUTH=LOGIN PLAIN");
-  smtp_out("\r\n250-PIPELINING\r\n250 8BITMIME");
+    puts("\r\n250-AUTH=LOGIN PLAIN\r\n");
+  puts(capabilities.s);
+  flush();
 }
 
 static stralloc authin = {0};
@@ -398,15 +415,17 @@ struct commands smtpcommands[] = {
 
 struct protocol {
   char *name;
+  char *cap_prefix;
+  void (*cap_format_response)();
   void (*error)();
   void (*greet)();
   struct commands *c;
 };
 
 struct protocol p[] = {
-  { "pop3", pop3_auth_error, pop3_greet, pop3commands }
-, { "smtp", smtp_auth_error, smtp_greet, smtpcommands }
-, { 0,      die_usage,       die_usage,  0            }
+  {"pop3", "",     pop3_format_capa, pop3_auth_error, pop3_greet, pop3commands}
+, {"smtp", "250-", smtp_format_ehlo, smtp_auth_error, smtp_greet, smtpcommands}
+, {0,      "",     0,                die_usage,       die_usage,  0           }
 };
 
 int control_readgreeting(char *p) {
@@ -437,6 +456,34 @@ int control_readtimeout(char *p) {
   return control_readint(&timeout,file.s);
 }
 
+int control_readcapabilities(struct protocol p) {
+  stralloc file = {0};
+  stralloc lines = {0};
+  int linestart;
+  int pos;
+
+  if (!stralloc_copys(&file,"control/")) authup_die("nomem");
+  if (!stralloc_cats(&file,p.name)) authup_die("nomem");
+  if (!stralloc_cats(&file,"capabilities")) authup_die("nomem");
+  if (!stralloc_0(&file)) authup_die("nomem");
+
+  if (control_readfile(&lines,file.s,0) != 1) return -1;
+
+  if (!stralloc_copys(&capabilities,"")) authup_die("nomem");
+  for (linestart = 0, pos = 0; pos < lines.len; pos++) {
+    if (lines.s[pos] == '\0') {
+      if (!stralloc_cats(&capabilities,p.cap_prefix)) authup_die("nomem");
+      if (!stralloc_cats(&capabilities,lines.s+linestart)) authup_die("nomem");
+      if (!stralloc_cats(&capabilities,"\r\n")) authup_die("nomem");
+      linestart = pos + 1;
+    }
+  }
+  p.cap_format_response(&capabilities);
+  if (!stralloc_0(&capabilities)) authup_die("nomem");
+
+  return 1;
+}
+
 int should_greet() {
   char *x;
   int r;
@@ -454,6 +501,7 @@ void doprotocol(struct protocol p) {
   if (control_init() == -1) authup_die("control");
   if (control_readgreeting(p.name) == -1) authup_die("control");
   if (control_readtimeout(p.name) == -1) authup_die("control");
+  if (control_readcapabilities(p) == -1) authup_die("control");
   if (should_greet()) p.greet();
   commands(&ssin,p.c);
   authup_die("protocol");
