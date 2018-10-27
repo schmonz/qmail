@@ -80,7 +80,7 @@ struct authup_error e[] = {
 , { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
 , { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
 , { "starttls","TLS temporarily not available","454", "5.7.3", 0, die         }
-, { "notls",   "TLS required",                 "535", "5.7.1", 0, die         }
+, { "needtls", "TLS required",                 "535", "5.7.1", 0, die         }
 , { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
 };
 
@@ -349,7 +349,7 @@ void pop3_stls(char *arg) {
 }
 
 void pop3_user(char *arg) {
-  if (starttls && !seentls) authup_die("notls");
+  if (starttls && !seentls) authup_die("needtls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -494,7 +494,7 @@ void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
-  if (starttls && !seentls) authup_die("notls");
+  if (starttls && !seentls) authup_die("needtls");
 
   i = str_chr(cmd,' ');
   arg = cmd + i;
