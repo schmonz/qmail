@@ -81,8 +81,8 @@ struct authup_error e[] = {
 , { "input",   "malformed auth input",         "501", "5.5.4", 5, die         }
 , { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
 , { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
-, { "starttls","TLS temporarily not available","454", "5.7.3", 5, die         }
-, { "notls",   "TLS required",                 "535", "5.7.1", 5, die         }
+, { "starttls","TLS temporarily not available","454", "5.7.3", 0, die         }
+, { "notls",   "TLS required",                 "535", "5.7.1", 0, die         }
 , { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
 };
 
