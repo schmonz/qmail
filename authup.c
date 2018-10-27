@@ -20,6 +20,7 @@
 #include "env.h"
 #include "control.h"
 #include "error.h"
+#include "open.h"
 
 #define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
 #define PROGNAME "authup"
@@ -32,6 +33,8 @@
 #define EXITCODE_FIXSMTPIO_PARSEFAIL         18
 
 static int timeout = 1200;
+int stls = 0;
+int seenstls = 0;
 
 void die()         { _exit( 1); }
 void die_noretry() { _exit(12); }
@@ -123,6 +126,9 @@ void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
 void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
 void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
 
+void die_tls() { pop3_err("TLS startup failed"); die(); }
+void die_notls() { pop3_err("TLS required but not negotiated"); die(); }
+
 int saferead(int fd,char *buf,int len) {
   int r;
   r = timeoutread(timeout,fd,buf,len);
@@ -141,6 +147,88 @@ char **childargs;
 void pop3_okay() { puts("+OK \r\n"); flush(); }
 void pop3_quit() { pop3_okay(); _exit(0); }
 void smtp_quit() { puts("221 "); smtp_out(greeting.s); _exit(0); }
+
+int starttls_init(void)
+{
+  unsigned long fd;
+  char *fdstr;
+
+  if (!(fdstr=env_get("SSLCTLFD")))
+    return 0;
+  if (!scan_ulong(fdstr,&fd))
+    return 0;
+  if (write((int)fd, "Y", 1) < 1)
+    return 0;
+
+  if (!(fdstr=env_get("SSLREADFD")))
+    return 0;
+  if (!scan_ulong(fdstr,&fd))
+    return 0;
+  if (dup2((int)fd,0) == -1)
+    return 0;
+
+  if (!(fdstr=env_get("SSLWRITEFD")))
+    return 0;
+  if (!scan_ulong(fdstr,&fd))
+    return 0;
+  if (dup2((int)fd,1) == -1)
+    return 0;
+
+  return 1;
+}
+
+int starttls_info(void)
+{
+  unsigned long fd;
+  char *fdstr;
+  char envbuf[8192];
+  char *x;
+  int j;
+
+  stralloc ssl_env   = {0};
+  stralloc ssl_parm  = {0};
+  stralloc ssl_value = {0};
+
+  if (!(fdstr=env_get("SSLCTLFD")))
+    return 0;
+  if (!scan_ulong(fdstr,&fd))
+    return 0;
+
+  while ((j=read(fd,envbuf,8192)) > 0 ) {
+    stralloc_catb(&ssl_env,envbuf,j);
+      if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2]==0 && ssl_env.s[ssl_env.len-1]==0)
+        break;
+  }
+  if (j <= 0)
+    authup_die("nomem");
+
+  x = ssl_env.s;
+
+  for (j=0;j < ssl_env.len-1;++j) {
+    if ( *x != '=' ) {
+      if (!stralloc_catb(&ssl_parm,x,1)) authup_die("nomem");
+      x++; }
+    else {
+      if (!stralloc_0(&ssl_parm)) authup_die("nomem");
+      x++;
+
+      for (;j < ssl_env.len-j-1;++j) {
+        if ( *x != '\0' ) {
+          if (!stralloc_catb(&ssl_value,x,1)) authup_die("nomem");
+          x++; }
+        else {
+          if (!stralloc_0(&ssl_value)) authup_die("nomem");
+          x++;
+          if (!env_put2(ssl_parm.s,ssl_value.s)) authup_die("nomem");
+          ssl_parm.len = 0;
+          ssl_value.len = 0;
+          break;
+        }
+      }
+    }
+  }
+  return j;
+}
 
 stralloc username = {0};
 stralloc password = {0};
@@ -173,7 +261,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int pi[2];
   char upbuf[SUBSTDIO_OUTSIZE];
   substdio ssup;
- 
+
   close(3);
   if (pipe(pi) == -1) authup_die("pipe");
   if (pi[0] != 3) authup_die("pipe");
@@ -237,6 +325,8 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
+  if (stls > 0)
+    puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
   flush();
@@ -244,7 +334,23 @@ void pop3_capa(char *arg) {
 
 static int seenuser = 0;
 
+void pop3_stls(char *arg)
+{
+  if (stls == 0 || seenstls == 1)
+    return pop3_err("STLS not available");
+  puts("+OK starting TLS negotiation\r\n");
+  flush();
+
+  if (!starttls_init()) die_tls();
+
+  seenstls = 1;
+  /* reset state */
+  seenuser = 0;
+  //if (!stralloc_cats(&protocol,"S")) authup_die("nomem");
+}
+
 void pop3_user(char *arg) {
+  if (stls == 2 && !seenstls) die_notls();
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -293,11 +399,10 @@ void smtp_format_ehlo(stralloc *multiline) {
 
 void smtp_ehlo(char *arg) {
   char *x;
-  puts("250-");
-  puts(greeting.s);
-  puts("\r\n250-AUTH LOGIN PLAIN\r\n");
+  puts("250-"); puts(greeting.s); puts("\r\n");
+  puts("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
-    puts("\r\n250-AUTH=LOGIN PLAIN\r\n");
+    puts("250-AUTH=LOGIN PLAIN\r\n");
   puts(capabilities.s);
   flush();
 }
@@ -395,7 +500,8 @@ void smtp_noop() {
 }
 
 struct commands pop3commands[] = {
-  { "user", pop3_user, 0 }
+  { "stls", pop3_stls, 0 }
+, { "user", pop3_user, 0 }
 , { "pass", pop3_pass, 0 }
 , { "quit", pop3_quit, 0 }
 , { "capa", pop3_capa, 0 }
@@ -509,16 +615,24 @@ void doprotocol(struct protocol p) {
 
 int main(int argc,char **argv) {
   char *protocol;
+  char *ucspitls;
   int i;
 
   sig_alarmcatch(die);
   sig_pipeignore();
- 
+
   protocol = argv[1];
   if (!protocol) die_usage();
 
   childargs = argv + 2;
   if (!*childargs) die_usage();
+
+  ucspitls = env_get("UCSPITLS");
+  if (ucspitls) {
+    stls = 1;
+    if (!case_diffs(ucspitls,"-")) stls = 0;
+    if (!case_diffs(ucspitls,"!")) stls = 2;
+  }
 
   for (i = 0; p[i].name; ++i)
     if (case_equals(p[i].name,protocol))
