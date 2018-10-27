@@ -35,6 +35,8 @@
 static int timeout = 1200;
 int stls = 0;
 int seenstls = 0;
+int seentls = 0;
+stralloc tlsinfo = {0};
 
 void die()         { _exit( 1); }
 void die_noretry() { _exit(12); }
@@ -79,6 +81,8 @@ struct authup_error e[] = {
 , { "input",   "malformed auth input",         "501", "5.5.4", 5, die         }
 , { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
 , { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
+, { "starttls","TLS temporarily not available","454", "5.7.3", 0, die         }
+, { "notls",   "TLS required",                 "535", "5.7.1", 0, die         }
 , { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
 };
 
@@ -109,6 +113,42 @@ void authup_die(const char *name) {
   e[i].die();
 }
 
+int modssl_info() {
+  char *tlsversion;
+  char *cipher;
+  char *cipherperm;
+  char *cipherused;
+  char *clientdn;
+
+  tlsversion = env_get("SSL_PROTOCOL");
+  if (!tlsversion) return 0;
+
+  cipher = env_get("SSL_CIPHER");
+  if (!cipher) cipher = "unknown";
+  cipherperm = env_get("SSL_CIPHER_ALGKEYSIZE");
+  if (!cipherperm) cipherperm = "unknown";
+  cipherused = env_get("SSL_CIPHER_USEKEYSIZE");
+  if (!cipherused) cipherused = "unknown";
+  clientdn = env_get("SSL_CLIENT_S_DN");
+  if (!clientdn) clientdn = "none";
+  else
+    seentls = 3;
+
+  if (!stralloc_copys(&tlsinfo,tlsversion)) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,": ")) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,cipher)) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo," [")) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,cipherused)) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,"/")) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,cipherperm)) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,"] ")) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,"DN=")) authup_die("nomem");
+  if (!stralloc_cats(&tlsinfo,clientdn)) authup_die("nomem");
+  if (!stralloc_0(&tlsinfo)) authup_die("nomem");
+
+  return 1;
+}
+
 char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
@@ -127,7 +167,6 @@ void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
 void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
 
 void die_tls() { pop3_err("TLS startup failed"); die(); }
-void die_notls() { pop3_err("TLS required but not negotiated"); die(); }
 
 int saferead(int fd,char *buf,int len) {
   int r;
@@ -148,8 +187,7 @@ void pop3_okay() { puts("+OK \r\n"); flush(); }
 void pop3_quit() { pop3_okay(); _exit(0); }
 void smtp_quit() { puts("221 "); smtp_out(greeting.s); _exit(0); }
 
-int starttls_init(void)
-{
+int starttls_init(void) {
   unsigned long fd;
   char *fdstr;
 
@@ -177,8 +215,7 @@ int starttls_init(void)
   return 1;
 }
 
-int starttls_info(void)
-{
+int starttls_info(void) {
   unsigned long fd;
   char *fdstr;
   char envbuf[8192];
@@ -334,8 +371,7 @@ void pop3_capa(char *arg) {
 
 static int seenuser = 0;
 
-void pop3_stls(char *arg)
-{
+void pop3_stls(char *arg) {
   if (stls == 0 || seenstls == 1)
     return pop3_err("STLS not available");
   puts("+OK starting TLS negotiation\r\n");
@@ -346,11 +382,10 @@ void pop3_stls(char *arg)
   seenstls = 1;
   /* reset state */
   seenuser = 0;
-  //if (!stralloc_cats(&protocol,"S")) authup_die("nomem");
 }
 
 void pop3_user(char *arg) {
-  if (stls == 2 && !seenstls) die_notls();
+  if (stls == 2 && !seenstls) authup_die("notls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -400,11 +435,29 @@ void smtp_format_ehlo(stralloc *multiline) {
 void smtp_ehlo(char *arg) {
   char *x;
   puts("250-"); puts(greeting.s); puts("\r\n");
+  if (stls > 0 && !seentls)
+    puts("250-STARTTLS\r\n");
   puts("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
     puts("250-AUTH=LOGIN PLAIN\r\n");
   puts(capabilities.s);
   flush();
+}
+
+void smtp_starttls() {
+  if (stls == 0) return smtp_out("502 unimplemented (#5.5.1)");
+
+  smtp_out("220 Ready to start TLS (#5.7.0)");
+
+  if (!starttls_init()) authup_die("starttls");
+  seentls = 2;
+
+  if (!starttls_info()) authup_die("starttls");
+  if (!modssl_info()) authup_die("starttls");
+
+  /* reset SMTP state */
+
+  ssin.p = 0;
 }
 
 static stralloc authin = {0};
@@ -481,6 +534,8 @@ void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
+  if ((stls > 1) && !seentls) authup_die("notls");
+
   i = str_chr(cmd,' ');
   arg = cmd + i;
   while (*arg == ' ') ++arg;
@@ -510,7 +565,8 @@ struct commands pop3commands[] = {
 };
 
 struct commands smtpcommands[] = {
-  { "auth", smtp_auth, flush }
+  { "starttls", smtp_starttls, 0 }
+, { "auth", smtp_auth, flush }
 , { "quit", smtp_quit, 0 }
 , { "helo", smtp_helo, 0 }
 , { "ehlo", smtp_ehlo, 0 }
@@ -627,11 +683,13 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  ucspitls = env_get("UCSPITLS");
-  if (ucspitls) {
-    stls = 1;
-    if (!case_diffs(ucspitls,"-")) stls = 0;
-    if (!case_diffs(ucspitls,"!")) stls = 2;
+  if (!seentls) {
+    ucspitls = env_get("UCSPITLS");
+    if (ucspitls) {
+      stls = 1;
+      if (!case_diffs(ucspitls,"-")) stls = 0;
+      if (!case_diffs(ucspitls,"!")) stls = 2;
+    }
   }
 
   for (i = 0; p[i].name; ++i)
