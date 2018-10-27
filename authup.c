@@ -230,6 +230,15 @@ void pop3_greet() {
   flush();
 }
 
+void pop3_capa(char *arg) {
+  puts("+OK capability list follows\r\n");
+  puts("TOP\r\n");
+  puts("USER\r\n");
+  puts("UIDL\r\n");
+  puts(".\r\n");
+  flush();
+}
+
 static int seenuser = 0;
 
 void pop3_user(char *arg) {
@@ -372,6 +381,7 @@ struct commands pop3commands[] = {
   { "user", pop3_user, 0 }
 , { "pass", pop3_pass, 0 }
 , { "quit", pop3_quit, 0 }
+, { "capa", pop3_capa, 0 }
 , { "noop", pop3_okay, 0 }
 , { 0, pop3_err_authoriz, 0 }
 };
