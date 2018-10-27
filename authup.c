@@ -325,7 +325,7 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  if (stls > 0)
+  if (stls > 0 && !seenstls)
     puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
