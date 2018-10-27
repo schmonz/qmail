@@ -35,7 +35,6 @@
 static int timeout = 1200;
 int starttls = 0;
 int seentls = 0;
-stralloc tlsinfo = {0};
 
 void die()         { _exit( 1); }
 void die_noretry() { _exit(12); }
@@ -132,40 +131,6 @@ void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
 
 void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
 void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
-
-int modssl_info() {
-  char *tlsversion;
-  char *cipher;
-  char *cipherperm;
-  char *cipherused;
-  char *clientdn;
-
-  tlsversion = env_get("SSL_PROTOCOL");
-  if (!tlsversion) return 0;
-
-  cipher = env_get("SSL_CIPHER");
-  if (!cipher) cipher = "unknown";
-  cipherperm = env_get("SSL_CIPHER_ALGKEYSIZE");
-  if (!cipherperm) cipherperm = "unknown";
-  cipherused = env_get("SSL_CIPHER_USEKEYSIZE");
-  if (!cipherused) cipherused = "unknown";
-  clientdn = env_get("SSL_CLIENT_S_DN");
-  if (!clientdn) clientdn = "none";
-
-  if (!stralloc_copys(&tlsinfo,tlsversion)) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,": ")) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,cipher)) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo," [")) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,cipherused)) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,"/")) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,cipherperm)) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,"] ")) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,"DN=")) authup_die("nomem");
-  if (!stralloc_cats(&tlsinfo,clientdn)) authup_die("nomem");
-  if (!stralloc_0(&tlsinfo)) authup_die("nomem");
-
-  return 1;
-}
 
 int saferead(int fd,char *buf,int len) {
   int r;
@@ -451,8 +416,7 @@ void smtp_starttls() {
   if (!starttls_init()) authup_die("starttls");
   seentls = 2;
 
-  if (!starttls_info()) authup_die("starttls");
-  if (!modssl_info()) authup_die("starttls");
+  // XXX if (!starttls_info()) authup_die("starttls");
 
   /* reset SMTP state */
 
