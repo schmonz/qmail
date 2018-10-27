@@ -34,7 +34,6 @@
 
 static int timeout = 1200;
 int starttls = 0;
-int seenstls = 0;
 int seentls = 0;
 stralloc tlsinfo = {0};
 
@@ -152,8 +151,6 @@ int modssl_info() {
   if (!cipherused) cipherused = "unknown";
   clientdn = env_get("SSL_CLIENT_S_DN");
   if (!clientdn) clientdn = "none";
-  else
-    seentls = 3;
 
   if (!stralloc_copys(&tlsinfo,tlsversion)) authup_die("nomem");
   if (!stralloc_cats(&tlsinfo,": ")) authup_die("nomem");
@@ -364,7 +361,7 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  if (starttls > 0 && !seenstls)
+  if (starttls > 0 && !seentls)
     puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
@@ -374,20 +371,20 @@ void pop3_capa(char *arg) {
 static int seenuser = 0;
 
 void pop3_stls(char *arg) {
-  if (starttls == 0 || seenstls == 1)
+  if (starttls == 0 || seentls == 1)
     return pop3_err("STLS not available");
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
   if (!starttls_init()) authup_die("starttls");
 
-  seenstls = 1;
+  seentls = 1;
   /* reset state */
   seenuser = 0;
 }
 
 void pop3_user(char *arg) {
-  if (starttls == 2 && !seenstls) authup_die("notls");
+  if (starttls == 2 && !seentls) authup_die("notls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
