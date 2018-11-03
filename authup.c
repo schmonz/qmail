@@ -179,6 +179,10 @@ void logtry(char *username) {
   substdio_putsflush(&sserr,"\n");
 }
 
+void append0(stralloc *sa) {
+  if (!stralloc_0(sa)) authup_die("nomem");
+}
+
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
@@ -195,7 +199,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
     case 0:
       close(pi[1]);
       sig_pipedefault();
-      if (!stralloc_0(username)) authup_die("nomem");
+      append0(username);
       logtry(username->s);
       if (!env_put2("AUTHUP_USER",username->s)) authup_die("nomem");
       execvp(*childargs,childargs);
@@ -204,15 +208,15 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   close(pi[0]);
   substdio_fdbuf(&ssup,write,pi[1],upbuf,sizeof upbuf);
 
-  if (!stralloc_0(username)) authup_die("nomem");
+  append0(username);
   if (substdio_put(&ssup,username->s,username->len) == -1) authup_die("write");
   byte_zero(username->s,username->len);
 
-  if (!stralloc_0(password)) authup_die("nomem");
+  append0(password);
   if (substdio_put(&ssup,password->s,password->len) == -1) authup_die("write");
   byte_zero(password->s,password->len);
 
-  if (!stralloc_0(timestamp)) authup_die("nomem");
+  append0(timestamp);
   if (substdio_put(&ssup,timestamp->s,timestamp->len) == -1) authup_die("write");
   byte_zero(timestamp->s,timestamp->len);
 
@@ -397,7 +401,8 @@ void auth_plain(char *arg) {
     smtp_authgetl();
     if ((r = b64decode(authin.s,authin.len,&resp)) == 1) authup_die("input");
   }
-  if (r == -1 || !stralloc_0(&resp)) authup_die("nomem");
+  if (r == -1) authup_die("nomem");
+  append0(&resp);
   while (resp.s[id]) id++; /* ignore authorize-id */
 
   if (resp.len > id + 1)
@@ -477,12 +482,12 @@ int control_readgreeting(char *p) {
   if (!stralloc_copys(&file,"control/")) authup_die("nomem");
   if (!stralloc_cats(&file,p)) authup_die("nomem");
   if (!stralloc_cats(&file,"greeting")) authup_die("nomem");
-  if (!stralloc_0(&file)) authup_die("nomem");
+  append0(&file);
 
   retval = control_rldef(&greeting,file.s,1,(char *) 0);
   if (retval != 1) retval = -1;
 
-  if (!stralloc_0(&greeting)) authup_die("nomem");
+  append0(&greeting);
 
   return retval;
 }
@@ -493,7 +498,7 @@ int control_readtimeout(char *p) {
   if (!stralloc_copys(&file,"control/timeout")) authup_die("nomem");
   if (!stralloc_cats(&file,p)) authup_die("nomem");
   if (!stralloc_cats(&file,"d")) authup_die("nomem");
-  if (!stralloc_0(&file)) authup_die("nomem");
+  append0(&file);
 
   return control_readint(&timeout,file.s);
 }
@@ -507,7 +512,7 @@ int control_readcapabilities(struct protocol p) {
   if (!stralloc_copys(&file,"control/")) authup_die("nomem");
   if (!stralloc_cats(&file,p.name)) authup_die("nomem");
   if (!stralloc_cats(&file,"capabilities")) authup_die("nomem");
-  if (!stralloc_0(&file)) authup_die("nomem");
+  append0(&file);
 
   if (control_readfile(&lines,file.s,0) != 1) return -1;
 
@@ -521,7 +526,7 @@ int control_readcapabilities(struct protocol p) {
     }
   }
   p.cap_format_response(&capabilities);
-  if (!stralloc_0(&capabilities)) authup_die("nomem");
+  append0(&capabilities);
 
   return 1;
 }
