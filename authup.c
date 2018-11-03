@@ -21,6 +21,7 @@
 #include "control.h"
 #include "error.h"
 #include "open.h"
+#include "acceptutils_ucspitls.h"
 
 #define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
 #define PROGNAME "authup"
@@ -124,6 +125,8 @@ void authup_die(const char *name) {
   e[i].die();
 }
 
+void die_nomem() { authup_die("nomem"); }
+
 void die_usage() { errflush("usage: " PROGNAME " <smtp|pop3> prog"); die(); }
 
 void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
@@ -150,86 +153,6 @@ char **childargs;
 void pop3_okay() { puts("+OK \r\n"); flush(); }
 void pop3_quit() { pop3_okay(); _exit(0); }
 void smtp_quit() { puts("221 "); smtp_out(greeting.s); _exit(0); }
-
-int starttls_init(void) {
-  unsigned long fd;
-  char *fdstr;
-
-  if (!(fdstr=env_get("SSLCTLFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-  if (write((int)fd, "Y", 1) < 1)
-    return 0;
-
-  if (!(fdstr=env_get("SSLREADFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-  if (fd_copy(0,(int)fd) == -1)
-    return 0;
-
-  if (!(fdstr=env_get("SSLWRITEFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-  if (fd_copy(1,(int)fd) == -1)
-    return 0;
-
-  return 1;
-}
-
-int starttls_info(void) {
-  unsigned long fd;
-  char *fdstr;
-  char envbuf[8192];
-  char *x;
-  int j;
-
-  stralloc ssl_env   = {0};
-  stralloc ssl_parm  = {0};
-  stralloc ssl_value = {0};
-
-  if (!(fdstr=env_get("SSLCTLFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-
-  while ((j=read(fd,envbuf,8192)) > 0 ) {
-    stralloc_catb(&ssl_env,envbuf,j);
-      if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2]==0 && ssl_env.s[ssl_env.len-1]==0)
-        break;
-  }
-  if (j <= 0)
-    authup_die("nomem");
-
-  x = ssl_env.s;
-
-  for (j=0;j < ssl_env.len-1;++j) {
-    if ( *x != '=' ) {
-      if (!stralloc_catb(&ssl_parm,x,1)) authup_die("nomem");
-      x++; }
-    else {
-      if (!stralloc_0(&ssl_parm)) authup_die("nomem");
-      x++;
-
-      for (;j < ssl_env.len-j-1;++j) {
-        if ( *x != '\0' ) {
-          if (!stralloc_catb(&ssl_value,x,1)) authup_die("nomem");
-          x++; }
-        else {
-          if (!stralloc_0(&ssl_value)) authup_die("nomem");
-          x++;
-          if (!env_put2(ssl_parm.s,ssl_value.s)) authup_die("nomem");
-          ssl_parm.len = 0;
-          ssl_value.len = 0;
-          break;
-        }
-      }
-    }
-  }
-  return j;
-}
 
 stralloc username = {0};
 stralloc password = {0};
@@ -339,7 +262,7 @@ void pop3_stls(char *arg) {
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
-  if (!starttls_init() || !starttls_info()) authup_die("starttls");
+  if (!starttls_init() || !starttls_info(die_nomem)) authup_die("starttls");
   /* reset state */
   seenuser = 0;
 
@@ -409,7 +332,7 @@ void smtp_starttls() {
   if (!starttls || seentls) return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
-  if (!starttls_init() || !starttls_info()) authup_die("starttls");
+  if (!starttls_init() || !starttls_info(die_nomem)) authup_die("starttls");
   /* reset state */
   ssin.p = 0;
 

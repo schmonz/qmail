@@ -11,6 +11,10 @@ acceptutils_base64.o: \
 compile acceptutils_base64.c acceptutils_base64.h
 	./compile acceptutils_base64.c
 
+acceptutils_ucspitls.o: \
+compile acceptutils_ucspitls.c acceptutils_ucspitls.h env.h fd.h readwrite.h scan.h stralloc.h
+	./compile acceptutils_ucspitls.c
+
 acceptutils-memcheck: \
 test_fixsmtpio
 	valgrind --track-origins=yes --leak-check=full --error-exitcode=99 ./test_fixsmtpio >/dev/null
@@ -27,10 +31,12 @@ authup: \
 load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o \
 timeoutread.o timeoutwrite.o now.o case.a env.a fd.a getln.a open.a \
 sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a fs.a \
+acceptutils_ucspitls.o \
 socket.lib
 	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o \
 	timeoutread.o timeoutwrite.o now.o case.a env.a fd.a getln.a open.a \
 	sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a fs.a \
+	acceptutils_ucspitls.o \
 	`cat socket.lib`
 
 authup.o: \

@@ -386,6 +386,7 @@ man
 setup
 check
 acceptutils_base64.o
+acceptutils_ucspitls.o
 authup
 authup.o
 checknotroot
