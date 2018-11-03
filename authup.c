@@ -183,6 +183,10 @@ void append0(stralloc *sa) {
   if (!stralloc_0(sa)) authup_die("nomem");
 }
 
+void cats(stralloc *to,char *from) {
+  if (!stralloc_cats(to,from)) die_nomem();
+}
+
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
@@ -248,7 +252,7 @@ void pop3_greet() {
 }
 
 void pop3_format_capa(stralloc *multiline) {
-  if (!stralloc_cats(multiline,".\r\n")) authup_die("nomem");
+  cats(multiline,".\r\n");
 }
 
 void pop3_capa(char *arg) {
@@ -289,9 +293,9 @@ void pop3_pass(char *arg) {
   byte_zero(arg,str_len(arg));
 
   if (!stralloc_copys(&timestamp,"<")) authup_die("nomem");
-  if (!stralloc_cats(&timestamp,unique)) authup_die("nomem");
-  if (!stralloc_cats(&timestamp,greeting.s)) authup_die("nomem");
-  if (!stralloc_cats(&timestamp,">")) authup_die("nomem");
+  cats(&timestamp,unique);
+  cats(&timestamp,greeting.s);
+  cats(&timestamp,">");
 
   checkpassword(&username,&password,&timestamp);
 }
@@ -480,8 +484,8 @@ int control_readgreeting(char *p) {
   int retval;
 
   if (!stralloc_copys(&file,"control/")) authup_die("nomem");
-  if (!stralloc_cats(&file,p)) authup_die("nomem");
-  if (!stralloc_cats(&file,"greeting")) authup_die("nomem");
+  cats(&file,p);
+  cats(&file,"greeting");
   append0(&file);
 
   retval = control_rldef(&greeting,file.s,1,(char *) 0);
@@ -496,8 +500,8 @@ int control_readtimeout(char *p) {
   stralloc file = {0};
 
   if (!stralloc_copys(&file,"control/timeout")) authup_die("nomem");
-  if (!stralloc_cats(&file,p)) authup_die("nomem");
-  if (!stralloc_cats(&file,"d")) authup_die("nomem");
+  cats(&file,p);
+  cats(&file,"d");
   append0(&file);
 
   return control_readint(&timeout,file.s);
@@ -510,8 +514,8 @@ int control_readcapabilities(struct protocol p) {
   int pos;
 
   if (!stralloc_copys(&file,"control/")) authup_die("nomem");
-  if (!stralloc_cats(&file,p.name)) authup_die("nomem");
-  if (!stralloc_cats(&file,"capabilities")) authup_die("nomem");
+  cats(&file,p.name);
+  cats(&file,"capabilities");
   append0(&file);
 
   if (control_readfile(&lines,file.s,0) != 1) return -1;
@@ -519,9 +523,9 @@ int control_readcapabilities(struct protocol p) {
   if (!stralloc_copys(&capabilities,"")) authup_die("nomem");
   for (linestart = 0, pos = 0; pos < lines.len; pos++) {
     if (lines.s[pos] == '\0') {
-      if (!stralloc_cats(&capabilities,p.cap_prefix)) authup_die("nomem");
-      if (!stralloc_cats(&capabilities,lines.s+linestart)) authup_die("nomem");
-      if (!stralloc_cats(&capabilities,"\r\n")) authup_die("nomem");
+      cats(&capabilities,p.cap_prefix);
+      cats(&capabilities,lines.s+linestart);
+      cats(&capabilities,"\r\n");
       linestart = pos + 1;
     }
   }
