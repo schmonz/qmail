@@ -28,15 +28,15 @@ acceptutils-tests
 	@prove -v -e '' ./test_fixsmtpio | grep -v '^ok'
 
 authup: \
-load authup.o auto_qmail.o acceptutils_base64.o commands.o control.o \
-timeoutread.o timeoutwrite.o now.o case.a env.a fd.a getln.a open.a \
-sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a fs.a \
-acceptutils_ucspitls.o \
+load authup.o auto_qmail.o acceptutils_base64.o acceptutils_ucspitls.o \
+commands.o control.o timeoutread.o timeoutwrite.o now.o \
+case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
+substdio.a error.a str.a fs.a \
 socket.lib
-	./load authup auto_qmail.o acceptutils_base64.o commands.o control.o \
-	timeoutread.o timeoutwrite.o now.o case.a env.a fd.a getln.a open.a \
-	sig.a wait.a stralloc.a alloc.a substdio.a error.a str.a fs.a \
-	acceptutils_ucspitls.o \
+	./load authup auto_qmail.o acceptutils_base64.o acceptutils_ucspitls.o \
+	commands.o control.o timeoutread.o timeoutwrite.o now.o \
+	case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
+	substdio.a error.a str.a fs.a \
 	`cat socket.lib`
 
 authup.o: \
