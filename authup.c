@@ -187,6 +187,10 @@ void cats(stralloc *to,char *from) {
   if (!stralloc_cats(to,from)) die_nomem();
 }
 
+void copys(stralloc *to,char *from) {
+  if (!stralloc_copys(to,from)) die_nomem();
+}
+
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
@@ -282,17 +286,17 @@ void pop3_user(char *arg) {
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
-  if (!stralloc_copys(&username,arg)) authup_die("nomem");
+  copys(&username,arg);
 }
 
 void pop3_pass(char *arg) {
   if (!seenuser) { pop3_err_wantuser(); return; }
   if (!*arg) { pop3_err_syntax(); return; }
 
-  if (!stralloc_copys(&password,arg)) authup_die("nomem");
+  copys(&password,arg);
   byte_zero(arg,str_len(arg));
 
-  if (!stralloc_copys(&timestamp,"<")) authup_die("nomem");
+  copys(&timestamp,"<");
   cats(&timestamp,unique);
   cats(&timestamp,greeting.s);
   cats(&timestamp,">");
@@ -352,7 +356,7 @@ static stralloc authin = {0};
 void smtp_authgetl() {
   int i;
 
-  if (!stralloc_copys(&authin,"")) authup_die("nomem");
+  copys(&authin,"");
 
   for (;;) {
     if (!stralloc_readyplus(&authin,1)) authup_die("nomem"); /* XXX */
@@ -410,9 +414,9 @@ void auth_plain(char *arg) {
   while (resp.s[id]) id++; /* ignore authorize-id */
 
   if (resp.len > id + 1)
-    if (!stralloc_copys(&username,resp.s + id + 1)) authup_die("nomem");
+    copys(&username,resp.s + id + 1);
   if (resp.len > id + username.len + 2)
-    if (!stralloc_copys(&password,resp.s + id + username.len + 2)) authup_die("nomem");
+    copys(&password,resp.s + id + username.len + 2);
 
   if (!username.len || !password.len) authup_die("input");
   checkpassword(&username,&password,&timestamp);
@@ -483,7 +487,7 @@ int control_readgreeting(char *p) {
   stralloc file = {0};
   int retval;
 
-  if (!stralloc_copys(&file,"control/")) authup_die("nomem");
+  copys(&file,"control/");
   cats(&file,p);
   cats(&file,"greeting");
   append0(&file);
@@ -499,7 +503,7 @@ int control_readgreeting(char *p) {
 int control_readtimeout(char *p) {
   stralloc file = {0};
 
-  if (!stralloc_copys(&file,"control/timeout")) authup_die("nomem");
+  copys(&file,"control/timeout");
   cats(&file,p);
   cats(&file,"d");
   append0(&file);
@@ -513,14 +517,14 @@ int control_readcapabilities(struct protocol p) {
   int linestart;
   int pos;
 
-  if (!stralloc_copys(&file,"control/")) authup_die("nomem");
+  copys(&file,"control/");
   cats(&file,p.name);
   cats(&file,"capabilities");
   append0(&file);
 
   if (control_readfile(&lines,file.s,0) != 1) return -1;
 
-  if (!stralloc_copys(&capabilities,"")) authup_die("nomem");
+  copys(&capabilities,"");
   for (linestart = 0, pos = 0; pos < lines.len; pos++) {
     if (lines.s[pos] == '\0') {
       cats(&capabilities,p.cap_prefix);
