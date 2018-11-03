@@ -552,7 +552,6 @@ void doprotocol(struct protocol p) {
 
 int main(int argc,char **argv) {
   char *protocol;
-  char *ucspitls;
   int i;
 
   sig_alarmcatch(die);
@@ -564,12 +563,7 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  ucspitls = env_get("UCSPITLS");
-  if (ucspitls) {
-    starttls = 1;
-    if (!case_diffs(ucspitls,"-")) starttls = 0;
-    if (!case_diffs(ucspitls,"!")) starttls = 2;
-  }
+  starttls = ucspitls_level();
 
   for (i = 0; p[i].name; ++i)
     if (case_equals(p[i].name,protocol))

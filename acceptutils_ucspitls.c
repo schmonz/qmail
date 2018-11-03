@@ -1,8 +1,20 @@
+#include "case.h"
 #include "env.h"
 #include "fd.h"
 #include "readwrite.h"
 #include "scan.h"
 #include "stralloc.h"
+
+int ucspitls_level(void) {
+  int starttls = 0;
+  char *ucspitls = env_get("UCSPITLS");
+  if (ucspitls) {
+    starttls = 1;
+    if (!case_diffs(ucspitls,"-")) starttls = 0;
+    if (!case_diffs(ucspitls,"!")) starttls = 2;
+  }
+  return starttls;
+}
 
 int starttls_init(void) {
   unsigned long fd;

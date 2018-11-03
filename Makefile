@@ -12,7 +12,7 @@ compile acceptutils_base64.c acceptutils_base64.h
 	./compile acceptutils_base64.c
 
 acceptutils_ucspitls.o: \
-compile acceptutils_ucspitls.c acceptutils_ucspitls.h env.h fd.h readwrite.h scan.h stralloc.h
+compile acceptutils_ucspitls.c acceptutils_ucspitls.h case.h env.h fd.h readwrite.h scan.h stralloc.h
 	./compile acceptutils_ucspitls.c
 
 acceptutils-memcheck: \
