@@ -564,13 +564,11 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  if (!seentls) {
-    ucspitls = env_get("UCSPITLS");
-    if (ucspitls) {
-      starttls = 1;
-      if (!case_diffs(ucspitls,"-")) starttls = 0;
-      if (!case_diffs(ucspitls,"!")) starttls = 2;
-    }
+  ucspitls = env_get("UCSPITLS");
+  if (ucspitls) {
+    starttls = 1;
+    if (!case_diffs(ucspitls,"-")) starttls = 0;
+    if (!case_diffs(ucspitls,"!")) starttls = 2;
   }
 
   for (i = 0; p[i].name; ++i)
