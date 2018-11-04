@@ -9,12 +9,9 @@
 
 int ucspitls_level(void) {
   char *ucspitls = env_get("UCSPITLS");
-  if (ucspitls) {
-    if (!case_diffs(ucspitls,"-")) return UCSPITLS_UNAVAILABLE;
-    if (!case_diffs(ucspitls,"!")) return UCSPITLS_REQUIRED;
-    return UCSPITLS_AVAILABLE;
-  }
-  return UCSPITLS_UNAVAILABLE;
+  if (!ucspitls || !case_diffs(ucspitls,"-")) return UCSPITLS_UNAVAILABLE;
+  if (!case_diffs(ucspitls,"!")) return UCSPITLS_REQUIRED;
+  return UCSPITLS_AVAILABLE;
 }
 
 int starttls_init(void) {
