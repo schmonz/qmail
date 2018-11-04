@@ -10,7 +10,7 @@ START_TEST (test_filter_rule_applies)
 {
   filter_rule rule = {
     0,
-    ENV_ANY, "caliente",
+    0, "caliente",
     REQUEST_PASSTHRU, "*",
     EXIT_LATER_NORMALLY, "",
   };
@@ -61,13 +61,13 @@ START_TEST (test_munge_response_line) {
   filter_rule *rules = 0;
   filter_rule helo = {
     0,
-    ENV_ANY, "helo",
+    0, "helo",
     REQUEST_PASSTHRU, "2*",
     EXIT_LATER_NORMALLY, MUNGE_INTERNALLY,
   };
   filter_rule ehlo = {
     0,
-    ENV_ANY, "ehlo",
+    0, "ehlo",
     REQUEST_PASSTHRU, "2*",
     EXIT_LATER_NORMALLY, MUNGE_INTERNALLY,
   };

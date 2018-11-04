@@ -11,6 +11,7 @@ extern void die_crash();
 extern void die_read();
 extern void die_write();
 extern void die_nomem();
+extern void die_tls();
 extern void die_parse();
 
 extern void cat(stralloc *,stralloc *);

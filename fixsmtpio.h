@@ -13,8 +13,6 @@
 #define HOMEPAGE                 "https://schmonz.com/qmail/acceptutils"
 #define PROGNAME                 "fixsmtpio"
 
-#define ENV_AUTHUP_USER          "AUTHUP_USER"
-#define ENV_ANY                  0
 #define EVENT_GREETING           "greeting"
 #define EVENT_TIMEOUT            "timeout"
 #define EVENT_CLIENTEOF          "clienteof"

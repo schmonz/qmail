@@ -28,7 +28,8 @@ int filter_rule_applies(filter_rule *rule,const char *event) {
 
 void munge_response_line(int lineno,
                          stralloc *line,int *exitcode,
-                         stralloc *greeting,filter_rule *rules,const char *event) {
+                         stralloc *greeting,filter_rule *rules,const char *event,
+                         int starttls,int seentls) {
   filter_rule *rule;
   stralloc line0 = {0};
 
@@ -40,7 +41,7 @@ void munge_response_line(int lineno,
     if (!string_matches_glob(rule->response_line_glob,line0.s)) continue;
     munge_exitcode(exitcode,rule);
     if (want_munge_internally(rule->response))
-      munge_line_internally(line,lineno,greeting,event);
+      munge_line_internally(line,lineno,greeting,event,starttls,seentls);
     else if (!want_leave_line_as_is(rule->response))
       copys(line,rule->response);
   }
@@ -48,7 +49,8 @@ void munge_response_line(int lineno,
 }
 
 void munge_response(stralloc *response,int *exitcode,
-                    stralloc *greeting,filter_rule *rules,const char *event) {
+                    stralloc *greeting,filter_rule *rules,const char *event,
+                    int starttls,int seentls) {
   stralloc munged = {0};
   stralloc line = {0};
   int lineno = 0;
@@ -57,7 +59,7 @@ void munge_response(stralloc *response,int *exitcode,
   for (i = 0; i < response->len; i++) {
     if (!stralloc_append(&line,i + response->s)) die_nomem();
     if (response->s[i] == '\n' || i == response->len - 1) {
-      munge_response_line(lineno++,&line,exitcode,greeting,rules,event);
+      munge_response_line(lineno++,&line,exitcode,greeting,rules,event,starttls,seentls);
       cat(&munged,&line);
       blank(&line);
     }

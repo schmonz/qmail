@@ -67,14 +67,14 @@ compile checknotroot.c exit.h readwrite.h substdio.h
 fixsmtpio: \
 load fixsmtpio.o fixsmtpio_control.o fixsmtpio_common.o fixsmtpio_filter.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
-fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
-substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
-case.a open.a fs.a
+fixsmtpio_proxy.o acceptutils_ucspitls.o auto_qmail.o control.o \
+getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a \
+alloc.a wait.a case.a open.a fs.a
 	./load fixsmtpio fixsmtpio_control.o fixsmtpio_common.o fixsmtpio_filter.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
-	fixsmtpio_proxy.o auto_qmail.o control.o getln.a \
-	substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
-	case.a open.a fs.a
+	fixsmtpio_proxy.o acceptutils_ucspitls.o auto_qmail.o control.o \
+	getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a \
+	alloc.a wait.a case.a open.a fs.a
 
 fixsmtpio.o: \
 compile fixsmtpio.c fixsmtpio.h fixsmtpio_common.h fixsmtpio_filter.h \

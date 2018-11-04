@@ -1,30 +1,44 @@
 #include "fixsmtpio_munge.h"
 #include "fixsmtpio_common.h"
+#include "acceptutils_ucspitls.h"
 
 void munge_exitcode(int *exitcode,filter_rule *rule) {
   if (rule->exitcode != EXIT_LATER_NORMALLY) *exitcode = rule->exitcode;
 }
 
-void munge_greeting(stralloc *response,int lineno,stralloc *greeting) {
+void munge_greeting(stralloc *response,int lineno,stralloc *greeting,
+                    int starttls,int seentls) {
   copys(response,"220 "); cat(response,greeting);
 }
 
-void munge_helo(stralloc *response,int lineno,stralloc *greeting) {
+void munge_helo(stralloc *response,int lineno,stralloc *greeting,
+                int starttls,int seentls) {
   copys(response,"250 "); cat(response,greeting);
 }
 
-void munge_ehlo(stralloc *response,int lineno,stralloc *greeting) {
-  if (lineno) return; munge_helo(response,lineno,greeting);
+void munge_ehlo(stralloc *response,int lineno,stralloc *greeting,
+                int starttls,int seentls) {
+  switch (lineno) {
+    case 0:
+      munge_helo(response,lineno,greeting,starttls,seentls);
+      break;
+    case 1:
+      if (starttls && !seentls && !env_get("AUTHUP_USER"))
+        prepends(response,"250-STARTTLS\r\n");
+      break;
+  }
 }
 
-void munge_help(stralloc *response,int lineno,stralloc *greeting) {
+void munge_help(stralloc *response,int lineno,stralloc *greeting,
+                int starttls,int seentls) {
   stralloc munged = {0};
   copys(&munged,"214 " PROGNAME " home page: " HOMEPAGE "\r\n");
   cat(&munged,response);
   copy(response,&munged);
 }
 
-void munge_quit(stralloc *response,int lineno,stralloc *greeting) {
+void munge_quit(stralloc *response,int lineno,stralloc *greeting,
+                int starttls,int seentls) {
   copys(response,"221 "); cat(response,greeting);
 }
 
@@ -85,7 +99,8 @@ void *munge_line_fn(const char *event) {
 }
 
 void munge_line_internally(stralloc *line,int lineno,
-                           stralloc *greeting,const char *event) {
+                           stralloc *greeting,const char *event,
+                           int starttls,int seentls) {
   void (*munger)() = munge_line_fn(event);
-  if (munger) munger(line,lineno,greeting);
+  if (munger) munger(line,lineno,greeting,starttls,seentls);
 }

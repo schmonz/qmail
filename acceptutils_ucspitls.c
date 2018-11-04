@@ -5,15 +5,16 @@
 #include "scan.h"
 #include "stralloc.h"
 
+#include "acceptutils_ucspitls.h"
+
 int ucspitls_level(void) {
-  int starttls = 0;
   char *ucspitls = env_get("UCSPITLS");
   if (ucspitls) {
-    starttls = 1;
-    if (!case_diffs(ucspitls,"-")) starttls = 0;
-    if (!case_diffs(ucspitls,"!")) starttls = 2;
+    if (!case_diffs(ucspitls,"-")) return UCSPITLS_UNAVAILABLE;
+    if (!case_diffs(ucspitls,"!")) return UCSPITLS_REQUIRED;
+    return UCSPITLS_AVAILABLE;
   }
-  return starttls;
+  return UCSPITLS_UNAVAILABLE;
 }
 
 int starttls_init(void) {

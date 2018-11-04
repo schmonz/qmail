@@ -34,7 +34,7 @@
 #define EXITCODE_FIXSMTPIO_PARSEFAIL         18
 
 static int timeout = 1200;
-int starttls = 0;
+int starttls = UCSPITLS_UNAVAILABLE;
 int seentls = 0;
 
 void die()         { _exit( 1); }
@@ -282,7 +282,7 @@ void pop3_stls(char *arg) {
 }
 
 void pop3_user(char *arg) {
-  if (starttls && !seentls) authup_die("needtls");
+  if (starttls >= UCSPITLS_REQUIRED && !seentls) authup_die("needtls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -426,7 +426,7 @@ void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
-  if (starttls && !seentls) authup_die("needtls");
+  if (starttls >= UCSPITLS_REQUIRED && !seentls) authup_die("needtls");
 
   i = str_chr(cmd,' ');
   arg = cmd + i;

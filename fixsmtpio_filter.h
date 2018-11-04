@@ -22,8 +22,8 @@ extern int filter_rule_applies(filter_rule *,const char *);
 
 extern int event_matches(char *,const char *);
 
-extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,const char *);
-extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,const char *);
+extern void munge_response(stralloc *,int *,stralloc *,filter_rule *,const char *,int,int);
+extern void munge_response_line(int,stralloc *,int *,stralloc *,filter_rule *,const char *,int,int);
 extern filter_rule *prepend_rule(filter_rule *,filter_rule *);
 
 #endif
