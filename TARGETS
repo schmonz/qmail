@@ -388,6 +388,7 @@ check
 acceptutils_base64.o
 acceptutils_stralloc.o
 acceptutils_ucspitls.o
+acceptutils_unistd.o
 authup
 authup.o
 checknotroot

@@ -7,9 +7,11 @@
 #include "substdio.h"
 #include "wait.h"
 
+#include "acceptutils_unistd.h"
+
 #define PROGNAME "reup"
 
-void die() { _exit(1); }
+void die() { unistd_exit(1); }
 
 char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
@@ -43,14 +45,14 @@ int try(int attempt,char **childargs) {
   int wstat;
   char reup[FMT_ULONG];
 
-  switch ((child = fork())) {
+  switch ((child = unistd_fork())) {
     case -1:
       die_fork();
     case 0:
       str_copy(reup + fmt_ulong(reup,attempt),"");
       if (!env_put2("REUP",reup)) die_nomem();
       logtry(reup,*childargs);
-      execvp(*childargs,childargs);
+      unistd_execvp(*childargs,childargs);
       die(); // log something I guess
   }
 
@@ -102,9 +104,9 @@ int main(int argc,char **argv) {
 
   for (i = 1; keep_trying(i,tries); i++) {
     exitcode = try(i,argv);
-    if (stop_trying(exitcode)) _exit(exitcode);
+    if (stop_trying(exitcode)) unistd_exit(exitcode);
   }
 
   errflush("no more tries");
-  _exit(exitcode);
+  unistd_exit(exitcode);
 }

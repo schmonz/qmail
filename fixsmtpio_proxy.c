@@ -56,7 +56,7 @@ static int need_starttls_first(int tls_level,int in_tls,char *event) {
 }
 
 static int want_starttls_now(int tls_level,char *event) {
-  return tls_level
+  return tls_level >= UCSPITLS_AVAILABLE
     && event_matches("starttls",event);
 }
 

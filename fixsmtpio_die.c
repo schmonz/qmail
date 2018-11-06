@@ -2,7 +2,9 @@
 #include "fixsmtpio_die.h"
 #include "readwrite.h"
 
-static void die() { _exit(1); }
+#include "acceptutils_unistd.h"
+
+static void die() { unistd_exit(1); }
 
 static char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
@@ -30,4 +32,4 @@ void die_write() { dieerrflush("unable to write"); }
 void die_nomem() { dieerrflush("out of memory"); }
 void die_tls()   { dieerrflush("TLS temporarily not available"); }
 void die_parse() {    errflush("unable to parse control/fixsmtpio");
-                      _exit(EXIT_NOW_PARSEFAIL); }
+                      unistd_exit(EXIT_NOW_PARSEFAIL); }

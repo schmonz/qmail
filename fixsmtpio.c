@@ -4,13 +4,14 @@
 #include "fixsmtpio_proxy.h"
 
 #include "acceptutils_stralloc.h"
+#include "acceptutils_unistd.h"
 
 void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
 void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
 
 void make_pipe(int *from,int *to) {
   int pi[2];
-  if (pipe(pi) == -1) die_pipe();
+  if (unistd_pipe(pi) == -1) die_pipe();
   *from = pi[0];
   *to = pi[1];
 }
@@ -18,11 +19,11 @@ void make_pipe(int *from,int *to) {
 void be_proxied(int from_proxy,int to_proxy,
                 int from_proxied,int to_proxied,
                 char **argv) {
-  close(from_proxied);
-  close(to_proxied);
+  unistd_close(from_proxied);
+  unistd_close(to_proxied);
   use_as_stdin(from_proxy);
   use_as_stdout(to_proxy);
-  execvp(*argv,argv);
+  unistd_execvp(*argv,argv);
   die_exec();
 }
 
@@ -30,14 +31,14 @@ void teardown_and_exit(int exitcode,int child,filter_rule *rules,
                        int from_server,int to_server) {
   int wstat;
 
-  close(from_server);
-  close(to_server);
+  unistd_close(from_server);
+  unistd_close(to_server);
 
   if (wait_pid(&wstat,child) == -1) die_wait();
   if (wait_crashed(wstat)) die_crash();
 
-  if (exitcode == EXIT_LATER_NORMALLY) _exit(wait_exitcode(wstat));
-  else _exit(exitcode);
+  if (exitcode == EXIT_LATER_NORMALLY) unistd_exit(wait_exitcode(wstat));
+  else unistd_exit(exitcode);
 }
 
 void be_proxy(int from_client,int to_client,
@@ -47,8 +48,8 @@ void be_proxy(int from_client,int to_client,
               int proxied) {
   int exitcode;
 
-  close(from_proxy);
-  close(to_proxy);
+  unistd_close(from_proxy);
+  unistd_close(to_proxy);
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules);
@@ -61,7 +62,7 @@ void load_smtp_greeting(stralloc *greeting,char *configfile) {
 }
 
 void cd_var_qmail() {
-  if (chdir(auto_qmail) == -1) die_control();
+  if (unistd_chdir(auto_qmail) == -1) die_control();
 }
 
 int main(int argc,char **argv) {
@@ -84,7 +85,7 @@ int main(int argc,char **argv) {
   make_pipe(&from_proxy,&to_server);
   make_pipe(&from_server,&to_proxy);
 
-  if ((proxied = fork()))
+  if ((proxied = unistd_fork()))
     be_proxy(from_client,to_client,
              from_proxy,to_proxy,
              from_server,to_server,

@@ -14,15 +14,16 @@
 #include "readwrite.h"
 #include "timeoutread.h"
 #include "timeoutwrite.h"
-#include "acceptutils_base64.h"
 #include "case.h"
 #include "env.h"
 #include "control.h"
 #include "error.h"
 #include "open.h"
 
+#include "acceptutils_base64.h"
 #include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
+#include "acceptutils_unistd.h"
 
 #define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
 #define PROGNAME "authup"
@@ -104,7 +105,7 @@ void smtp_auth_error(struct authup_error ae) {
 void (*protocol_error)();
 
 void pop3_sleep(int s) { return; }
-void smtp_sleep(int s) { sleep(s); }
+void smtp_sleep(int s) { unistd_sleep(s); }
 void (*protocol_sleep)();
 
 char sserrbuf[SUBSTDIO_OUTSIZE];
@@ -187,22 +188,22 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   char upbuf[SUBSTDIO_OUTSIZE];
   substdio ssup;
 
-  close(3);
-  if (pipe(pi) == -1) authup_die("pipe");
+  unistd_close(3);
+  if (unistd_pipe(pi) == -1) authup_die("pipe");
   if (pi[0] != 3) authup_die("pipe");
-  switch((child = fork())) {
+  switch((child = unistd_fork())) {
     case -1:
       authup_die("fork");
     case 0:
-      close(pi[1]);
+      unistd_close(pi[1]);
       sig_pipedefault();
       append0(username);
       logtry(username->s);
       if (!env_put2("AUTHUP_USER",username->s)) authup_die("nomem");
-      execvp(*childargs,childargs);
+      unistd_execvp(*childargs,childargs);
       authup_die("fork");
   }
-  close(pi[0]);
+  unistd_close(pi[0]);
   substdio_fdbuf(&ssup,write,pi[1],upbuf,sizeof upbuf);
 
   append0(username);
@@ -218,7 +219,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   byte_zero(timestamp->s,timestamp->len);
 
   if (substdio_flush(&ssup) == -1) authup_die("write");
-  close(pi[1]);
+  unistd_close(pi[1]);
   byte_zero(upbuf,sizeof upbuf);
 
   if (wait_pid(&wstat,child) == -1) authup_die("wait");
@@ -232,7 +233,7 @@ static char unique[FMT_ULONG + FMT_ULONG + 3];
 void pop3_greet() {
   char *s;
   s = unique;
-  s += fmt_uint(s,getpid());
+  s += fmt_uint(s,unistd_getpid());
   *s++ = '.';
   s += fmt_ulong(s,(unsigned long) now());
   *s++ = '@';
@@ -250,7 +251,7 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  if (tls_level && !in_tls) puts("STLS\r\n");
+  if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
   flush();
@@ -259,7 +260,7 @@ void pop3_capa(char *arg) {
 static int seenuser = 0;
 
 void pop3_stls(char *arg) {
-  if (!tls_level || in_tls) return pop3_err("STLS not available");
+  if (tls_level < UCSPITLS_AVAILABLE || in_tls) return pop3_err("STLS not available");
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
@@ -321,7 +322,7 @@ void smtp_format_ehlo(stralloc *multiline) {
 void smtp_ehlo(char *arg) {
   char *x;
   puts("250-"); puts(greeting.s); puts("\r\n");
-  if (tls_level && !in_tls) puts("250-STARTTLS\r\n");
+  if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) puts("250-STARTTLS\r\n");
   puts("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
     puts("250-AUTH=LOGIN PLAIN\r\n");
@@ -330,7 +331,7 @@ void smtp_ehlo(char *arg) {
 }
 
 void smtp_starttls() {
-  if (!tls_level || in_tls) return smtp_out("502 unimplemented (#5.5.1)");
+  if (tls_level < UCSPITLS_AVAILABLE || in_tls) return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
   if (!tls_init() || !tls_info(die_nomem)) authup_die("starttls");
@@ -362,23 +363,27 @@ void smtp_authgetl() {
   if (authin.len == 0) authup_die("input");
 }
 
+static int b64decode2(char *c,int i,stralloc *sa) {
+  return b64decode((const unsigned char *)c,i,sa);
+}
+
 void auth_login(char *arg) {
   int r;
 
   if (*arg) {
-    if ((r = b64decode(arg,str_len(arg),&username)) == 1) authup_die("input");
+    if ((r = b64decode2(arg,str_len(arg),&username)) == 1) authup_die("input");
   }
   else {
     smtp_out("334 VXNlcm5hbWU6"); /* Username: */
     smtp_authgetl();
-    if ((r = b64decode(authin.s,authin.len,&username)) == 1) authup_die("input");
+    if ((r = b64decode2(authin.s,authin.len,&username)) == 1) authup_die("input");
   }
   if (r == -1) authup_die("nomem");
 
   smtp_out("334 UGFzc3dvcmQ6"); /* Password: */
 
   smtp_authgetl();
-  if ((r = b64decode(authin.s,authin.len,&password)) == 1) authup_die("input");
+  if ((r = b64decode2(authin.s,authin.len,&password)) == 1) authup_die("input");
   if (r == -1) authup_die("nomem");
 
   if (!username.len || !password.len) authup_die("input");
@@ -391,12 +396,12 @@ void auth_plain(char *arg) {
   int r, id = 0;
 
   if (*arg) {
-    if ((r = b64decode(arg,str_len(arg),&resp)) == 1) authup_die("input");
+    if ((r = b64decode2(arg,str_len(arg),&resp)) == 1) authup_die("input");
   }
   else {
     smtp_out("334 ");
     smtp_authgetl();
-    if ((r = b64decode(authin.s,authin.len,&resp)) == 1) authup_die("input");
+    if ((r = b64decode2(authin.s,authin.len,&resp)) == 1) authup_die("input");
   }
   if (r == -1) authup_die("nomem");
   append0(&resp);
@@ -542,7 +547,7 @@ void doprotocol(struct protocol p) {
   protocol_error = p.error;
   protocol_sleep = p.sleep;
 
-  if (chdir(auto_qmail) == -1) authup_die("control");
+  if (unistd_chdir(auto_qmail) == -1) authup_die("control");
   if (control_init() == -1) authup_die("control");
   if (control_readgreeting(p.name) == -1) authup_die("control");
   if (control_readtimeout(p.name) == -1) authup_die("control");

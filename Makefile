@@ -19,6 +19,10 @@ acceptutils_ucspitls.o: \
 compile acceptutils_ucspitls.c acceptutils_ucspitls.h case.h env.h fd.h readwrite.h scan.h stralloc.h
 	./compile acceptutils_ucspitls.c
 
+acceptutils_unistd.o: \
+compile acceptutils_unistd.c acceptutils_unistd.h
+	./compile acceptutils_unistd.c
+
 acceptutils-memcheck: \
 test_fixsmtpio
 	valgrind --track-origins=yes --leak-check=full --error-exitcode=99 ./test_fixsmtpio >/dev/null
@@ -32,12 +36,12 @@ acceptutils-tests
 	@prove -v -e '' ./test_fixsmtpio | grep -v '^ok'
 
 authup: \
-load authup.o auto_qmail.o acceptutils_base64.o acceptutils_ucspitls.o \
+load authup.o auto_qmail.o acceptutils_base64.o acceptutils_unistd.o acceptutils_ucspitls.o \
 acceptutils_stralloc.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
 case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 substdio.a error.a str.a fs.a \
 socket.lib
-	./load authup auto_qmail.o acceptutils_base64.o acceptutils_ucspitls.o \
+	./load authup auto_qmail.o acceptutils_base64.o acceptutils_unistd.o acceptutils_ucspitls.o \
 	acceptutils_stralloc.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
 	case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 	substdio.a error.a str.a fs.a \
@@ -61,35 +65,36 @@ conf-check
 	cp `head -1 conf-check`/include/check_stdint.h .
 
 checknotroot: \
-load checknotroot.o substdio.a error.a str.a
-	./load checknotroot substdio.a error.a str.a
+load checknotroot.o acceptutils_unistd.o substdio.a error.a str.a
+	./load checknotroot acceptutils_unistd.o substdio.a error.a str.a
 
 checknotroot.o: \
-compile checknotroot.c exit.h readwrite.h substdio.h
+compile checknotroot.c exit.h readwrite.h substdio.h acceptutils_unistd.h
 	./compile checknotroot.c
 
 fixsmtpio: \
 load fixsmtpio.o fixsmtpio_control.o fixsmtpio_die.o fixsmtpio_filter.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_proxy.o acceptutils_ucspitls.o auto_qmail.o control.o \
-acceptutils_stralloc.o \
+acceptutils_unistd.o acceptutils_stralloc.o \
 getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a \
 alloc.a wait.a case.a open.a fs.a
 	./load fixsmtpio fixsmtpio_control.o fixsmtpio_die.o fixsmtpio_filter.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_proxy.o acceptutils_ucspitls.o auto_qmail.o control.o \
-	acceptutils_stralloc.o \
+	acceptutils_unistd.o acceptutils_stralloc.o \
 	getln.a substdio.a stralloc.a env.a str.a error.a fd.a sig.a \
 	alloc.a wait.a case.a open.a fs.a
 
 fixsmtpio.o: \
 compile fixsmtpio.c fixsmtpio.h fixsmtpio_die.h fixsmtpio_filter.h \
 fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h \
-fd.h scan.h str.h stralloc.h substdio.h wait.h
+fd.h scan.h str.h stralloc.h substdio.h wait.h acceptutils_unistd.h
 	./compile fixsmtpio.c
 
 fixsmtpio_die.o: \
-compile fixsmtpio_die.c fixsmtpio.h fixsmtpio_die.h readwrite.h
+compile fixsmtpio_die.c fixsmtpio.h fixsmtpio_die.h readwrite.h \
+acceptutils_unistd.h
 	./compile fixsmtpio_die.c
 
 test_acceptutils_stralloc.o: \
@@ -159,7 +164,8 @@ test_fixsmtpio_proxy.c
 	./compile test_fixsmtpio_proxy.c
 
 fixsmtpio_readwrite.o: \
-compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_die.h error.h readwrite.h select.h
+compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_die.h error.h readwrite.h select.h \
+acceptutils_stralloc.h
 	./compile fixsmtpio_readwrite.c
 
 test_fixsmtpio: \
@@ -194,11 +200,11 @@ conf-check
 	cp `head -1 conf-check`/lib/libcheck.a .
 
 reup: \
-load reup.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
-	./load reup wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
+load reup.o acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
+	./load reup acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
 
 reup.o: \
-compile reup.c env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
+compile reup.c acceptutils_unistd.h env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
 	./compile reup.c
 
 rt.lib: \

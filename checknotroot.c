@@ -2,6 +2,8 @@
 #include "readwrite.h"
 #include "substdio.h"
 
+#include "acceptutils_unistd.h"
+
 char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
@@ -22,8 +24,8 @@ int main(int argc,char **argv) {
   childargs = argv + 1;
   if (!*childargs) die_usage();
 
-  if (getuid() == 0) die_root();
+  if (unistd_getuid() == 0) die_root();
  
-  execvp(*childargs,childargs);
+  unistd_execvp(*childargs,childargs);
   die();
 }

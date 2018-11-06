@@ -30,7 +30,7 @@ void munge_ehlo(stralloc *response,int lineno,stralloc *greeting,
       break;
     case 1:
       if (is_starttls_line(response)) blank(response);
-      if (tls_level && !in_tls && !env_get("AUTHUP_USER"))
+      if (tls_level >= UCSPITLS_AVAILABLE && !in_tls && !env_get("AUTHUP_USER"))
         prepends(response,"250-STARTTLS\r\n");
       break;
     default:

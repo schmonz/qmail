@@ -4,6 +4,8 @@
 #include "readwrite.h"
 #include "select.h"
 
+#include "acceptutils_stralloc.h"
+
 fd_set fds;
 
 static void want_to_read(int fd1,int fd2) {
