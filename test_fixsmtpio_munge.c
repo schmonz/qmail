@@ -124,7 +124,7 @@ END_TEST
 void assert_munge_line_internally(char *input, int lineno, char *greeting, char *event, char *expected_output) {
   stralloc input_sa = {0}; stralloc_copys(&input_sa, input);
   stralloc greeting_sa = {0}; stralloc_copys(&greeting_sa, greeting);
-  munge_line_internally(&input_sa,lineno,&greeting_sa,event);
+  munge_line_internally(&input_sa,lineno,&greeting_sa,event,0,0);
   stralloc_0(&input_sa);
   ck_assert_str_eq(input_sa.s, expected_output);
 }

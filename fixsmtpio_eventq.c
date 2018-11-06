@@ -1,7 +1,7 @@
 #include "alloc.h"
 #include "str.h"
 #include "fixsmtpio.h"
-#include "fixsmtpio_common.h"
+#include "fixsmtpio_die.h"
 
 #include "fixsmtpio_eventq.h"
 

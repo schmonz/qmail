@@ -1,0 +1,12 @@
+extern void die_usage();
+extern void die_control();
+extern void die_pipe();
+extern void die_fork();
+extern void die_exec();
+extern void die_wait();
+extern void die_crash();
+extern void die_read();
+extern void die_write();
+extern void die_nomem();
+extern void die_tls();
+extern void die_parse();

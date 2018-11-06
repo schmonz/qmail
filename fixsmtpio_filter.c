@@ -1,9 +1,11 @@
 #include "fixsmtpio.h"
 #include "fixsmtpio_control.h"
 #include "fixsmtpio_filter.h"
-#include "fixsmtpio_common.h"
+#include "fixsmtpio_die.h"
 #include "fixsmtpio_munge.h"
 #include "fixsmtpio_glob.h"
+
+#include "acceptutils_stralloc.h"
 
 int want_munge_internally(char *response) {
   return !str_diff(MUNGE_INTERNALLY,response);
@@ -34,7 +36,7 @@ void munge_response_line(int lineno,
   stralloc line0 = {0};
 
   copy(&line0,line);
-  if (!stralloc_0(&line0)) die_nomem();
+  append0(&line0);
 
   for (rule = rules; rule; rule = rule->next) {
     if (!filter_rule_applies(rule,event)) continue;
@@ -57,7 +59,7 @@ void munge_response(stralloc *response,int *exitcode,
   int i;
 
   for (i = 0; i < response->len; i++) {
-    if (!stralloc_append(&line,i + response->s)) die_nomem();
+    append(&line,i + response->s);
     if (response->s[i] == '\n' || i == response->len - 1) {
       munge_response_line(lineno++,&line,exitcode,greeting,rules,event,tls_level,in_tls);
       cat(&munged,&line);

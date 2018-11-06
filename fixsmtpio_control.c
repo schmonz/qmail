@@ -1,6 +1,7 @@
 #include "fixsmtpio_control.h"
-
 #include "fixsmtpio_munge.h"
+
+#include "acceptutils_stralloc.h"
 
 static void parse_field(int *fields_seen, stralloc *value, filter_rule *rule) {
   char *s;
@@ -9,10 +10,10 @@ static void parse_field(int *fields_seen, stralloc *value, filter_rule *rule) {
 
   if (!value->len) return;
 
-  stralloc_0(value);
+  append0(value);
   s = (char *)alloc(value->len);
   str_copy(s, value->s);
-  stralloc_copys(value, "");
+  copys(value, "");
 
   switch (*fields_seen) {
     case 1: rule->env                = s; break;
@@ -46,7 +47,7 @@ filter_rule *parse_control_line(char *line) {
   for (i = 0; i < line_length; i++) {
     char c = line[i];
     if (':' == c && fields_seen < 5) parse_field(&fields_seen, &value, rule);
-    else stralloc_append(&value, &c);
+    else append(&value, &c);
   }
   parse_field(&fields_seen, &value, rule);
 

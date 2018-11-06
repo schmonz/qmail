@@ -1,7 +1,9 @@
 #include "fixsmtpio.h"
-#include "fixsmtpio_common.h"
+#include "fixsmtpio_die.h"
 #include "fixsmtpio_filter.h"
 #include "fixsmtpio_proxy.h"
+
+#include "acceptutils_stralloc.h"
 
 void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
 void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
@@ -72,6 +74,8 @@ int main(int argc,char **argv) {
   int proxied;
 
   argv++; if (!*argv) die_usage();
+
+  stralloc_set_die(die_nomem);
 
   cd_var_qmail();
   load_smtp_greeting(&greeting,"control/smtpgreeting");

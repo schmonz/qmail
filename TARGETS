@@ -386,6 +386,7 @@ man
 setup
 check
 acceptutils_base64.o
+acceptutils_stralloc.o
 acceptutils_ucspitls.o
 authup
 authup.o
@@ -399,7 +400,7 @@ test_fixsmtpio
 test_fixsmtpio.o
 fixsmtpio_filter.o
 fixsmtpio_proxy.o
-fixsmtpio_common.o
+fixsmtpio_die.o
 fixsmtpio_eventq.o
 fixsmtpio_readwrite.o
 fixsmtpio_munge.o
@@ -409,7 +410,7 @@ check.h
 check_stdint.h
 libcheck.a
 rt.lib
-test_fixsmtpio_common.o
+test_acceptutils_stralloc.o
 test_fixsmtpio_control.o
 test_fixsmtpio_eventq.o
 test_fixsmtpio_filter.o

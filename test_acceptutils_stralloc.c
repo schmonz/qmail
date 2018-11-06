@@ -1,8 +1,8 @@
 #include "check.h"
 
-#include "fixsmtpio_common.h"
+#include "acceptutils_stralloc.h"
 
-void assert_prepends(const char *input, const char *prepend, const char *expected_output) {
+void assert_prepends(const char *input, char *prepend, const char *expected_output) {
   stralloc sa = {0}; stralloc_copys(&sa, input);
 
   prepends(&sa, prepend);
@@ -22,7 +22,7 @@ START_TEST (test_prepends)
 }
 END_TEST
 
-TCase *tc_common(void) {
+TCase *tc_stralloc(void) {
   TCase *tc = tcase_create("");
 
   tcase_add_test(tc, test_prepends);

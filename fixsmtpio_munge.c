@@ -1,5 +1,6 @@
 #include "fixsmtpio_munge.h"
-#include "fixsmtpio_common.h"
+
+#include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 
 void munge_exitcode(int *exitcode,filter_rule *rule) {
@@ -17,8 +18,8 @@ void munge_helo(stralloc *response,int lineno,stralloc *greeting,
 }
 
 static int is_starttls_line(stralloc *response) {
-  return stralloc_starts(response,"250-STARTTLS\r\n")
-      || stralloc_starts(response,"250 STARTTLS\r\n");
+  return starts(response,"250-STARTTLS\r\n")
+      || starts(response,"250 STARTTLS\r\n");
 }
 
 void munge_ehlo(stralloc *response,int lineno,stralloc *greeting,

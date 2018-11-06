@@ -1,8 +1,10 @@
 #include "fixsmtpio_proxy.h"
 #include "fixsmtpio_readwrite.h"
-#include "fixsmtpio_common.h"
+#include "fixsmtpio_die.h"
 #include "fixsmtpio_eventq.h"
 #include "fixsmtpio_filter.h"
+
+#include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 
 int is_last_line_of_data(stralloc *r) {
@@ -105,12 +107,14 @@ void construct_proxy_response(stralloc *proxy_response,
     if (accepted_data(server_response)) *in_data = 1;
   }
 
-  if (want_tls)
+  if (want_tls) {
     if (in_tls)
       copys(proxy_response,"502 unimplemented (#5.5.1)\r\n");
     else
       copys(proxy_response,"220 Ready to start TLS (#5.7.0)\r\n");
-  else if (need_starttls_first(tls_level,in_tls,event))
+    return;
+  }
+  if (need_starttls_first(tls_level,in_tls,event))
     copys(proxy_response,"530 Must issue a STARTTLS command first (#5.7.0)\r\n");
   else
     copy(proxy_response,server_response);
@@ -174,10 +178,8 @@ void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int 
 
   logit('1',request);
   if (!*in_data) parse_client_request(&verb,&arg,request);
-  logit('2',&verb);
-  logit('3',&arg);
   copy(&event,&verb);
-  if (!stralloc_0(&event)) die_nomem();
+  append0(&event);
   eventq_put(event.s);
   construct_proxy_request(proxy_request,rules,
                           event.s,&arg,
@@ -185,13 +187,13 @@ void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int 
                           tls_level,
                           want_tls,in_tls,
                           want_data,in_data);
-  logit('4',proxy_request);
+  logit('2',proxy_request);
   blank(request);
 }
 
 void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting) {
   char *event;
-  logit('5',response);
+  logit('3',response);
   event = eventq_get();
   construct_proxy_response(proxy_response,
                            greeting,rules,event,
@@ -200,7 +202,7 @@ void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,i
                            tls_level,
                            want_tls,in_tls,
                            want_data,in_data);
-  logit('6',proxy_response);
+  logit('4',proxy_response);
   //alloc_free(event);
   blank(response);
 }

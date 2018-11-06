@@ -1,5 +1,5 @@
 #include "check.h"
-#include "fixsmtpio_common.h"
+#include "acceptutils_stralloc.h"
 
 #include "fixsmtpio_proxy.h"
 
@@ -108,7 +108,7 @@ START_TEST (test_parse_client_request)
 }
 END_TEST
 
-static void assert_get_one_response(const char *input, const char *expected_result, const char *expected_remaining, int expected_return) {
+static void assert_get_one_response(char *input, const char *expected_result, const char *expected_remaining, int expected_return) {
   stralloc actual_one = {0}, actual_many = {0};
   int return_value;
   copys(&actual_many,input);
@@ -172,13 +172,13 @@ START_TEST (test_construct_proxy_request)
   env_put2("SPECIFIC_ENV_VAR","");
 
   copys(&proxy_request, ""); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
-  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,&want_data,&in_data);
+  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,0,(void *)0,0,&want_data,&in_data);
   stralloc_0(&proxy_request); stralloc_0(&client_request);
   ck_assert_str_ne(proxy_request.s, client_request.s);
 
   in_data = 1;
   copys(&proxy_request, ""); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
-  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,&want_data,&in_data);
+  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,0,(void *)0,0,&want_data,&in_data);
   stralloc_0(&proxy_request); stralloc_0(&client_request);
   ck_assert_str_eq(proxy_request.s, client_request.s);
 

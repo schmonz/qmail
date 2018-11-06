@@ -1,7 +1,7 @@
 #include "check.h"
 #include <stdlib.h>
 
-extern TCase *tc_common(void);
+extern TCase *tc_stralloc(void);
 extern TCase *tc_control(void);
 extern TCase *tc_eventq(void);
 extern TCase *tc_filter(void);
@@ -13,7 +13,7 @@ Suite * fixsmtpio_suite(void)
 {
   Suite *s = suite_create("fixsmtpio");
 
-  suite_add_tcase(s, tc_common());
+  suite_add_tcase(s, tc_stralloc());
   suite_add_tcase(s, tc_control());
   suite_add_tcase(s, tc_eventq());
   suite_add_tcase(s, tc_filter());

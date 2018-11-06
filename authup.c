@@ -2,7 +2,6 @@
 #include "commands.h"
 #include "fd.h"
 #include "sig.h"
-#include "stralloc.h"
 #include "substdio.h"
 #include "alloc.h"
 #include "wait.h"
@@ -21,6 +20,8 @@
 #include "control.h"
 #include "error.h"
 #include "open.h"
+
+#include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 
 #define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
@@ -177,18 +178,6 @@ void logtry(char *username) {
   substdio_puts(&sserr,PROGNAME ": login attempt by ");
   substdio_puts(&sserr,username);
   substdio_putsflush(&sserr,"\n");
-}
-
-void append0(stralloc *sa) {
-  if (!stralloc_0(sa)) authup_die("nomem");
-}
-
-void cats(stralloc *to,char *from) {
-  if (!stralloc_cats(to,from)) die_nomem();
-}
-
-void copys(stralloc *to,char *from) {
-  if (!stralloc_copys(to,from)) die_nomem();
 }
 
 void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
@@ -569,6 +558,8 @@ int main(int argc,char **argv) {
 
   sig_alarmcatch(die);
   sig_pipeignore();
+
+  stralloc_set_die(die_nomem);
 
   protocol = argv[1];
   if (!protocol) die_usage();

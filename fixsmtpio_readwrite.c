@@ -1,5 +1,5 @@
 #include "fixsmtpio_readwrite.h"
-#include "fixsmtpio_common.h"
+#include "fixsmtpio_die.h"
 #include "error.h"
 #include "readwrite.h"
 #include "select.h"

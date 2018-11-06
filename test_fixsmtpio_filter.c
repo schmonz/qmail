@@ -50,7 +50,7 @@ void assert_munge_response_line(char *expected_output, int lineno, char *line, i
   stralloc line_sa = {0}; stralloc_copys(&line_sa, line);
   stralloc greeting_sa = {0}; stralloc_copys(&greeting_sa, greeting);
 
-  munge_response_line(lineno, &line_sa, &exitcode, &greeting_sa, rules, event);
+  munge_response_line(lineno, &line_sa, &exitcode, &greeting_sa, rules, event, 0, 0);
 
   stralloc_0(&line_sa);
 
@@ -89,7 +89,7 @@ void assert_munge_response(char *expected_output, char *response, int exitcode, 
   stralloc response_sa = {0}; stralloc_copys(&response_sa, response);
   stralloc greeting_sa = {0}; stralloc_copys(&greeting_sa, greeting);
 
-  munge_response(&response_sa, &exitcode, &greeting_sa, rules, event);
+  munge_response(&response_sa, &exitcode, &greeting_sa, rules, event, 0, 0);
 
   stralloc_0(&response_sa);
 
