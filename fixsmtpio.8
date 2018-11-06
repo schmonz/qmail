@@ -7,7 +7,7 @@ fixsmtpio \- filter SMTP I/O and exit status
 .SH DESCRIPTION
 .B fixsmtpio
 is a proxy for changing how an SMTP service behaves without changing its code.
-By default, with no configuration, it changes no observable behavior.
+By default, with no configuration, it changes almost no observable behavior.
 In a typical configuration, it makes
 .B ofmipd
 or
@@ -208,6 +208,14 @@ will refuse to run.
 The first word of
 .I smtpgreeting
 should be the current host's name.
+.SH "COMPATIBILITY"
+.B fixsmtpio
+handles STARTTLS internally, terminating TLS in order to continue
+observing requests and responses and do its job.
+If you rely on STARTTLS support directly in
+.B qmail-smtpd
+via a patch,
+please share your use case with the author.
 .SH "EXAMPLES"
 See
 .IR https://schmonz.com/qmail/acceptutils .
