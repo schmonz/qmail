@@ -170,7 +170,7 @@ acceptutils_stralloc.h
 
 test_fixsmtpio: \
 fixsmtpio \
-load test_fixsmtpio.o fixsmtpio_control.o fixsmtpio_die.o \
+load test_fixsmtpio.o fixsmtpio_control.o fixsmtpio_die.o acceptutils_unistd.o \
 fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 fixsmtpio_filter.o fixsmtpio_proxy.o acceptutils_stralloc.o acceptutils_ucspitls.o \
 test_fixsmtpio_control.o \
@@ -180,7 +180,7 @@ auto_qmail.o control.o getln.a \
 substdio.a stralloc.a env.a str.a error.a fd.a sig.a alloc.a wait.a \
 case.a open.a fs.a \
 libcheck.a rt.lib
-	./load test_fixsmtpio fixsmtpio_control.o fixsmtpio_die.o \
+	./load test_fixsmtpio fixsmtpio_control.o fixsmtpio_die.o acceptutils_unistd.o \
 	fixsmtpio_eventq.o fixsmtpio_readwrite.o fixsmtpio_munge.o fixsmtpio_glob.o \
 	fixsmtpio_filter.o fixsmtpio_proxy.o acceptutils_stralloc.o acceptutils_ucspitls.o \
 	test_fixsmtpio_control.o \
