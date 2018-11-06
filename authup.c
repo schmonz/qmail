@@ -52,11 +52,11 @@ int safewrite(int fd,char *buf,int len) {
 char ssoutbuf[SUBSTDIO_OUTSIZE];
 substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
 
-void puts(char *s) { substdio_puts(&ssout,s); }
+void out(char *s) { substdio_puts(&ssout,s); }
 void flush() { substdio_flush(&ssout); }
 
-void pop3_err(char *s) { puts("-ERR "); puts(s); puts("\r\n"); flush(); }
-void smtp_out(char *s) {                puts(s); puts("\r\n"); flush(); }
+void pop3_err(char *s) { out("-ERR "); out(s); out("\r\n"); flush(); }
+void smtp_out(char *s) {               out(s); out("\r\n"); flush(); }
 
 struct authup_error {
   char *name;
@@ -88,18 +88,18 @@ struct authup_error e[] = {
 };
 
 void pop3_auth_error(struct authup_error ae) {
-  puts("-ERR");
-  puts(" " PROGNAME " ");
-  puts(ae.message);
+  out("-ERR");
+  out(" " PROGNAME " ");
+  out(ae.message);
 }
 
 void smtp_auth_error(struct authup_error ae) {
-  puts(ae.smtpcode);
-  puts(" " PROGNAME " ");
-  puts(ae.message);
-  puts(" (#");
-  puts(ae.smtperror);
-  puts(")");
+  out(ae.smtpcode);
+  out(" " PROGNAME " ");
+  out(ae.message);
+  out(" (#");
+  out(ae.smtperror);
+  out(")");
 }
 
 void (*protocol_error)();
@@ -122,7 +122,7 @@ void authup_die(const char *name) {
   for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
   protocol_sleep(e[i].sleep);
   protocol_error(e[i]);
-  puts("\r\n");
+  out("\r\n");
   flush();
   e[i].die();
 }
@@ -152,9 +152,9 @@ stralloc greeting = {0};
 stralloc capabilities = {0};
 char **childargs;
 
-void pop3_okay() { puts("+OK \r\n"); flush(); }
+void pop3_okay() { out("+OK \r\n"); flush(); }
 void pop3_quit() { pop3_okay(); _exit(0); }
-void smtp_quit() { puts("221 "); smtp_out(greeting.s); _exit(0); }
+void smtp_quit() { out("221 "); smtp_out(greeting.s); _exit(0); }
 
 stralloc username = {0};
 stralloc password = {0};
@@ -238,10 +238,10 @@ void pop3_greet() {
   s += fmt_ulong(s,(unsigned long) now());
   *s++ = '@';
   *s++ = 0;
-  puts("+OK <");
-  puts(unique);
-  puts(greeting.s);
-  puts(">\r\n");
+  out("+OK <");
+  out(unique);
+  out(greeting.s);
+  out(">\r\n");
   flush();
 }
 
@@ -250,10 +250,10 @@ void pop3_format_capa(stralloc *multiline) {
 }
 
 void pop3_capa(char *arg) {
-  puts("+OK capability list follows\r\n");
-  if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) puts("STLS\r\n");
-  puts("USER\r\n");
-  puts(capabilities.s);
+  out("+OK capability list follows\r\n");
+  if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) out("STLS\r\n");
+  out("USER\r\n");
+  out(capabilities.s);
   flush();
 }
 
@@ -261,7 +261,7 @@ static int seenuser = 0;
 
 void pop3_stls(char *arg) {
   if (tls_level < UCSPITLS_AVAILABLE || in_tls) return pop3_err("STLS not available");
-  puts("+OK starting TLS negotiation\r\n");
+  out("+OK starting TLS negotiation\r\n");
   flush();
 
   if (!tls_init() || !tls_info(die_nomem)) authup_die("starttls");
@@ -295,14 +295,14 @@ void pop3_pass(char *arg) {
 }
 
 void smtp_greet() {
-  puts("220 ");
-  puts(greeting.s);
-  puts(" ESMTP\r\n");
+  out("220 ");
+  out(greeting.s);
+  out(" ESMTP\r\n");
   flush();
 }
 
 void smtp_helo(char *arg) {
-  puts("250 ");
+  out("250 ");
   smtp_out(greeting.s);
 }
 
@@ -321,12 +321,12 @@ void smtp_format_ehlo(stralloc *multiline) {
 
 void smtp_ehlo(char *arg) {
   char *x;
-  puts("250-"); puts(greeting.s); puts("\r\n");
-  if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) puts("250-STARTTLS\r\n");
-  puts("250-AUTH LOGIN PLAIN\r\n");
+  out("250-"); out(greeting.s); out("\r\n");
+  if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) out("250-STARTTLS\r\n");
+  out("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
-    puts("250-AUTH=LOGIN PLAIN\r\n");
-  puts(capabilities.s);
+    out("250-AUTH=LOGIN PLAIN\r\n");
+  out(capabilities.s);
   flush();
 }
 
