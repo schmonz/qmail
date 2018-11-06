@@ -41,8 +41,8 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
     verb_and_arg(verb,arg,++pos,request);
 }
 
-static int need_starttls_first(int starttls,int in_tls,char *event) {
-  return starttls >= UCSPITLS_REQUIRED
+static int need_starttls_first(int tls_level,int in_tls,char *event) {
+  return tls_level >= UCSPITLS_REQUIRED
     && !in_tls
     && !event_matches(EVENT_GREETING,event)
     && !event_matches(EVENT_TIMEOUT,event)
@@ -53,8 +53,8 @@ static int need_starttls_first(int starttls,int in_tls,char *event) {
     && !event_matches("quit",event);
 }
 
-static int want_starttls_now(int starttls,char *event) {
-  return starttls
+static int want_starttls_now(int tls_level,char *event) {
+  return tls_level
     && event_matches("starttls",event);
 }
 
@@ -62,7 +62,7 @@ void construct_proxy_request(stralloc *proxy_request,
                              filter_rule *rules,
                              char *event,stralloc *arg,
                              stralloc *client_request,
-                             int starttls,
+                             int tls_level,
                              int *want_tls,int in_tls,
                              int *want_data,int *in_data) {
   filter_rule *rule;
@@ -74,9 +74,9 @@ void construct_proxy_request(stralloc *proxy_request,
     for (rule = rules; rule; rule = rule->next)
       if (rule->request_prepend && filter_rule_applies(rule,event))
         prepends(proxy_request,rule->request_prepend);
-    if (need_starttls_first(starttls,in_tls,event))
+    if (need_starttls_first(tls_level,in_tls,event))
       prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS FIRST ");
-    else if (want_starttls_now(starttls,event)) {
+    else if (want_starttls_now(tls_level,event)) {
       *want_tls = 1;
       if (in_tls)
         prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS AGAIN ");
@@ -97,7 +97,7 @@ void construct_proxy_response(stralloc *proxy_response,
                               char *event,
                               stralloc *server_response,
                               int *proxy_exitcode,
-                              int starttls,
+                              int tls_level,
                               int want_tls,int in_tls,
                               int *want_data,int *in_data) {
   if (*want_data) {
@@ -110,11 +110,11 @@ void construct_proxy_response(stralloc *proxy_response,
       copys(proxy_response,"502 unimplemented (#5.5.1)\r\n");
     else
       copys(proxy_response,"220 Ready to start TLS (#5.7.0)\r\n");
-  else if (need_starttls_first(starttls,in_tls,event))
+  else if (need_starttls_first(tls_level,in_tls,event))
     copys(proxy_response,"530 Must issue a STARTTLS command first (#5.7.0)\r\n");
   else
     copy(proxy_response,server_response);
-    munge_response(proxy_response,proxy_exitcode,greeting,rules,event,starttls,in_tls);
+    munge_response(proxy_response,proxy_exitcode,greeting,rules,event,tls_level,in_tls);
 }
 
 void logit(char logprefix,stralloc *sa) {
@@ -169,7 +169,7 @@ int get_one_response(stralloc *one,stralloc *pile) {
   return get_one(one,pile,&is_last_line_of_response);
 }
 
-void handle_request(stralloc *proxy_request,stralloc *request,int starttls,int *want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules) {
+void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules) {
   stralloc event = {0}, verb = {0}, arg = {0};
 
   logit('1',request);
@@ -182,14 +182,14 @@ void handle_request(stralloc *proxy_request,stralloc *request,int starttls,int *
   construct_proxy_request(proxy_request,rules,
                           event.s,&arg,
                           request,
-                          starttls,
+                          tls_level,
                           want_tls,in_tls,
                           want_data,in_data);
   logit('4',proxy_request);
   blank(request);
 }
 
-void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int starttls,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting) {
+void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting) {
   char *event;
   logit('5',response);
   event = eventq_get();
@@ -197,7 +197,7 @@ void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,i
                            greeting,rules,event,
                            response,
                            exitcode,
-                           starttls,
+                           tls_level,
                            want_tls,in_tls,
                            want_data,in_data);
   logit('6',proxy_response);
@@ -213,7 +213,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
   int      exitcode         = EXIT_LATER_NORMALLY;
 
-  int      starttls         = ucspitls_level(),
+  int      tls_level        = ucspitls_level(),
            want_tls         =  0,
            in_tls           =  0,
            want_data        =  0,
@@ -233,11 +233,11 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
-        munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,starttls,in_tls);
+        munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,tls_level,in_tls);
         break;
       }
       while (client_requests.len && get_one_request(&one_request,&client_requests)) {
-        handle_request(&proxy_request,&one_request,starttls,&want_tls,in_tls,&want_data,&in_data,rules);
+        handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,&in_data,rules);
         safewrite(to_server,&proxy_request);
       }
     }
@@ -245,7 +245,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
       while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
-        handle_response(&proxy_response,&exitcode,&one_response,starttls,want_tls,in_tls,&want_data,&in_data,rules,greeting);
+        handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting);
         safewrite(to_client,&proxy_response);
         if (want_tls && !in_tls) {
           want_tls = 0;
