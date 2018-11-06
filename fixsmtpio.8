@@ -61,6 +61,18 @@ sets
 .B AUTHUP_USER
 in the environment.
 Many typical filter rules apply if and only if this variable is present.
+
+If running under
+.B sslserver -n
+and
+.B UCSPITLS
+is set,
+.B fixsmtpio
+will offer STARTTLS.
+The value "!" requires peers to STARTTLS before doing anything
+else useful.
+The value "" (empty string) enables STARTTLS without requiring it, a
+sensible choice for public incoming SMTP service.
 .SH "FILTER RULES"
 Filter rules follow the format:
 
@@ -188,6 +200,8 @@ See
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
 authup(8),
+sslserver(1),
+ucspi-tls(2),
 checkpassword(8),
 checknotroot(8),
 qmail-smtpd(8),
