@@ -8,7 +8,7 @@ void munge_exitcode(int *exitcode,filter_rule *rule) {
 
 void munge_greeting(stralloc *response,int lineno,stralloc *greeting,
                     int starttls,int in_tls) {
-  copys(response,"220 "); cat(response,greeting);
+  copys(response,"220 "); cat(response,greeting); cats(response," ESMTP");
 }
 
 void munge_helo(stralloc *response,int lineno,stralloc *greeting,
