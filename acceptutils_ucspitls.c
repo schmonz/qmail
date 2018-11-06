@@ -9,6 +9,7 @@
 
 int ucspitls_level(void) {
   char *ucspitls = env_get("UCSPITLS");
+  env_unset("UCSPITLS");
   if (!ucspitls || !case_diffs(ucspitls,"-")) return UCSPITLS_UNAVAILABLE;
   if (!case_diffs(ucspitls,"!")) return UCSPITLS_REQUIRED;
   return UCSPITLS_AVAILABLE;
