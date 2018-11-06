@@ -52,11 +52,11 @@ static int adjust_write_fd() {
   return 1;
 }
 
-int starttls_init(void) {
+int tls_init(void) {
   return notify_control_socket() && adjust_read_fd() && adjust_write_fd();
 }
 
-int starttls_info(void (*die_nomem)()) {
+int tls_info(void (*die_nomem)()) {
   unsigned long fd;
   char *fdstr;
   char envbuf[8192];

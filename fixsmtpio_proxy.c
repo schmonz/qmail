@@ -249,7 +249,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         safewrite(to_client,&proxy_response);
         if (want_tls && !in_tls) {
           want_tls = 0;
-          if (!starttls_init() || !starttls_info(die_nomem)) die_tls();
+          if (!tls_init() || !tls_info(die_nomem)) die_tls();
           in_tls = 1;
         }
       }

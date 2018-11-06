@@ -3,5 +3,5 @@
 #define UCSPITLS_REQUIRED    2
 
 extern int ucspitls_level(void);
-extern int starttls_init(void);
-extern int starttls_info(void (*)());
+extern int tls_init(void);
+extern int tls_info(void (*)());
