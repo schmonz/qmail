@@ -14,32 +14,45 @@ int ucspitls_level(void) {
   return UCSPITLS_AVAILABLE;
 }
 
-int starttls_init(void) {
+static int get_fd_for(char *name) {
   unsigned long fd;
   char *fdstr;
 
-  if (!(fdstr=env_get("SSLCTLFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-  if (write((int)fd, "Y", 1) < 1)
-    return 0;
+  if (!(fdstr = env_get(name))) return 0;
+  if (!scan_ulong(fdstr,&fd)) return 0;
 
-  if (!(fdstr=env_get("SSLREADFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-  if (fd_copy(0,(int)fd) == -1)
-    return 0;
+  return (int)fd;
+}
 
-  if (!(fdstr=env_get("SSLWRITEFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
-  if (fd_copy(1,(int)fd) == -1)
-    return 0;
+static int notify_control_socket() {
+  unsigned int fd = get_fd_for("SSLCTLFD");
+
+  if (!fd) return 0;
+  if (write(fd, "Y", 1) < 1) return 0;
 
   return 1;
+}
+
+static int adjust_read_fd() {
+  unsigned int fd = get_fd_for("SSLREADFD");
+
+  if (!fd) return 0;
+  if (fd_move(0,fd) == -1) return 0;
+
+  return 1;
+}
+
+static int adjust_write_fd() {
+  unsigned int fd = get_fd_for("SSLWRITEFD");
+
+  if (!fd) return 0;
+  if (fd_move(1,fd) == -1) return 0;
+
+  return 1;
+}
+
+int starttls_init(void) {
+  return notify_control_socket() && adjust_read_fd() && adjust_write_fd();
 }
 
 int starttls_info(void (*die_nomem)()) {

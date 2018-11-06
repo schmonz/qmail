@@ -143,7 +143,7 @@ test_fixsmtpio_munge.c
 	./compile test_fixsmtpio_munge.c
 
 fixsmtpio_proxy.o: \
-compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h
+compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_common.h fixsmtpio_eventq.h fixsmtpio_filter.h fixsmtpio_common.h
 	./compile fixsmtpio_proxy.c
 
 test_fixsmtpio_proxy.o: \

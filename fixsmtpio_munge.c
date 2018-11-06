@@ -7,30 +7,39 @@ void munge_exitcode(int *exitcode,filter_rule *rule) {
 }
 
 void munge_greeting(stralloc *response,int lineno,stralloc *greeting,
-                    int starttls,int seentls) {
+                    int starttls,int in_tls) {
   copys(response,"220 "); cat(response,greeting);
 }
 
 void munge_helo(stralloc *response,int lineno,stralloc *greeting,
-                int starttls,int seentls) {
+                int starttls,int in_tls) {
   copys(response,"250 "); cat(response,greeting);
 }
 
+static int is_starttls_line(stralloc *response) {
+  return stralloc_starts(response,"250-STARTTLS\r\n")
+      || stralloc_starts(response,"250 STARTTLS\r\n");
+}
+
 void munge_ehlo(stralloc *response,int lineno,stralloc *greeting,
-                int starttls,int seentls) {
+                int starttls,int in_tls) {
   switch (lineno) {
     case 0:
-      munge_helo(response,lineno,greeting,starttls,seentls);
+      munge_helo(response,lineno,greeting,starttls,in_tls);
       break;
     case 1:
-      if (starttls && !seentls && !env_get("AUTHUP_USER"))
+      if (is_starttls_line(response)) blank(response);
+      if (starttls && !in_tls && !env_get("AUTHUP_USER"))
         prepends(response,"250-STARTTLS\r\n");
+      break;
+    default:
+      if (is_starttls_line(response)) blank(response);
       break;
   }
 }
 
 void munge_help(stralloc *response,int lineno,stralloc *greeting,
-                int starttls,int seentls) {
+                int starttls,int in_tls) {
   stralloc munged = {0};
   copys(&munged,"214 " PROGNAME " home page: " HOMEPAGE "\r\n");
   cat(&munged,response);
@@ -38,7 +47,7 @@ void munge_help(stralloc *response,int lineno,stralloc *greeting,
 }
 
 void munge_quit(stralloc *response,int lineno,stralloc *greeting,
-                int starttls,int seentls) {
+                int starttls,int in_tls) {
   copys(response,"221 "); cat(response,greeting);
 }
 
@@ -100,7 +109,7 @@ void *munge_line_fn(const char *event) {
 
 void munge_line_internally(stralloc *line,int lineno,
                            stralloc *greeting,const char *event,
-                           int starttls,int seentls) {
+                           int starttls,int in_tls) {
   void (*munger)() = munge_line_fn(event);
-  if (munger) munger(line,lineno,greeting,starttls,seentls);
+  if (munger) munger(line,lineno,greeting,starttls,in_tls);
 }
