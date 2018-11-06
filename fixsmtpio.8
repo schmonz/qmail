@@ -62,17 +62,32 @@ sets
 in the environment.
 Many typical filter rules apply if and only if this variable is present.
 
-If running under
-.B sslserver -n
-and
+If
 .B UCSPITLS
+is set while running under
+.BR "sslserver -n" ,
+.B fixsmtpio
+supports STARTTLS.
+The special value
+.B !
+requires peers to negotiate TLS before doing much of anything else.
+The empty string is a more sensible choice for public SMTP service.
+
+If
+.B FIXSMTPIODEBUG
 is set,
 .B fixsmtpio
-will offer STARTTLS.
-The value "!" requires peers to STARTTLS before doing anything
-else useful.
-The value "" (empty string) enables STARTTLS without requiring it, a
-sensible choice for public incoming SMTP service.
+will show its work.
+Lines are numbered like so:
+.TP 3
+1: Request received from client
+.TP 3
+2: Request sent to server
+.TP 3
+3: Response received from server
+.TP 3
+4: Response sent to client
+
 .SH "FILTER RULES"
 Filter rules follow the format:
 
