@@ -34,8 +34,8 @@
 #define EXITCODE_FIXSMTPIO_PARSEFAIL         18
 
 static int timeout = 1200;
-int starttls = UCSPITLS_UNAVAILABLE;
-int seentls = 0;
+int tls_level = UCSPITLS_UNAVAILABLE;
+int in_tls = 0;
 
 void die()         { _exit( 1); }
 void die_noretry() { _exit(12); }
@@ -261,7 +261,7 @@ void pop3_format_capa(stralloc *multiline) {
 
 void pop3_capa(char *arg) {
   puts("+OK capability list follows\r\n");
-  if (starttls && !seentls) puts("STLS\r\n");
+  if (tls_level && !in_tls) puts("STLS\r\n");
   puts("USER\r\n");
   puts(capabilities.s);
   flush();
@@ -270,7 +270,7 @@ void pop3_capa(char *arg) {
 static int seenuser = 0;
 
 void pop3_stls(char *arg) {
-  if (!starttls || seentls) return pop3_err("STLS not available");
+  if (!tls_level || in_tls) return pop3_err("STLS not available");
   puts("+OK starting TLS negotiation\r\n");
   flush();
 
@@ -278,11 +278,11 @@ void pop3_stls(char *arg) {
   /* reset state */
   seenuser = 0;
 
-  seentls = 1;
+  in_tls = 1;
 }
 
 void pop3_user(char *arg) {
-  if (starttls >= UCSPITLS_REQUIRED && !seentls) authup_die("needtls");
+  if (tls_level >= UCSPITLS_REQUIRED && !in_tls) authup_die("needtls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -332,7 +332,7 @@ void smtp_format_ehlo(stralloc *multiline) {
 void smtp_ehlo(char *arg) {
   char *x;
   puts("250-"); puts(greeting.s); puts("\r\n");
-  if (starttls && !seentls) puts("250-STARTTLS\r\n");
+  if (tls_level && !in_tls) puts("250-STARTTLS\r\n");
   puts("250-AUTH LOGIN PLAIN\r\n");
   if ((x = env_get("AUTHUP_SASL_BROKEN_CLIENTS")))
     puts("250-AUTH=LOGIN PLAIN\r\n");
@@ -341,14 +341,14 @@ void smtp_ehlo(char *arg) {
 }
 
 void smtp_starttls() {
-  if (!starttls || seentls) return smtp_out("502 unimplemented (#5.5.1)");
+  if (!tls_level || in_tls) return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
   if (!starttls_init() || !starttls_info(die_nomem)) authup_die("starttls");
   /* reset state */
   ssin.p = 0;
 
-  seentls = 1;
+  in_tls = 1;
 }
 
 static stralloc authin = {0};
@@ -426,7 +426,7 @@ void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
-  if (starttls >= UCSPITLS_REQUIRED && !seentls) authup_die("needtls");
+  if (tls_level >= UCSPITLS_REQUIRED && !in_tls) authup_die("needtls");
 
   i = str_chr(cmd,' ');
   arg = cmd + i;
@@ -576,7 +576,7 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  starttls = ucspitls_level();
+  tls_level = ucspitls_level();
 
   for (i = 0; p[i].name; ++i)
     if (case_equals(p[i].name,protocol))
