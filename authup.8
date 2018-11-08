@@ -47,7 +47,7 @@ is SMTP, it waits 5 seconds
 before printing the message.
 
 When run under
-.BR sslserver ,
+.BR "sslserver -n" ,
 .B authup
 can be configured to offer TLS and/or refuse to authenticate without it.
 .SH "ENVIRONMENT VARIABLES"
@@ -56,6 +56,12 @@ If
 is set to "!",
 .B authup
 will require the client to negotiate TLS before attempting to authenticate.
+
+If
+.B DISABLETLS
+is set,
+.B UCSPITLS
+will not be honored.
 
 If
 .B AUTHUP_SASL_BROKEN_CLIENTS
