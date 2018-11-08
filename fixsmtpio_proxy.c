@@ -55,11 +55,6 @@ static int need_starttls_first(int tls_level,int in_tls,char *event) {
     && !event_matches("quit",event);
 }
 
-static int want_starttls_now(int tls_level,char *event) {
-  return tls_level >= UCSPITLS_AVAILABLE
-    && event_matches("starttls",event);
-}
-
 void construct_proxy_request(stralloc *proxy_request,
                              filter_rule *rules,
                              char *event,stralloc *arg,
@@ -78,12 +73,16 @@ void construct_proxy_request(stralloc *proxy_request,
         prepends(proxy_request,rule->request_prepend);
     if (need_starttls_first(tls_level,in_tls,event))
       prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS FIRST ");
-    else if (want_starttls_now(tls_level,event)) {
+    else if (event_matches("starttls",event)) {
       *want_tls = 1;
-      if (in_tls)
-        prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS AGAIN ");
-      else
-        prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS BEGIN ");
+      if (tls_level >= UCSPITLS_AVAILABLE) {
+        if (in_tls)
+          prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS AGAIN ");
+        else
+          prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS BEGIN ");
+      } else {
+        prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS BLOCK ");
+      }
     }
     else if (event_matches("data",event))
       *want_data = 1;
@@ -108,7 +107,7 @@ void construct_proxy_response(stralloc *proxy_response,
   }
 
   if (want_tls) {
-    if (in_tls)
+    if (tls_level < UCSPITLS_AVAILABLE || in_tls)
       copys(proxy_response,"502 unimplemented (#5.5.1)\r\n");
     else
       copys(proxy_response,"220 Ready to start TLS (#5.7.0)\r\n");
@@ -249,10 +248,12 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
         handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting);
         safewrite(to_client,&proxy_response);
-        if (want_tls && !in_tls) {
+        if (want_tls) {
           want_tls = 0;
-          if (!tls_init() || !tls_info(die_nomem)) die_tls();
-          in_tls = 1;
+          if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) {
+            if (!tls_init() || !tls_info(die_nomem)) die_tls();
+            in_tls = 1;
+          }
         }
       }
     }
