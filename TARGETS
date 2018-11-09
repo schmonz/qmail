@@ -252,6 +252,7 @@ qmail-qmqpd
 qmail-qmtpd.o
 rcpthosts.o
 qmail-qmtpd
+qmail-spp.o
 qmail-smtpd.o
 qmail-smtpd
 sendmail.o
