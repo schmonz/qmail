@@ -1485,9 +1485,9 @@ auto_qmail.h auto_uids.h date822fmt.h fmtqfn.h
 	./compile qmail-queue.c
 
 qmail-rcptcheck: \
-load qmail-rcptcheck.o control.o error.a fs.a getln.a open.a \
+load qmail-rcptcheck.o control.o env.a error.a fs.a getln.a open.a \
 stralloc.a substdio.a str.a alloc.a wait.a
-	./load qmail-rcptcheck control.o error.a fs.a getln.a open.a \
+	./load qmail-rcptcheck control.o env.a error.a fs.a getln.a open.a \
 	stralloc.a substdio.a str.a alloc.a wait.a
 
 qmail-rcptcheck-badrcptto: \
@@ -1529,7 +1529,7 @@ compile qmail-rcptcheck-realrcptto.c env.h realrcptto.h
 	./compile qmail-rcptcheck-realrcptto.c
 
 qmail-rcptcheck.o: \
-compile qmail-rcptcheck.c control.h stralloc.h wait.h
+compile qmail-rcptcheck.c control.h env.h stralloc.h substdio.h wait.h
 	./compile qmail-rcptcheck.c
 
 qmail-remote: \
