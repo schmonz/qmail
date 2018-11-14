@@ -72,16 +72,16 @@ void construct_proxy_request(stralloc *proxy_request,
       if (rule->request_prepend && filter_rule_applies(rule,event))
         prepends(proxy_request,rule->request_prepend);
     if (need_starttls_first(tls_level,in_tls,event))
-      prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS FIRST ");
+      prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS FIRST ");
     else if (event_matches("starttls",event)) {
       *want_tls = 1;
       if (tls_level >= UCSPITLS_AVAILABLE) {
         if (in_tls)
-          prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS AGAIN ");
+          prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS AGAIN ");
         else
-          prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS BEGIN ");
+          prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS BEGIN ");
       } else {
-        prepends(proxy_request,REQUEST_NOOP "fixsmtpio STARTTLS BLOCK ");
+        prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS BLOCK ");
       }
     }
     else if (event_matches("data",event))
