@@ -76,6 +76,8 @@ int main(int argc,char **argv) {
 
   argv++; if (!*argv) die_usage();
 
+  if (env_get("NOFIXSMTPIO")) unistd_execvp(*argv,argv);
+
   stralloc_set_die(die_nomem);
 
   cd_var_qmail();
