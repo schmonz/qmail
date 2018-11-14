@@ -202,7 +202,7 @@ void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,i
                            want_tls,in_tls,
                            want_data,in_data);
   logit('4',proxy_response);
-  //alloc_free(event);
+  alloc_free(event);
   blank(response);
 }
 
