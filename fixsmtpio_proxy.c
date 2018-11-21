@@ -150,6 +150,7 @@ int get_one(const char *caller,stralloc *one,stralloc *pile,int (*fn)(stralloc *
 
     _copyb(caller_sa.s,&next_pile,pile->s+pos,pile->len-pos);
     _copy(caller_sa.s,pile,&next_pile);
+    copys(&next_pile,"");
 
     copys(&caller_sa,"");
   } else {
