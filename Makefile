@@ -8,20 +8,20 @@ acceptutils: \
 reup authup checknotroot fixsmtpio
 
 acceptutils_base64.o: \
-compile acceptutils_base64.c acceptutils_base64.h
-	./compile acceptutils_base64.c
+compile99 acceptutils_base64.c acceptutils_base64.h
+	./compile99 acceptutils_base64.c
 
 acceptutils_stralloc.o: \
-compile acceptutils_stralloc.c acceptutils_stralloc.h
-	./compile acceptutils_stralloc.c
+compile99 acceptutils_stralloc.c acceptutils_stralloc.h
+	./compile99 acceptutils_stralloc.c
 
 acceptutils_ucspitls.o: \
-compile acceptutils_ucspitls.c acceptutils_ucspitls.h case.h env.h fd.h readwrite.h scan.h stralloc.h
-	./compile acceptutils_ucspitls.c
+compile99 acceptutils_ucspitls.c acceptutils_ucspitls.h case.h env.h fd.h readwrite.h scan.h stralloc.h
+	./compile99 acceptutils_ucspitls.c
 
 acceptutils_unistd.o: \
-compile acceptutils_unistd.c acceptutils_unistd.h
-	./compile acceptutils_unistd.c
+compile99 acceptutils_unistd.c acceptutils_unistd.h
+	./compile99 acceptutils_unistd.c
 
 acceptutils-memcheck: \
 test_fixsmtpio
@@ -48,11 +48,11 @@ socket.lib
 	`cat socket.lib`
 
 authup.o: \
-compile authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
+compile99 authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
 readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h \
 env.h control.h error.h scan.h auto_qmail.h acceptutils_unistd.h
-	./compile authup.c
+	./compile99 authup.c
 
 check.h: \
 conf-check check_stdint.h
@@ -69,8 +69,8 @@ load checknotroot.o acceptutils_unistd.o substdio.a error.a str.a
 	./load checknotroot acceptutils_unistd.o substdio.a error.a str.a
 
 checknotroot.o: \
-compile checknotroot.c exit.h readwrite.h substdio.h acceptutils_unistd.h
-	./compile checknotroot.c
+compile99 checknotroot.c exit.h readwrite.h substdio.h acceptutils_unistd.h
+	./compile99 checknotroot.c
 
 fixsmtpio: \
 load fixsmtpio.o fixsmtpio_control.o fixsmtpio_die.o fixsmtpio_filter.o \
@@ -87,86 +87,86 @@ alloc.a wait.a case.a open.a fs.a
 	alloc.a wait.a case.a open.a fs.a
 
 fixsmtpio.o: \
-compile fixsmtpio.c fixsmtpio.h fixsmtpio_die.h fixsmtpio_filter.h \
+compile99 fixsmtpio.c fixsmtpio.h fixsmtpio_die.h fixsmtpio_filter.h \
 fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h \
 fd.h scan.h str.h stralloc.h substdio.h wait.h acceptutils_unistd.h
-	./compile fixsmtpio.c
+	./compile99 fixsmtpio.c
 
 fixsmtpio_die.o: \
-compile fixsmtpio_die.c fixsmtpio.h fixsmtpio_die.h readwrite.h \
+compile99 fixsmtpio_die.c fixsmtpio.h fixsmtpio_die.h readwrite.h \
 acceptutils_unistd.h
-	./compile fixsmtpio_die.c
+	./compile99 fixsmtpio_die.c
 
 test_acceptutils_stralloc.o: \
-compile acceptutils_stralloc.c fixsmtpio.h acceptutils_stralloc.h readwrite.h \
+compile99 acceptutils_stralloc.c fixsmtpio.h acceptutils_stralloc.h readwrite.h \
 check.h \
 test_acceptutils_stralloc.c
-	./compile test_acceptutils_stralloc.c
+	./compile99 test_acceptutils_stralloc.c
 
 fixsmtpio_control.o: \
-compile fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h
-	./compile fixsmtpio_control.c
+compile99 fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h
+	./compile99 fixsmtpio_control.c
 
 test_fixsmtpio_control.o: \
-compile fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h \
+compile99 fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h \
 check.h \
 test_fixsmtpio_control.c
-	./compile test_fixsmtpio_control.c
+	./compile99 test_fixsmtpio_control.c
 
 fixsmtpio_eventq.o: \
-compile fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_die.h fixsmtpio_eventq.h
-	./compile fixsmtpio_eventq.c
+compile99 fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_die.h fixsmtpio_eventq.h
+	./compile99 fixsmtpio_eventq.c
 
 test_fixsmtpio_eventq.o: \
-compile fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_die.h fixsmtpio_eventq.h \
+compile99 fixsmtpio_eventq.c alloc.h str.h fixsmtpio.h fixsmtpio_die.h fixsmtpio_eventq.h \
 check.h \
 test_fixsmtpio_eventq.c
-	./compile test_fixsmtpio_eventq.c
+	./compile99 test_fixsmtpio_eventq.c
 
 fixsmtpio_filter.o: \
-compile fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_die.h fixsmtpio_munge.h fixsmtpio_glob.h
-	./compile fixsmtpio_filter.c
+compile99 fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_die.h fixsmtpio_munge.h fixsmtpio_glob.h
+	./compile99 fixsmtpio_filter.c
 
 test_fixsmtpio_filter.o: \
-compile fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_die.h fixsmtpio_munge.h fixsmtpio_glob.h \
+compile99 fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_die.h fixsmtpio_munge.h fixsmtpio_glob.h \
 check.h \
 test_fixsmtpio_filter.c
-	./compile test_fixsmtpio_filter.c
+	./compile99 test_fixsmtpio_filter.c
 
 fixsmtpio_glob.o: \
-compile fixsmtpio_glob.c fixsmtpio_glob.h
-	./compile fixsmtpio_glob.c
+compile99 fixsmtpio_glob.c fixsmtpio_glob.h
+	./compile99 fixsmtpio_glob.c
 
 test_fixsmtpio_glob.o: \
-compile fixsmtpio_glob.c fixsmtpio_glob.h \
+compile99 fixsmtpio_glob.c fixsmtpio_glob.h \
 check.h \
 test_fixsmtpio_glob.c
-	./compile test_fixsmtpio_glob.c
+	./compile99 test_fixsmtpio_glob.c
 
 fixsmtpio_munge.o: \
-compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_die.h
-	./compile fixsmtpio_munge.c
+compile99 fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_die.h
+	./compile99 fixsmtpio_munge.c
 
 test_fixsmtpio_munge.o: \
-compile fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_die.h \
+compile99 fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_die.h \
 check.h \
 test_fixsmtpio_munge.c
-	./compile test_fixsmtpio_munge.c
+	./compile99 test_fixsmtpio_munge.c
 
 fixsmtpio_proxy.o: \
-compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h fixsmtpio_die.h
-	./compile fixsmtpio_proxy.c
+compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h fixsmtpio_die.h
+	./compile99 fixsmtpio_proxy.c
 
 test_fixsmtpio_proxy.o: \
-compile fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h \
+compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h \
 check.h \
 test_fixsmtpio_proxy.c
-	./compile test_fixsmtpio_proxy.c
+	./compile99 test_fixsmtpio_proxy.c
 
 fixsmtpio_readwrite.o: \
-compile fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_die.h error.h readwrite.h select.h \
+compile99 fixsmtpio_readwrite.c fixsmtpio_readwrite.h fixsmtpio_die.h error.h readwrite.h select.h \
 acceptutils_stralloc.h
-	./compile fixsmtpio_readwrite.c
+	./compile99 fixsmtpio_readwrite.c
 
 test_fixsmtpio: \
 fixsmtpio \
@@ -192,8 +192,8 @@ libcheck.a rt.lib
 	libcheck.a -lpthread -lm `cat rt.lib`
 
 test_fixsmtpio.o: \
-compile test_fixsmtpio.c fixsmtpio.h check.h
-	./compile test_fixsmtpio.c
+compile99 test_fixsmtpio.c fixsmtpio.h check.h
+	./compile99 test_fixsmtpio.c
 
 libcheck.a: \
 conf-check
@@ -204,8 +204,8 @@ load reup.o acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.
 	./load reup acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
 
 reup.o: \
-compile reup.c acceptutils_unistd.h env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
-	./compile reup.c
+compile99 reup.c acceptutils_unistd.h env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
+	./compile99 reup.c
 
 rt.lib: \
 compile load
@@ -529,6 +529,12 @@ make-compile warn-auto.sh systype
 	( cat warn-auto.sh; ./make-compile "`cat systype`" ) > \
 	compile
 	chmod 755 compile
+
+compile99: \
+make-compile99 warn-auto.sh systype
+	( cat warn-auto.sh; ./make-compile99 "`cat systype`" ) > \
+	compile99
+	chmod 755 compile99
 
 condredirect: \
 load condredirect.o qmail.o strerr.a fd.a sig.a wait.a seek.a env.a \
@@ -1118,6 +1124,11 @@ make-compile: \
 make-compile.sh auto-ccld.sh
 	cat auto-ccld.sh make-compile.sh > make-compile
 	chmod 755 make-compile
+
+make-compile99: \
+make-compile99.sh auto-ccld.sh
+	cat auto-ccld.sh make-compile99.sh > make-compile99
+	chmod 755 make-compile99
 
 make-load: \
 make-load.sh auto-ccld.sh

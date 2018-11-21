@@ -385,6 +385,8 @@ forgeries.0
 man
 setup
 check
+make-compile99
+compile99
 acceptutils_base64.o
 acceptutils_stralloc.o
 acceptutils_ucspitls.o
