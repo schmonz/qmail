@@ -85,16 +85,16 @@ int tls_info(void (*die_nomem)()) {
   for (j=0;j < ssl_env.len-1;++j) {
     if ( *x != '=' ) {
       catb(&ssl_parm,x,1);
-      x++; }
-    else {
+      x++;
+    } else {
       append0(&ssl_parm);
       x++;
 
       for (;j < ssl_env.len-j-1;++j) {
         if ( *x != '\0' ) {
           catb(&ssl_value,x,1);
-          x++; }
-        else {
+          x++;
+        } else {
           append0(&ssl_value);
           x++;
           if (!env_put2(ssl_parm.s,ssl_value.s)) die_nomem();
