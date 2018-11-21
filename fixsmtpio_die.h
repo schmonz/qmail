@@ -1,3 +1,5 @@
+#include "stralloc.h"
+
 void die_usage(void);
 void die_control(void);
 void die_pipe(void);
@@ -10,3 +12,4 @@ void die_write(void);
 void die_nomem(void);
 void die_tls(void);
 void die_parse(void);
+void logit(char,stralloc *);

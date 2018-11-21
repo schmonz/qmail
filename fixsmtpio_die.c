@@ -2,6 +2,7 @@
 #include "fixsmtpio_die.h"
 #include "readwrite.h"
 
+#include "acceptutils_stralloc.h"
 #include "acceptutils_unistd.h"
 
 static void die() { unistd_exit(1); }
@@ -33,3 +34,13 @@ void die_nomem() { dieerrflush("out of memory"); }
 void die_tls()   { dieerrflush("TLS temporarily not available"); }
 void die_parse() {    errflush("unable to parse control/fixsmtpio");
                       unistd_exit(EXIT_NOW_PARSEFAIL); }
+
+void logit(char logprefix,stralloc *sa) {
+  if (!env_get("FIXSMTPIODEBUG")) return;
+  substdio_puts(&sserr,PROGNAME ": ");
+  substdio_put(&sserr,&logprefix,1);
+  substdio_puts(&sserr,": ");
+  substdio_put(&sserr,sa->s,sa->len);
+  if (!ends_with_newline(sa)) substdio_puts(&sserr,"\r\n");
+  substdio_flush(&sserr);
+}

@@ -120,16 +120,6 @@ void construct_proxy_response(stralloc *proxy_response,
     munge_response(proxy_response,proxy_exitcode,greeting,rules,event,tls_level,in_tls);
 }
 
-void logit(char logprefix,stralloc *sa) {
-  if (!env_get("FIXSMTPIODEBUG")) return;
-  substdio_puts(&sserr,PROGNAME ": ");
-  substdio_put(&sserr,&logprefix,1);
-  substdio_puts(&sserr,": ");
-  substdio_put(&sserr,sa->s,sa->len);
-  if (!ends_with_newline(sa)) substdio_puts(&sserr,"\r\n");
-  substdio_flush(&sserr);
-}
-
 int get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
   int got_one = 0;
   stralloc next_pile = {0};
