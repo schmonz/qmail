@@ -1,16 +1,16 @@
 #include "stralloc.h"
 
-extern void stralloc_set_die(void (*)());
+void stralloc_set_die(void (*)());
 
-extern void append(stralloc *,char *);
-extern void append0(stralloc *);
-extern void cat(stralloc *,stralloc *);
-extern void catb(stralloc *,char *,int);
-extern void cats(stralloc *,char *);
-extern void copy(stralloc *,stralloc *);
-extern void copyb(stralloc *,char *,int);
-extern void copys(stralloc *,char *);
-extern void prepends(stralloc *,char *);
-extern int  starts(stralloc *,char *);
-extern int  ends_with_newline(stralloc *);
-extern void blank(stralloc *);
+void append(stralloc *,char *);
+void append0(stralloc *);
+void cat(stralloc *,stralloc *);
+void catb(stralloc *,char *,int);
+void cats(stralloc *,char *);
+void copy(stralloc *,stralloc *);
+void copyb(stralloc *,char *,int);
+void copys(stralloc *,char *);
+void prepends(stralloc *,char *);
+int  starts(stralloc *,char *);
+int  ends_with_newline(stralloc *);
+void blank(stralloc *);
