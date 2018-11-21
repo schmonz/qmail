@@ -120,7 +120,8 @@ void construct_proxy_response(stralloc *proxy_response,
     munge_response(proxy_response,proxy_exitcode,greeting,rules,event,tls_level,in_tls);
 }
 
-int get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
+int get_one(const char *caller,stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
+  stralloc caller_sa = {0};
   int got_one = 0;
   stralloc next_pile = {0};
   int pos = 0;
@@ -142,8 +143,15 @@ int get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
   }
 
   if (got_one) {
-    copyb(&next_pile,pile->s+pos,pile->len-pos);
-    copy(pile,&next_pile);
+    copys(&caller_sa,(char *)caller);
+    cats(&caller_sa,":");
+    cats(&caller_sa,(char *)__func__);
+    append0(&caller_sa);
+
+    _copyb(caller_sa.s,&next_pile,pile->s+pos,pile->len-pos);
+    _copy(caller_sa.s,pile,&next_pile);
+
+    copys(&caller_sa,"");
   } else {
     blank(one);
   }
@@ -152,7 +160,7 @@ int get_one(stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
 }
 
 int get_one_request(stralloc *one,stralloc *pile) {
-  return get_one(one,pile,0);
+  return get_one(__func__,one,pile,0);
 }
 
 int is_last_line_of_response(stralloc *line) {
@@ -160,7 +168,7 @@ int is_last_line_of_response(stralloc *line) {
 }
 
 int get_one_response(stralloc *one,stralloc *pile) {
-  return get_one(one,pile,&is_last_line_of_response);
+  return get_one(__func__,one,pile,&is_last_line_of_response);
 }
 
 void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules) {
