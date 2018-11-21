@@ -90,7 +90,7 @@ alloc.a wait.a case.a open.a fs.a
 fixsmtpio.o: \
 compile99 fixsmtpio.c fixsmtpio.h fixsmtpio_die.h fixsmtpio_filter.h \
 fixsmtpio_proxy.h alloc.h auto_qmail.h case.h control.h env.h \
-fd.h scan.h str.h stralloc.h substdio.h wait.h acceptutils_unistd.h
+fd.h scan.h str.h substdio.h wait.h acceptutils_stralloc.h acceptutils_unistd.h
 	./compile99 fixsmtpio.c
 
 fixsmtpio_die.o: \
@@ -105,7 +105,8 @@ test_acceptutils_stralloc.c
 	./compile99 test_acceptutils_stralloc.c
 
 fixsmtpio_control.o: \
-compile99 fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h
+compile99 fixsmtpio_control.c fixsmtpio.h fixsmtpio_control.h \
+acceptutils_stralloc.h
 	./compile99 fixsmtpio_control.c
 
 test_fixsmtpio_control.o: \
@@ -125,7 +126,8 @@ test_fixsmtpio_eventq.c
 	./compile99 test_fixsmtpio_eventq.c
 
 fixsmtpio_filter.o: \
-compile99 fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_die.h fixsmtpio_munge.h fixsmtpio_glob.h
+compile99 fixsmtpio_filter.c fixsmtpio_filter.h fixsmtpio_die.h fixsmtpio_munge.h fixsmtpio_glob.h \
+acceptutils_stralloc.h
 	./compile99 fixsmtpio_filter.c
 
 test_fixsmtpio_filter.o: \
@@ -145,7 +147,8 @@ test_fixsmtpio_glob.c
 	./compile99 test_fixsmtpio_glob.c
 
 fixsmtpio_munge.o: \
-compile99 fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_die.h
+compile99 fixsmtpio_munge.c fixsmtpio_munge.h fixsmtpio_die.h \
+acceptutils_stralloc.h
 	./compile99 fixsmtpio_munge.c
 
 test_fixsmtpio_munge.o: \
@@ -155,11 +158,15 @@ test_fixsmtpio_munge.c
 	./compile99 test_fixsmtpio_munge.c
 
 fixsmtpio_proxy.o: \
-compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h fixsmtpio_die.h
+compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h \
+fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h fixsmtpio_die.h \
+acceptutils_stralloc.h
 	./compile99 fixsmtpio_proxy.c
 
 test_fixsmtpio_proxy.o: \
-compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h \
+compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h \
+fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h \
+acceptutils_stralloc.h \
 check.h \
 test_fixsmtpio_proxy.c
 	./compile99 test_fixsmtpio_proxy.c
