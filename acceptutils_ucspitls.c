@@ -3,8 +3,8 @@
 #include "fd.h"
 #include "readwrite.h"
 #include "scan.h"
-#include "stralloc.h"
 
+#include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 
 int ucspitls_level(void) {
@@ -76,7 +76,7 @@ int tls_info(void (*die_nomem)()) {
     return 0;
 
   while ((j=read(fd,envbuf,8192)) > 0 ) {
-    stralloc_catb(&ssl_env,envbuf,j);
+    catb(&ssl_env,envbuf,j);
       if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2]==0 && ssl_env.s[ssl_env.len-1]==0)
         break;
   }
@@ -87,18 +87,18 @@ int tls_info(void (*die_nomem)()) {
 
   for (j=0;j < ssl_env.len-1;++j) {
     if ( *x != '=' ) {
-      if (!stralloc_catb(&ssl_parm,x,1)) die_nomem();
+      catb(&ssl_parm,x,1);
       x++; }
     else {
-      if (!stralloc_0(&ssl_parm)) die_nomem();
+      append0(&ssl_parm);
       x++;
 
       for (;j < ssl_env.len-j-1;++j) {
         if ( *x != '\0' ) {
-          if (!stralloc_catb(&ssl_value,x,1)) die_nomem();
+          catb(&ssl_value,x,1);
           x++; }
         else {
-          if (!stralloc_0(&ssl_value)) die_nomem();
+          append0(&ssl_value);
           x++;
           if (!env_put2(ssl_parm.s,ssl_value.s)) die_nomem();
           ssl_parm.len = 0;
