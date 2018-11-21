@@ -57,6 +57,6 @@ void logit(char logprefix,stralloc *sa) {
   substdio_put(&sserr,&logprefix,1);
   substdio_puts(&sserr,": ");
   substdio_put(&sserr,sa->s,sa->len);
-  if (!ends_with_newline(sa)) substdio_puts(&sserr,"\r\n");
+  if (!ends_with_newline(sa)) substdio_puts(&sserr,"\n");
   substdio_flush(&sserr);
 }
