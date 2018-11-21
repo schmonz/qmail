@@ -10,10 +10,23 @@ static void die() { unistd_exit(1); }
 static char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-static void errflush(char *s) {
-  substdio_puts(&sserr,PROGNAME ": ");
+static void errflush3(const char *caller,const char *alloc_fn,char *s) {
+  substdio_puts(&sserr,PROGNAME ":");
+  if (caller) {
+    substdio_puts(&sserr,caller);
+    substdio_puts(&sserr,":");
+  }
+  if (alloc_fn) {
+    substdio_puts(&sserr,alloc_fn);
+    substdio_puts(&sserr,":");
+  }
+  substdio_puts(&sserr," ");
   substdio_puts(&sserr,s);
   substdio_putsflush(&sserr,"\n");
+}
+
+static void errflush(char *s) {
+  errflush3(0,0,s);
 }
 
 static void dieerrflush(char *s) {
@@ -30,7 +43,10 @@ void die_wait()  { dieerrflush("unable to wait for child"); }
 void die_crash() { dieerrflush("aack, child crashed"); }
 void die_read()  { dieerrflush("unable to read"); }
 void die_write() { dieerrflush("unable to write"); }
-void die_nomem() { dieerrflush("out of memory"); }
+void die_nomem(const char *caller,const char *alloc_fn) {
+  errflush3(caller,alloc_fn,"out of memory");
+  die();
+}
 void die_tls()   { dieerrflush("TLS temporarily not available"); }
 void die_parse() {    errflush("unable to parse control/fixsmtpio");
                       unistd_exit(EXIT_NOW_PARSEFAIL); }

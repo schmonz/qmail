@@ -9,7 +9,7 @@ void die_wait(void);
 void die_crash(void);
 void die_read(void);
 void die_write(void);
-void die_nomem(void);
+void die_nomem(const char *,const char *);
 void die_tls(void);
 void die_parse(void);
 void logit(char,stralloc *);

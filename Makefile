@@ -51,7 +51,8 @@ authup.o: \
 compile99 authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
 substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
 readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h \
-env.h control.h error.h scan.h auto_qmail.h acceptutils_unistd.h
+env.h control.h error.h scan.h auto_qmail.h acceptutils_unistd.h \
+acceptutils_stralloc.h
 	./compile99 authup.c
 
 check.h: \

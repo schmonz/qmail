@@ -127,7 +127,9 @@ void authup_die(const char *name) {
   e[i].die();
 }
 
-void die_nomem() { authup_die("nomem"); }
+void die_nomem(const char *caller,const char *alloc_fn) {
+  authup_die("nomem");
+}
 
 void die_usage() { errflush("usage: " PROGNAME " <smtp|pop3> prog"); die(); }
 

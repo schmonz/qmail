@@ -26,13 +26,13 @@ static void eventq_init() {
 
 static node_t *eventq_alloc_node() {
   node_t *e = (node_t *)alloc(sizeof(node_t));
-  if (!e) die_nomem();
+  if (!e) die_nomem(__func__,"alloc");
   return e;
 }
 
 static char *eventq_alloc_event(const char *event) {
   char *s = (char *)alloc(sizeof(char) * (1 + str_len(event)));
-  if (!s) die_nomem();
+  if (!s) die_nomem(__func__,"alloc");
   return s;
 }
 

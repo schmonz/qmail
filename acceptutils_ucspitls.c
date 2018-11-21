@@ -59,7 +59,7 @@ int tls_init(void) {
   return notify_control_socket() && adjust_read_fd() && adjust_write_fd();
 }
 
-int tls_info(void (*die_nomem)()) {
+int tls_info(void (*die_nomem)(const char *caller,const char *alloc_fn)) {
   unsigned long fd;
   char envbuf[8192];
   char *x;
@@ -78,7 +78,7 @@ int tls_info(void (*die_nomem)()) {
         break;
   }
   if (j <= 0)
-    die_nomem();
+    die_nomem(__func__,"read");
 
   x = ssl_env.s;
 
@@ -97,7 +97,8 @@ int tls_info(void (*die_nomem)()) {
         } else {
           append0(&ssl_value);
           x++;
-          if (!env_put2(ssl_parm.s,ssl_value.s)) die_nomem();
+          if (!env_put2(ssl_parm.s,ssl_value.s))
+            die_nomem(__func__,"env_put2");
           ssl_parm.len = 0;
           ssl_value.len = 0;
           break;
