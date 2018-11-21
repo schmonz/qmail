@@ -148,8 +148,8 @@ int get_one(const char *caller,stralloc *one,stralloc *pile,int (*fn)(stralloc *
     cats(&caller_sa,(char *)__func__);
     append0(&caller_sa);
 
-    _copyb(caller_sa.s,&next_pile,pile->s+pos,pile->len-pos);
-    _copy(caller_sa.s,pile,&next_pile);
+    contextlogging_copyb(caller_sa.s,&next_pile,pile->s+pos,pile->len-pos);
+    contextlogging_copy(caller_sa.s,pile,&next_pile);
     copys(&next_pile,"");
 
     copys(&caller_sa,"");
