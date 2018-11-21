@@ -61,7 +61,6 @@ int tls_init(void) {
 
 int tls_info(void (*die_nomem)()) {
   unsigned long fd;
-  char *fdstr;
   char envbuf[8192];
   char *x;
   int j;
@@ -70,10 +69,8 @@ int tls_info(void (*die_nomem)()) {
   stralloc ssl_parm  = {0};
   stralloc ssl_value = {0};
 
-  if (!(fdstr=env_get("SSLCTLFD")))
-    return 0;
-  if (!scan_ulong(fdstr,&fd))
-    return 0;
+  fd = get_fd_for("SSLCTLFD");
+  if (!fd) return 0;
 
   while ((j=read(fd,envbuf,8192)) > 0 ) {
     catb(&ssl_env,envbuf,j);
