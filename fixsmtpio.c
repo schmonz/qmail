@@ -1,3 +1,5 @@
+#include <libgen.h>
+
 #include "fixsmtpio.h"
 #include "fixsmtpio_die.h"
 #include "fixsmtpio_filter.h"
@@ -45,15 +47,16 @@ void be_proxy(int from_client,int to_client,
               int from_proxy,int to_proxy,
               int from_server,int to_server,
               stralloc *greeting,filter_rule *rules,
-              int proxied) {
+              int kid_pid,char *kid_name) {
   int exitcode;
 
   unistd_close(from_proxy);
   unistd_close(to_proxy);
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
-                                                      greeting,rules);
-  teardown_and_exit(exitcode,proxied,rules,from_server,to_server);
+                                                      greeting,rules,
+                                                      kid_pid,kid_name);
+  teardown_and_exit(exitcode,kid_pid,rules,from_server,to_server);
 }
 
 void load_smtp_greeting(stralloc *greeting,char *configfile) {
@@ -72,7 +75,7 @@ int main(int argc,char **argv) {
   int from_proxy, to_server;
   int from_server, to_proxy;
   int to_client = 1;
-  int proxied;
+  int kid_pid;
 
   argv++; if (!*argv) die_usage();
 
@@ -87,13 +90,13 @@ int main(int argc,char **argv) {
   make_pipe(&from_proxy,&to_server);
   make_pipe(&from_server,&to_proxy);
 
-  if ((proxied = unistd_fork()))
+  if ((kid_pid = unistd_fork()))
     be_proxy(from_client,to_client,
              from_proxy,to_proxy,
              from_server,to_server,
              &greeting,rules,
-             proxied);
-  else if (proxied == 0)
+             kid_pid,basename(argv[0]));
+  else if (kid_pid == 0)
     be_proxied(from_proxy,to_proxy,
                from_server,to_server,
                argv);

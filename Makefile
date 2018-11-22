@@ -95,7 +95,7 @@ fd.h scan.h str.h substdio.h wait.h acceptutils_stralloc.h acceptutils_unistd.h
 
 fixsmtpio_die.o: \
 compile99 fixsmtpio_die.c fixsmtpio.h fixsmtpio_die.h readwrite.h \
-acceptutils_stralloc.h acceptutils_unistd.h
+acceptutils_stralloc.h acceptutils_unistd.h fmt.h
 	./compile99 fixsmtpio_die.c
 
 test_acceptutils_stralloc.o: \
