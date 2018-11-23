@@ -114,7 +114,7 @@ void construct_proxy_response(stralloc *proxy_response,
     return;
   }
   if (need_starttls_first(tls_level,in_tls,event))
-    copys(proxy_response,"530 Must issue a STARTTLS command first (#5.7.0)\r\n");
+    copys(proxy_response,"530 Must start TLS first (#5.7.0)\r\n");
   else
     copy(proxy_response,server_response);
     munge_response(proxy_response,proxy_exitcode,greeting,rules,event,tls_level,in_tls);

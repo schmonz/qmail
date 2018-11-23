@@ -83,7 +83,7 @@ struct authup_error e[] = {
 , { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
 , { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
 , { "starttls","TLS temporarily not available","454", "5.7.3", 0, die         }
-, { "needtls", "TLS required",                 "535", "5.7.1", 0, die         }
+, { "needtls", "Must start TLS first",         "530", "5.7.0", 0, die         }
 , { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
 };
 
