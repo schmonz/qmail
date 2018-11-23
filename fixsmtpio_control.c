@@ -13,7 +13,7 @@ static void parse_field(int *fields_seen, stralloc *value, filter_rule *rule) {
   append0(value);
   s = (char *)alloc(value->len);
   str_copy(s, value->s);
-  copys(value, "");
+  blank(value);
 
   switch (*fields_seen) {
     case 1: rule->env                = s; break;

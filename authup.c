@@ -348,7 +348,7 @@ static stralloc authin = {0};
 void smtp_authgetl() {
   int i;
 
-  copys(&authin,"");
+  blank(&authin);
 
   for (;;) {
     if (!stralloc_readyplus(&authin,1)) authup_die("nomem"); /* XXX */
@@ -520,7 +520,7 @@ int control_readcapabilities(struct protocol p) {
 
   if (control_readfile(&lines,file.s,0) != 1) return -1;
 
-  copys(&capabilities,"");
+  blank(&capabilities);
   for (linestart = 0, pos = 0; pos < lines.len; pos++) {
     if (lines.s[pos] == '\0') {
       cats(&capabilities,p.cap_prefix);
