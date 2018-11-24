@@ -8,19 +8,19 @@
 #include "acceptutils_stralloc.h"
 #include "acceptutils_unistd.h"
 
-void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
-void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
+static void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
+static void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
 
-void make_pipe(int *from,int *to) {
+static void make_pipe(int *from,int *to) {
   int pi[2];
   if (unistd_pipe(pi) == -1) die_pipe();
   *from = pi[0];
   *to = pi[1];
 }
 
-void be_proxied(int from_proxy,int to_proxy,
-                int from_proxied,int to_proxied,
-                char **argv) {
+static void be_proxied(int from_proxy,int to_proxy,
+                       int from_proxied,int to_proxied,
+                       char **argv) {
   unistd_close(from_proxied);
   unistd_close(to_proxied);
   use_as_stdin(from_proxy);
@@ -29,8 +29,8 @@ void be_proxied(int from_proxy,int to_proxy,
   die_exec();
 }
 
-void teardown_and_exit(int exitcode,int child,filter_rule *rules,
-                       int from_server,int to_server) {
+static void teardown_and_exit(int exitcode,int child,filter_rule *rules,
+                              int from_server,int to_server) {
   int wstat;
 
   unistd_close(from_server);
@@ -43,11 +43,11 @@ void teardown_and_exit(int exitcode,int child,filter_rule *rules,
   else unistd_exit(exitcode);
 }
 
-void be_proxy(int from_client,int to_client,
-              int from_proxy,int to_proxy,
-              int from_server,int to_server,
-              stralloc *greeting,filter_rule *rules,
-              int kid_pid,char *kid_name) {
+static void be_proxy(int from_client,int to_client,
+                     int from_proxy,int to_proxy,
+                     int from_server,int to_server,
+                     stralloc *greeting,filter_rule *rules,
+                     int kid_pid,char *kid_name) {
   int exitcode;
 
   unistd_close(from_proxy);
@@ -59,16 +59,16 @@ void be_proxy(int from_client,int to_client,
   teardown_and_exit(exitcode,kid_pid,rules,from_server,to_server);
 }
 
-void load_smtp_greeting(stralloc *greeting,char *configfile) {
+static void load_smtp_greeting(stralloc *greeting,char *configfile) {
   if (control_init() == -1) die_control();
   if (control_rldef(greeting,configfile,1,(char *) 0) != 1) die_control();
 }
 
-void cd_var_qmail() {
+static void cd_var_qmail() {
   if (unistd_chdir(auto_qmail) == -1) die_control();
 }
 
-void run_kid(stralloc *greeting,filter_rule *rules,char **argv) {
+static void run_kid(stralloc *greeting,filter_rule *rules,char **argv) {
   int from_client = 0;
   int from_proxy, to_server;
   int from_server, to_proxy;
