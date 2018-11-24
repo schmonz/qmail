@@ -1,4 +1,3 @@
-#include "fmt.h"
 #include "fixsmtpio.h"
 #include "fixsmtpio_die.h"
 #include "readwrite.h"
@@ -52,29 +51,10 @@ void die_tls()   { dieerrflush("TLS temporarily not available"); }
 void die_parse() {    errflush("unable to parse control/fixsmtpio");
                       unistd_exit(EXIT_NOW_PARSEFAIL); }
 
-static char *format_pid(unsigned int pid) {
-  char pidbuf[FMT_ULONG];
-  stralloc sa = {0};
-  if (!sa.len) {
-    int len = fmt_ulong(pidbuf,pid);
-    if (len) copyb(&sa,pidbuf,len);
-    append0(&sa);
-  }
-  return sa.s;
-}
-
-static char *my_pidstr;
-static char *kid_pidstr;
-void logit(char logprefix,int kid_pid,char *kid_name,stralloc *sa) {
+void logit(stralloc *logstamp,char logprefix,stralloc *sa) {
   if (!env_get("FIXSMTPIODEBUG")) return;
 
-  if (!my_pidstr) my_pidstr = format_pid(unistd_getpid());
-  if (!kid_pidstr) kid_pidstr = format_pid(kid_pid);
-
-  substdio_puts(&sserr,PROGNAME " ");
-  substdio_puts(&sserr,my_pidstr);    substdio_puts(&sserr," ");
-  substdio_puts(&sserr,kid_name);     substdio_puts(&sserr," ");
-  substdio_puts(&sserr,kid_pidstr);   substdio_puts(&sserr," ");
+  substdio_put (&sserr,logstamp->s,logstamp->len);
   substdio_put (&sserr,&logprefix,1); substdio_puts(&sserr,": ");
   substdio_put (&sserr,sa->s,sa->len);
   if (!ends_with_newline(sa)) substdio_puts(&sserr,"\n");

@@ -12,4 +12,4 @@ void die_write(void);
 void die_nomem(const char *,const char *);
 void die_tls(void);
 void die_parse(void);
-void logit(char,int,char *,stralloc *);
+void logit(stralloc *,char,stralloc *);

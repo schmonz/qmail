@@ -1,5 +1,7 @@
 #include <libgen.h>
 
+#include "fmt.h"
+
 #include "fixsmtpio_proxy.h"
 #include "fixsmtpio_readwrite.h"
 #include "fixsmtpio_die.h"
@@ -182,16 +184,16 @@ int get_one_response(stralloc *one,stralloc *pile) {
   return get_one(__func__,one,pile,&is_last_line_of_response);
 }
 
-static void handle_data_specially(stralloc *data,int *in_data,int kid_pid,char *kid_name) {
-  logit('D',kid_pid,kid_name,data);
+static void handle_data_specially(stralloc *data,int *in_data,stralloc *logstamp) {
+  logit(logstamp,'D',data);
   if (ends_data(data))
     *in_data = 0;
 }
 
-static void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,filter_rule *rules,int kid_pid,char *kid_name) {
+static void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,filter_rule *rules,stralloc *logstamp) {
   stralloc event = {0}, verb = {0}, arg = {0};
 
-  logit('1',kid_pid,kid_name,request);
+  logit(logstamp,'1',request);
   parse_client_request(&verb,&arg,request);
   copy(&event,&verb);
   append0(&event);
@@ -203,12 +205,12 @@ static void handle_request(stralloc *proxy_request,stralloc *request,int tls_lev
                           want_tls,in_tls,
                           want_data);
   blank(request);
-  logit('2',kid_pid,kid_name,proxy_request);
+  logit(logstamp,'2',proxy_request);
 }
 
-static void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting,int kid_pid,char *kid_name) {
+static void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting,stralloc *logstamp) {
   char *event;
-  logit('3',kid_pid,kid_name,response);
+  logit(logstamp,'3',response);
   event = eventq_get();
   construct_proxy_response(proxy_response,
                            greeting,rules,event,
@@ -217,7 +219,7 @@ static void handle_response(stralloc *proxy_response,int *exitcode,stralloc *res
                            tls_level,
                            want_tls,in_tls,
                            want_data,in_data);
-  logit('4',kid_pid,kid_name,proxy_response);
+  logit(logstamp,'4',proxy_response);
   alloc_free(event);
   blank(response);
 }
@@ -226,7 +228,8 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              int from_server,int to_client,
                                              stralloc *greeting,
                                              filter_rule *rules,
-                                             int kid_pid,char *kid_name) {
+                                             stralloc *logstamp,
+                                             int kid_pid) {
   char buf[SUBSTDIO_INSIZE];
 
   int      exitcode         = EXIT_LATER_NORMALLY;
@@ -256,10 +259,10 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
       }
       while (client_requests.len) {
         if (in_data) {
-          handle_data_specially(&client_requests,&in_data,kid_pid,kid_name);
+          handle_data_specially(&client_requests,&in_data,logstamp);
           safewrite(to_server,&client_requests);
         } else if (get_one_request(&one_request,&client_requests)) {
-          handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,rules,kid_pid,kid_name);
+          handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,rules,logstamp);
           safewrite(to_server,&proxy_request);
         }
       }
@@ -268,7 +271,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (can_read(from_server)) {
       if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
       while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
-        handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting,kid_pid,kid_name);
+        handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting,logstamp);
         safewrite(to_client,&proxy_response);
         if (want_tls) {
           want_tls = 0;
@@ -321,19 +324,40 @@ static void teardown_and_exit(int exitcode,int child,filter_rule *rules,
   else unistd_exit(exitcode);
 }
 
+static char *format_pid(unsigned int pid) {
+  char pidbuf[FMT_ULONG];
+  stralloc sa = {0};
+  if (!sa.len) {
+    int len = fmt_ulong(pidbuf,pid);
+    if (len) copyb(&sa,pidbuf,len);
+    append0(&sa);
+  }
+  return sa.s;
+}
+
+static void prepare_logstamp(stralloc *sa,int kid_pid,char *kid_name) {
+  copys(sa,PROGNAME " ");
+  cats(sa,format_pid(unistd_getpid())); cats(sa," ");
+  cats(sa,kid_name);                    cats(sa," ");
+  cats(sa,format_pid(kid_pid));         cats(sa," ");
+}
+
 static void be_proxy(int from_client,int to_client,
                      int from_proxy,int to_proxy,
                      int from_server,int to_server,
                      stralloc *greeting,filter_rule *rules,
-                     int kid_pid,char *kid_name) {
+                     int kid_pid,char **argv) {
   int exitcode;
+  stralloc logstamp = {0};
 
   unistd_close(from_proxy);
   unistd_close(to_proxy);
+  prepare_logstamp(&logstamp,kid_pid,basename(argv[0]));
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules,
-                                                      kid_pid,kid_name);
+                                                      &logstamp,
+                                                      kid_pid);
   teardown_and_exit(exitcode,kid_pid,rules,from_server,to_server);
 }
 
@@ -352,7 +376,7 @@ void start_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
              from_proxy,to_proxy,
              from_server,to_server,
              greeting,rules,
-             kid_pid,basename(argv[0]));
+             kid_pid,argv);
   else if (kid_pid == 0)
     be_proxied(from_proxy,to_proxy,
                from_server,to_server,
