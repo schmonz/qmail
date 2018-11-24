@@ -7,8 +7,17 @@
 #include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 
-int is_last_line_of_data(stralloc *r) {
-  return (r->len == 3 && r->s[0] == '.' && r->s[1] == '\r' && r->s[2] == '\n');
+int ends_data(stralloc *r) {
+  int len = r->len;
+
+  if (!len                      ) return 0;
+  if (       r->s[--len] != '\n') return 0;
+  if (len && r->s[--len] != '\r') ++len;
+  if (!len                      ) return 0;
+  if (       r->s[--len] !=  '.') return 0;
+  if (len && r->s[--len] != '\n') return 0;
+
+  return 1;
 }
 
 static int find_first_space(stralloc *request) {
@@ -61,33 +70,28 @@ void construct_proxy_request(stralloc *proxy_request,
                              stralloc *client_request,
                              int tls_level,
                              int *want_tls,int in_tls,
-                             int *want_data,int *in_data) {
+                             int *want_data) {
   filter_rule *rule;
 
-  if (*in_data) {
-    copy(proxy_request,client_request);
-    if (is_last_line_of_data(proxy_request)) *in_data = 0;
-  } else {
-    for (rule = rules; rule; rule = rule->next)
-      if (rule->request_prepend && filter_rule_applies(rule,event))
-        prepends(proxy_request,rule->request_prepend);
-    if (need_starttls_first(tls_level,in_tls,event))
-      prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS FIRST ");
-    else if (event_matches("starttls",event)) {
-      *want_tls = 1;
-      if (tls_level >= UCSPITLS_AVAILABLE) {
-        if (in_tls)
-          prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS AGAIN ");
-        else
-          prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS BEGIN ");
-      } else {
-        prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS BLOCK ");
-      }
+  for (rule = rules; rule; rule = rule->next)
+    if (rule->request_prepend && filter_rule_applies(rule,event))
+      prepends(proxy_request,rule->request_prepend);
+  if (need_starttls_first(tls_level,in_tls,event))
+    prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS FIRST ");
+  else if (event_matches("starttls",event)) {
+    *want_tls = 1;
+    if (tls_level >= UCSPITLS_AVAILABLE) {
+      if (in_tls)
+        prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS AGAIN ");
+      else
+        prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS BEGIN ");
+    } else {
+      prepends(proxy_request,REQUEST_NOOP PROGNAME " STARTTLS BLOCK ");
     }
-    else if (event_matches("data",event))
-      *want_data = 1;
-    cat(proxy_request,client_request);
   }
+  else if (event_matches("data",event))
+    *want_data = 1;
+  cat(proxy_request,client_request);
 }
 
 static int accepted_data(stralloc *response) { return starts(response,"354 "); }
@@ -101,12 +105,15 @@ void construct_proxy_response(stralloc *proxy_response,
                               int tls_level,
                               int want_tls,int in_tls,
                               int *want_data,int *in_data) {
-  if (*want_data) {
+  if (event_matches("data",event) && *want_data) {
     *want_data = 0;
-    if (accepted_data(server_response)) *in_data = 1;
+    if (accepted_data(server_response)) {
+      eventq_put("in_data");
+      *in_data = 1;
+    }
   }
 
-  if (want_tls) {
+  if (event_matches("starttls",event) && want_tls) {
     if (tls_level < UCSPITLS_AVAILABLE || in_tls)
       copys(proxy_response,"502 unimplemented (#5.5.1)\r\n");
     else
@@ -172,11 +179,17 @@ int get_one_response(stralloc *one,stralloc *pile) {
   return get_one(__func__,one,pile,&is_last_line_of_response);
 }
 
-void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,int kid_pid,char *kid_name) {
+static void handle_data_specially(stralloc *data,int *in_data,int kid_pid,char *kid_name) {
+  logit('D',kid_pid,kid_name,data);
+  if (ends_data(data))
+    *in_data = 0;
+}
+
+static void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,filter_rule *rules,int kid_pid,char *kid_name) {
   stralloc event = {0}, verb = {0}, arg = {0};
 
   logit('1',kid_pid,kid_name,request);
-  if (!*in_data) parse_client_request(&verb,&arg,request);
+  parse_client_request(&verb,&arg,request);
   copy(&event,&verb);
   append0(&event);
   eventq_put(event.s);
@@ -185,12 +198,12 @@ void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int 
                           request,
                           tls_level,
                           want_tls,in_tls,
-                          want_data,in_data);
-  logit('2',kid_pid,kid_name,proxy_request);
+                          want_data);
   blank(request);
+  logit('2',kid_pid,kid_name,proxy_request);
 }
 
-void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting,int kid_pid,char *kid_name) {
+static void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting,int kid_pid,char *kid_name) {
   char *event;
   logit('3',kid_pid,kid_name,response);
   event = eventq_get();
@@ -238,9 +251,14 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,tls_level,in_tls);
         break;
       }
-      while (client_requests.len && get_one_request(&one_request,&client_requests)) {
-        handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,&in_data,rules,kid_pid,kid_name);
-        safewrite(to_server,&proxy_request);
+      while (client_requests.len) {
+        if (in_data) {
+          handle_data_specially(&client_requests,&in_data,kid_pid,kid_name);
+          safewrite(to_server,&client_requests);
+        } else if (get_one_request(&one_request,&client_requests)) {
+          handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,rules,kid_pid,kid_name);
+          safewrite(to_server,&proxy_request);
+        }
       }
     }
 

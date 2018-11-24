@@ -134,22 +134,27 @@ START_TEST (test_get_one_response)
 }
 END_TEST
 
-static void assert_is_last_line_of_data(const char *input, const int expected) {
+static void assert_ends_data(const char *input, const int expected) {
   stralloc input_sa = {0}; stralloc_copys(&input_sa, input);
 
-  int actual = is_last_line_of_data(&input_sa);
+  int actual = ends_data(&input_sa);
 
   ck_assert_int_eq(actual, expected);
 }
 
-START_TEST (test_is_last_line_of_data)
+START_TEST (test_ends_data)
 {
   // annoying to test, currently don't believe I have this bug:
   // assert_is_last_line_of_data(NULL, 0);
-  assert_is_last_line_of_data("", 0);
-  assert_is_last_line_of_data("\r\n", 0);
-  assert_is_last_line_of_data(" \r\n", 0);
-  assert_is_last_line_of_data(".\r\n", 1);
+  assert_ends_data("", 0);
+  assert_ends_data("\r\n", 0);
+  assert_ends_data(" \r\n", 0);
+  assert_ends_data(".\r\n", 1);
+  assert_ends_data(" .\r\n", 0);
+  assert_ends_data("\n.\r\n", 1);
+  assert_ends_data("\r\n.\r\n", 1);
+  assert_ends_data("snorf.\r\n", 0);
+  assert_ends_data("snorf.\r\n.\r\n", 1);
 }
 END_TEST
 
@@ -158,8 +163,7 @@ START_TEST (test_construct_proxy_request)
   stralloc proxy_request = {0},
            arg = {0},
            client_request = {0};
-  int want_data = 0,
-      in_data = 0;
+  int want_data = 0;
 
   filter_rule test_rule = {
     0,
@@ -169,18 +173,17 @@ START_TEST (test_construct_proxy_request)
   };
   filter_rule *test_rules = prepend_rule(0, &test_rule);
 
-  env_put2("SPECIFIC_ENV_VAR","");
-
-  copys(&proxy_request, ""); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
-  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,0,(void *)0,0,&want_data,&in_data);
-  stralloc_0(&proxy_request); stralloc_0(&client_request);
-  ck_assert_str_ne(proxy_request.s, client_request.s);
-
-  in_data = 1;
-  copys(&proxy_request, ""); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
-  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,0,(void *)0,0,&want_data,&in_data);
+  blank(&proxy_request); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
+  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,0,(void *)0,0,&want_data);
   stralloc_0(&proxy_request); stralloc_0(&client_request);
   ck_assert_str_eq(proxy_request.s, client_request.s);
+
+  env_put2("SPECIFIC_ENV_VAR","");
+
+  blank(&proxy_request); copys(&client_request, "SPECIFIC_VERB somearg\r\n");
+  construct_proxy_request(&proxy_request,test_rules,"SPECIFIC_VERB",&arg,&client_request,0,(void *)0,0,&want_data);
+  stralloc_0(&proxy_request); stralloc_0(&client_request);
+  ck_assert_str_ne(proxy_request.s, client_request.s);
 
   env_unset("SPECIFIC_ENV_VAR");
 
@@ -205,7 +208,7 @@ TCase *tc_proxy(void) {
   tcase_add_test(tc, test_is_last_line_of_response);
   tcase_add_test(tc, test_parse_client_request);
   tcase_add_test(tc, test_get_one_response);
-  tcase_add_test(tc, test_is_last_line_of_data);
+  tcase_add_test(tc, test_ends_data);
   tcase_add_test(tc, test_construct_proxy_request);
   tcase_add_test(tc, test_construct_proxy_response);
 
