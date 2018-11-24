@@ -72,6 +72,10 @@ The special value
 .B !
 requires peers to negotiate TLS before doing much of anything else.
 The empty string is a more sensible choice for public SMTP service.
+.B fixsmtpio
+sets
+.B FIXSMTPIOTLS
+in the environment when TLS has been negotiated.
 
 If
 .B DISABLETLS

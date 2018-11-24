@@ -406,8 +406,8 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
         if (want_tls) {
           want_tls = 0;
           if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) {
-            if (!tls_init()) die_tls();
-            if (!tls_info(die_nomem)) die_tls();
+            if (!tls_init() || !tls_info(die_nomem)) die_tls();
+            if (!env_put("FIXSMTPIOTLS=1")) die_nomem(__func__,"env_put");
             stop_kid(*kid_pid,from_server,to_server);
             start_kid(kid_pid,&from_server,&to_server,logstamp,argv);
             in_tls = 1;
