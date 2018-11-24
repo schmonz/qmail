@@ -224,69 +224,6 @@ static void handle_response(stralloc *proxy_response,int *exitcode,stralloc *res
   blank(response);
 }
 
-int read_and_process_until_either_end_closes(int from_client,int to_server,
-                                             int from_server,int to_client,
-                                             stralloc *greeting,
-                                             filter_rule *rules,
-                                             stralloc *logstamp,
-                                             int kid_pid) {
-  char buf[SUBSTDIO_INSIZE];
-
-  int      exitcode         = EXIT_LATER_NORMALLY;
-
-  int      tls_level        = ucspitls_level(),
-           want_tls         =  0,
-           in_tls           =  0,
-           want_data        =  0,
-           in_data          =  0;
-
-  stralloc client_requests  = {0},
-           one_request      = {0},
-           proxy_request    = {0},
-           server_responses = {0},
-           one_response     = {0},
-           proxy_response   = {0};
-
-  for (;;) {
-    if (!block_efficiently_until_can_read_either(from_client,from_server)) break;
-
-    if (can_read(from_client)) {
-      if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
-        munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,tls_level,in_tls);
-        break;
-      }
-      while (client_requests.len) {
-        if (in_data) {
-          handle_data_specially(&client_requests,&in_data,logstamp);
-          safewrite(to_server,&client_requests);
-        } else if (get_one_request(&one_request,&client_requests)) {
-          handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,rules,logstamp);
-          safewrite(to_server,&proxy_request);
-        }
-      }
-    }
-
-    if (can_read(from_server)) {
-      if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
-      while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
-        handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting,logstamp);
-        safewrite(to_client,&proxy_response);
-        if (want_tls) {
-          want_tls = 0;
-          if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) {
-            if (!tls_init()) die_tls();
-            in_tls = 1;
-          }
-        }
-      }
-    }
-
-    if (exitcode != EXIT_LATER_NORMALLY) break;
-  }
-
-  return exitcode;
-}
-
 static void use_as_stdin(int fd)  { if (fd_move(0,fd) == -1) die_pipe(); }
 static void use_as_stdout(int fd) { if (fd_move(1,fd) == -1) die_pipe(); }
 
@@ -391,4 +328,67 @@ void start_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
                argv);
   else
     die_fork();
+}
+
+int read_and_process_until_either_end_closes(int from_client,int to_server,
+                                             int from_server,int to_client,
+                                             stralloc *greeting,
+                                             filter_rule *rules,
+                                             stralloc *logstamp,
+                                             int kid_pid) {
+  char buf[SUBSTDIO_INSIZE];
+
+  int      exitcode         = EXIT_LATER_NORMALLY;
+
+  int      tls_level        = ucspitls_level(),
+           want_tls         =  0,
+           in_tls           =  0,
+           want_data        =  0,
+           in_data          =  0;
+
+  stralloc client_requests  = {0},
+           one_request      = {0},
+           proxy_request    = {0},
+           server_responses = {0},
+           one_response     = {0},
+           proxy_response   = {0};
+
+  for (;;) {
+    if (!block_efficiently_until_can_read_either(from_client,from_server)) break;
+
+    if (can_read(from_client)) {
+      if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
+        munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,tls_level,in_tls);
+        break;
+      }
+      while (client_requests.len) {
+        if (in_data) {
+          handle_data_specially(&client_requests,&in_data,logstamp);
+          safewrite(to_server,&client_requests);
+        } else if (get_one_request(&one_request,&client_requests)) {
+          handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,rules,logstamp);
+          safewrite(to_server,&proxy_request);
+        }
+      }
+    }
+
+    if (can_read(from_server)) {
+      if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
+      while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
+        handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting,logstamp);
+        safewrite(to_client,&proxy_response);
+        if (want_tls) {
+          want_tls = 0;
+          if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) {
+            if (!tls_init()) die_tls();
+            in_tls = 1;
+          }
+        }
+      }
+    }
+
+    if (exitcode != EXIT_LATER_NORMALLY) break;
+  }
+
+  return exitcode;
 }
