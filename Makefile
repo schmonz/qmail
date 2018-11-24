@@ -160,7 +160,7 @@ test_fixsmtpio_munge.c
 fixsmtpio_proxy.o: \
 compile99 fixsmtpio_proxy.c fixsmtpio_proxy.h fixsmtpio_readwrite.h \
 fixsmtpio_die.h fixsmtpio_eventq.h fixsmtpio_filter.h fixsmtpio_die.h \
-acceptutils_stralloc.h fmt.h
+acceptutils_stralloc.h acceptutils_unistd.h fmt.h
 	./compile99 fixsmtpio_proxy.c
 
 test_fixsmtpio_proxy.o: \
