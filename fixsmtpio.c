@@ -68,14 +68,33 @@ void cd_var_qmail() {
   if (unistd_chdir(auto_qmail) == -1) die_control();
 }
 
-int main(int argc,char **argv) {
-  stralloc greeting = {0};
-  filter_rule *rules;
+void run_kid(stralloc *greeting,filter_rule *rules,char **argv) {
   int from_client = 0;
   int from_proxy, to_server;
   int from_server, to_proxy;
   int to_client = 1;
   int kid_pid;
+
+  make_pipe(&from_proxy,&to_server);
+  make_pipe(&from_server,&to_proxy);
+
+  if ((kid_pid = unistd_fork()))
+    be_proxy(from_client,to_client,
+             from_proxy,to_proxy,
+             from_server,to_server,
+             greeting,rules,
+             kid_pid,basename(argv[0]));
+  else if (kid_pid == 0)
+    be_proxied(from_proxy,to_proxy,
+               from_server,to_server,
+               argv);
+  else
+    die_fork();
+}
+
+int main(int argc,char **argv) {
+  stralloc greeting = {0};
+  filter_rule *rules;
 
   argv++; if (!*argv) die_usage();
 
@@ -87,19 +106,5 @@ int main(int argc,char **argv) {
   load_smtp_greeting(&greeting,"control/smtpgreeting");
   rules = load_filter_rules();
 
-  make_pipe(&from_proxy,&to_server);
-  make_pipe(&from_server,&to_proxy);
-
-  if ((kid_pid = unistd_fork()))
-    be_proxy(from_client,to_client,
-             from_proxy,to_proxy,
-             from_server,to_server,
-             &greeting,rules,
-             kid_pid,basename(argv[0]));
-  else if (kid_pid == 0)
-    be_proxied(from_proxy,to_proxy,
-               from_server,to_server,
-               argv);
-  else
-    die_fork();
+  run_kid(&greeting,rules,argv);
 }
