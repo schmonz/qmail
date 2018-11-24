@@ -247,8 +247,6 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
            one_response     = {0},
            proxy_response   = {0};
 
-  eventq_put(EVENT_GREETING);
-
   for (;;) {
     if (!block_efficiently_until_can_read_either(from_client,from_server)) break;
 
@@ -342,6 +340,15 @@ static void prepare_logstamp(stralloc *sa,int kid_pid,char *kid_name) {
   cats(sa,format_pid(kid_pid));         cats(sa," ");
 }
 
+static void adjust_proxy_for_new_kid(int from_proxy,int to_proxy,
+                                     stralloc *logstamp,
+                                     int kid_pid,char *kid_name) {
+  unistd_close(from_proxy);
+  unistd_close(to_proxy);
+  prepare_logstamp(logstamp,kid_pid,kid_name);
+  eventq_put(EVENT_GREETING);
+}
+
 static void be_proxy(int from_client,int to_client,
                      int from_proxy,int to_proxy,
                      int from_server,int to_server,
@@ -350,9 +357,10 @@ static void be_proxy(int from_client,int to_client,
   int exitcode;
   stralloc logstamp = {0};
 
-  unistd_close(from_proxy);
-  unistd_close(to_proxy);
-  prepare_logstamp(&logstamp,kid_pid,basename(argv[0]));
+  adjust_proxy_for_new_kid(from_proxy,to_proxy,
+                           &logstamp,
+                           kid_pid,basename(argv[0]));
+
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules,
