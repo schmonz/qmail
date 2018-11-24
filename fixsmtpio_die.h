@@ -6,6 +6,7 @@ void die_pipe(void);
 void die_fork(void);
 void die_exec(void);
 void die_wait(void);
+void die_kill(void);
 void die_crash(void);
 void die_read(void);
 void die_write(void);

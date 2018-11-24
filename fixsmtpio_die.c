@@ -40,6 +40,7 @@ void die_pipe()  { dieerrflush("unable to open pipe"); }
 void die_fork()  { dieerrflush("unable to fork"); }
 void die_exec()  { dieerrflush("unable to exec"); }
 void die_wait()  { dieerrflush("unable to wait for child"); }
+void die_kill()  { dieerrflush("unable to kill child"); }
 void die_crash() { dieerrflush("aack, child crashed"); }
 void die_read()  { dieerrflush("unable to read"); }
 void die_write() { dieerrflush("unable to write"); }

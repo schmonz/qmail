@@ -1,4 +1,5 @@
 #include <libgen.h>
+#include <signal.h>
 
 #include "fmt.h"
 
@@ -302,8 +303,33 @@ static void be_proxy(int from_client,int to_client,
                                                       from_server,to_client,
                                                       greeting,rules,
                                                       &logstamp,
-                                                      kid_pid);
+                                                      &kid_pid,argv);
   teardown_and_exit(exitcode,kid_pid,rules,from_server,to_server);
+}
+
+static void stop_kid(int kid_pid,int from_server,int to_server) {
+  unistd_close(from_server);
+  unistd_close(to_server);
+  if (-1 == kill(kid_pid,SIGTERM)) die_kill();
+}
+
+static void start_kid(int *kid_pid,int *from_server,int *to_server,
+                      stralloc *logstamp,char **argv) {
+  int from_proxy, to_proxy;
+
+  make_pipe(&from_proxy,to_server);
+  make_pipe(from_server,&to_proxy);
+
+  if ((*kid_pid = unistd_fork()))
+    adjust_proxy_for_new_kid(from_proxy,to_proxy,
+                             logstamp,
+                             *kid_pid,basename(argv[0]));
+  else if (*kid_pid == 0)
+    be_proxied(from_proxy,to_proxy,
+               *from_server,*to_server,
+               argv);
+  else
+    die_fork();
 }
 
 void start_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
@@ -335,7 +361,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              stralloc *greeting,
                                              filter_rule *rules,
                                              stralloc *logstamp,
-                                             int kid_pid) {
+                                             int *kid_pid,char **argv) {
   char buf[SUBSTDIO_INSIZE];
 
   int      exitcode         = EXIT_LATER_NORMALLY;
@@ -381,6 +407,9 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
           want_tls = 0;
           if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) {
             if (!tls_init()) die_tls();
+            if (!tls_info(die_nomem)) die_tls();
+            stop_kid(*kid_pid,from_server,to_server);
+            start_kid(kid_pid,&from_server,&to_server,logstamp,argv);
             in_tls = 1;
           }
         }
