@@ -362,22 +362,13 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              filter_rule *rules,
                                              stralloc *logstamp,
                                              int *kid_pid,char **argv) {
-  char buf[SUBSTDIO_INSIZE];
-
+  char     buf               [SUBSTDIO_INSIZE];
   int      exitcode         = EXIT_LATER_NORMALLY;
-
   int      tls_level        = ucspitls_level(),
-           want_tls         =  0,
-           in_tls           =  0,
-           want_data        =  0,
-           in_data          =  0;
-
-  stralloc client_requests  = {0},
-           one_request      = {0},
-           proxy_request    = {0},
-           server_responses = {0},
-           one_response     = {0},
-           proxy_response   = {0};
+           want_tls         =  0, in_tls  = 0,
+           want_data        =  0, in_data = 0;
+  stralloc client_requests  = {0}, one_request  = {0}, proxy_request  = {0},
+           server_responses = {0}, one_response = {0}, proxy_response = {0};
 
   for (;;) {
     if (!block_efficiently_until_can_read_either(from_client,from_server)) break;
