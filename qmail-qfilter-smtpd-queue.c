@@ -5,20 +5,18 @@
 #include "stralloc.h"
 #include "wait.h"
 
-void unable_to_allocate() { _exit(51); }
-void unable_to_execute()  { _exit(71); }
-void unable_to_verify()   { _exit(55); }
+static void unable_to_allocate() { _exit(51); }
+static void unable_to_execute()  { _exit(71); }
+static void unable_to_verify()   { _exit(55); }
 
-static int num_lines(stralloc lines)
-{
+static int num_lines(stralloc *lines) {
   int num = 0;
   int i;
-  for (i = 0; i < lines.len; i++) if (lines.s[i] == '\0') num++;
+  for (i = 0; i < lines->len; i++) if (lines->s[i] == '\0') num++;
   return num;
 }
 
-static void run_qmail_qfilter(stralloc filters)
-{
+static void run_qmail_qfilter(stralloc *filters) {
   int num_args;
   char **args;
   int arg;
@@ -34,10 +32,10 @@ static void run_qmail_qfilter(stralloc filters)
 
   arg = 0;
   linestart = 0;
-  for (i = 0; i < filters.len; i++) {
-    if (filters.s[i] == '\0') {
+  for (i = 0; i < filters->len; i++) {
+    if (filters->s[i] == '\0') {
       stralloc filter = {0};
-      stralloc_copys(&filter, filters.s + linestart);
+      stralloc_copys(&filter, filters->s + linestart);
       stralloc_0(&filter);
       args[++arg] = filter.s;
       args[++arg] = "--";
@@ -50,12 +48,11 @@ static void run_qmail_qfilter(stralloc filters)
   unable_to_execute();
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   stralloc filters = {0};
 
   if (control_readfile(&filters,"control/smtpfilters",0) == -1)
     unable_to_verify();
 
-  run_qmail_qfilter(filters);
+  run_qmail_qfilter(&filters);
 }
