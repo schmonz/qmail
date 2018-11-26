@@ -1,0 +1,56 @@
+.TH QMAIL-QFILTER-ADDTLSHEADER 8 2018-11-26
+.SH NAME
+qmail-qfilter-addtlsheader \- Add Received: header with TLS parameters
+.SH SYNOPSIS
+.B qmail-qfilter-addtlsheader
+.SH DESCRIPTION
+.B qmail-qfilter-addtlsheader
+takes a message (headers and body) on standard input
+and prints it to standard output.
+If
+.B UCSPITLS
+connection details are available, it prepends a
+.B Received:
+header.
+.PP
+.B qmail-qfilter-addtlsheader
+is intended to be invoked by
+.BR qmail-qfilter .
+It is typically used under
+.B authup
+(via
+.BR qmail-ofmipfilter-queue )
+or
+.B fixsmtpio
+(via
+.BR qmail-smtpfilter-queue ).
+.SH "ENVIRONMENT VARIABLES"
+If both
+.B SSL_CIPHER
+and
+.B SSL_PROTOCOL
+are set,
+.B qmail-qfilter-addtlsheader
+will add its header.
+.PP
+If either
+.B FIXSMTPIOTLS
+or
+.B AUTHUP_USER
+is set, the header will mention
+.BR fixsmtpio (8)
+or
+.BR authup (8),
+respectively.
+.SH "EXAMPLES"
+See
+.IR https://schmonz.com/qmail/acceptutils .
+.SH "AUTHOR"
+.B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
+.SH "SEE ALSO"
+.BR ucspi-tls(2),
+.BR qmail-qfilter(1),
+.BR authup(8),
+.BR qmail-ofmipfilter-queue(8),
+.BR fixsmtpio(8),
+.BR qmail-smtpfilter-queue(8).

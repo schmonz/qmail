@@ -420,3 +420,5 @@ test_fixsmtpio_filter.o
 test_fixsmtpio_glob.o
 test_fixsmtpio_munge.o
 test_fixsmtpio_proxy.o
+qmail-qfilter-addtlsheader
+qmail-qfilter-addtlsheader.o

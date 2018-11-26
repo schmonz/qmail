@@ -5,7 +5,7 @@ SHELL=/bin/sh
 default: it
 
 acceptutils: \
-reup authup checknotroot fixsmtpio
+reup authup checknotroot fixsmtpio qmail-qfilter-addtlsheader
 
 acceptutils_base64.o: \
 compile99 acceptutils_base64.c acceptutils_base64.h
@@ -215,6 +215,17 @@ load reup.o acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.
 reup.o: \
 compile99 reup.c acceptutils_unistd.h env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
 	./compile99 reup.c
+
+qmail-qfilter-addtlsheader: \
+load qmail-qfilter-addtlsheader.o date822fmt.o now.o \
+datetime.a substdio.a env.a error.a str.a fs.a
+	./load qmail-qfilter-addtlsheader date822fmt.o now.o \
+	datetime.a substdio.a env.a error.a str.a fs.a
+
+qmail-qfilter-addtlsheader.o: \
+compile99 qmail-qfilter-addtlsheader.c datetime.h date822fmt.h env.h \
+now.h readwrite.h substdio.h
+	./compile99 qmail-qfilter-addtlsheader.c
 
 rt.lib: \
 compile load
