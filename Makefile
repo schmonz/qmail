@@ -1357,9 +1357,9 @@ compile qmail-qfilter-ofmipd-queue.c control.h stralloc.h wait.h
 	./compile qmail-qfilter-ofmipd-queue.c
 
 qmail-qfilter-smtpd-queue: \
-load qmail-qfilter-smtpd-queue.o control.o error.a fs.a getln.a \
+load qmail-qfilter-smtpd-queue.o control.o env.a error.a fs.a getln.a \
 open.a stralloc.a substdio.a str.a alloc.a wait.a
-	./load qmail-qfilter-smtpd-queue control.o error.a fs.a getln.a \
+	./load qmail-qfilter-smtpd-queue control.o env.a error.a fs.a getln.a \
 	open.a stralloc.a substdio.a str.a alloc.a wait.a
 
 qmail-qfilter-smtpd-queue.o: \

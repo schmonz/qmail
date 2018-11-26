@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include "alloc.h"
 #include "control.h"
+#include "env.h"
 #include "str.h"
 #include "stralloc.h"
 #include "wait.h"
@@ -50,9 +51,11 @@ static void run_qmail_qfilter(stralloc *filters) {
 
 int main(int argc, char **argv) {
   stralloc filters = {0};
+  char *filterfile;
 
-  if (control_readfile(&filters,"control/smtpfilters",0) == -1)
-    unable_to_verify();
+  if ((filterfile = env_get("QMAILQUEUEFILTERS")))
+    if (control_readfile(&filters,filterfile,0) != 1)
+      unable_to_verify();
 
   run_qmail_qfilter(&filters);
 }
