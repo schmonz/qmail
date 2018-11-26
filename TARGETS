@@ -387,6 +387,8 @@ setup
 check
 badrcptto.o
 case_startb2.o
+qmail-qfilter-queue
+qmail-qfilter-queue.o
 qmail-qfilter-ofmipd-queue
 qmail-qfilter-ofmipd-queue.c
 qmail-qfilter-ofmipd-queue.o
