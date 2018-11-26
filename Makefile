@@ -16,7 +16,8 @@ compile99 acceptutils_stralloc.c acceptutils_stralloc.h
 	./compile99 acceptutils_stralloc.c
 
 acceptutils_ucspitls.o: \
-compile99 acceptutils_ucspitls.c acceptutils_ucspitls.h acceptutils_stralloc.h case.h env.h fd.h readwrite.h scan.h
+compile99 acceptutils_ucspitls.c acceptutils_ucspitls.h acceptutils_stralloc.h \
+case.h env.h fd.h readwrite.h scan.h substdio.h
 	./compile99 acceptutils_ucspitls.c
 
 acceptutils_unistd.o: \

@@ -3,6 +3,7 @@
 #include "fd.h"
 #include "readwrite.h"
 #include "scan.h"
+#include "substdio.h"
 
 #include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
@@ -61,7 +62,7 @@ int tls_init(void) {
 
 int tls_info(void (*die_nomem)(const char *caller,const char *alloc_fn)) {
   unsigned long fd;
-  char envbuf[8192];
+  char envbuf[SUBSTDIO_INSIZE];
   char *x;
   int j;
 
@@ -72,9 +73,9 @@ int tls_info(void (*die_nomem)(const char *caller,const char *alloc_fn)) {
   fd = get_fd_for("SSLCTLFD");
   if (!fd) return 0;
 
-  while ((j=read(fd,envbuf,8192)) > 0 ) {
+  while ((j = read(fd,envbuf,SUBSTDIO_INSIZE)) > 0) {
     catb(&ssl_env,envbuf,j);
-      if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2]==0 && ssl_env.s[ssl_env.len-1]==0)
+      if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2] == 0 && ssl_env.s[ssl_env.len-1] == 0)
         break;
   }
   if (j < 0)
