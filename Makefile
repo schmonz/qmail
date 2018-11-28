@@ -1341,10 +1341,10 @@ auto_usera.h
 	./compile qmail-pw2u.c
 
 qmail-qfilter-ofmipd-queue: \
-load qmail-qfilter-ofmipd-queue.o env.a error.a fs.a str.a alloc.a \
-substdio.a
-	./load qmail-qfilter-ofmipd-queue env.a error.a fs.a str.a alloc.a \
-	substdio.a
+load qmail-qfilter-ofmipd-queue.o env.a substdio.a error.a str.a \
+fs.a alloc.a
+	./load qmail-qfilter-ofmipd-queue env.a substdio.a error.a str.a \
+	fs.a alloc.a
 
 qmail-qfilter-ofmipd-queue.c: \
 qmail-qfilter-smtpd-queue.c
@@ -1367,10 +1367,10 @@ compile qmail-qfilter-queue.c control.h stralloc.h wait.h
 	./compile qmail-qfilter-queue.c
 
 qmail-qfilter-smtpd-queue: \
-load qmail-qfilter-smtpd-queue.o env.a error.a fs.a str.a alloc.a \
-substdio.a
-	./load qmail-qfilter-smtpd-queue env.a error.a fs.a str.a alloc.a \
-	substdio.a
+load qmail-qfilter-smtpd-queue.o env.a substdio.a error.a str.a \
+fs.a alloc.a
+	./load qmail-qfilter-smtpd-queue env.a substdio.a error.a str.a \
+	fs.a alloc.a
 
 qmail-qfilter-smtpd-queue.o: \
 compile qmail-qfilter-smtpd-queue.c env.h substdio.h
