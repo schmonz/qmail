@@ -5,6 +5,13 @@
 #include "readwrite.h"
 #include "substdio.h"
 
+static char inbuf[SUBSTDIO_INSIZE];
+static substdio ssin = SUBSTDIO_FDBUF(read,0,inbuf,sizeof(inbuf));
+static char outbuf[SUBSTDIO_OUTSIZE];
+static substdio ssout = SUBSTDIO_FDBUF(write,1,outbuf,sizeof(outbuf));
+
+static void out(char *s) { substdio_puts(&ssout,s); }
+
 static char datebuf[DATE822FMT];
 
 static void set_now(char *datebuf) {
@@ -13,16 +20,8 @@ static void set_now(char *datebuf) {
   date822fmt(datebuf,&dt);
 }
 
-static char inbuf[SUBSTDIO_INSIZE];
-static substdio ssin = SUBSTDIO_FDBUF(read,0,inbuf,sizeof(inbuf));
-static char outbuf[SUBSTDIO_OUTSIZE];
-static substdio ssout = SUBSTDIO_FDBUF(write,1,outbuf,sizeof(outbuf));
-
-static void out(char *s) { substdio_puts(&ssout,s); }
-
-int main(void) {
+static void perhaps_write_tls_header() {
   char *ssl_cipher, *ssl_protocol, *authup_user;
-  int i;
 
   if ((ssl_cipher = env_get("SSL_CIPHER"))
     && (ssl_protocol = env_get("SSL_PROTOCOL"))) {
@@ -39,9 +38,17 @@ int main(void) {
     out("); "); out(datebuf);
     substdio_flush(&ssout);
   }
+}
+
+static void copy_stdin_to_stdout() {
+  int i;
 
   while ((i = substdio_get(&ssin,inbuf,sizeof(inbuf))) > 0)
     substdio_putflush(&ssout,inbuf,i);
+}
 
+int main(void) {
+  perhaps_write_tls_header();
+  copy_stdin_to_stdout();
   return 0;
 }
