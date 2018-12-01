@@ -1,4 +1,4 @@
-.TH QMAIL-QFILTER-ADDTLSHEADER 8 2018-11-26
+.TH QMAIL-QFILTER-ADDTLSHEADER 8 2018-12-01
 .SH NAME
 qmail-qfilter-addtlsheader \- Add Received: header with TLS parameters
 .SH SYNOPSIS
@@ -18,12 +18,10 @@ is intended to be invoked by
 .BR qmail-qfilter .
 It is typically used under
 .B authup
-(via
-.BR qmail-ofmipfilter-queue )
 or
 .B fixsmtpio
 (via
-.BR qmail-smtpfilter-queue ).
+.BR qmail-qfilter-queue ).
 .SH "ENVIRONMENT VARIABLES"
 If both
 .B SSL_CIPHER
@@ -51,6 +49,5 @@ See
 .BR ucspi-tls(2),
 .BR qmail-qfilter(1),
 .BR authup(8),
-.BR qmail-ofmipfilter-queue(8),
 .BR fixsmtpio(8),
-.BR qmail-smtpfilter-queue(8).
+.BR qmail-qfilter-queue(8).
