@@ -4,8 +4,13 @@ SHELL=/bin/sh
 
 default: it
 
+ACCEPTUTILS_BIN=reup   authup   checknotroot \
+		fixsmtpio   qmail-qfilter-addtlsheader
+ACCEPTUTILS_MAN=reup.8 authup.8 checknotroot.8 \
+		fixsmtpio.8 qmail-qfilter-addtlsheader.8
+
 acceptutils: \
-reup authup checknotroot fixsmtpio qmail-qfilter-addtlsheader
+${ACCEPTUTILS_BIN} ${ACCEPTUTILS_MAN}
 
 acceptutils_base64.o: \
 compile99 acceptutils_base64.c acceptutils_base64.h
@@ -23,6 +28,11 @@ case.h env.h fd.h readwrite.h scan.h substdio.h
 acceptutils_unistd.o: \
 compile99 acceptutils_unistd.c acceptutils_unistd.h
 	./compile99 acceptutils_unistd.c
+
+acceptutils-install: \
+acceptutils
+	cp ${ACCEPTUTILS_BIN} `head -1 conf-qmail`/bin && \
+	cp ${ACCEPTUTILS_MAN} `head -1 conf-qmail`/man/man8
 
 acceptutils-memcheck: \
 test_fixsmtpio
