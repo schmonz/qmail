@@ -78,8 +78,8 @@ int tls_info(void (*die_nomem)(const char *caller,const char *alloc_fn)) {
     if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2] == 0 && ssl_env.s[ssl_env.len-1] == 0)
       break;
   }
-  if (j < 0)
-    die_nomem(__func__,"read");
+  if (j < 0) die_nomem(__func__,"read");
+  if (ssl_env.len == 0) return 0;
 
   x = ssl_env.s;
 
