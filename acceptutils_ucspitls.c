@@ -75,8 +75,8 @@ int tls_info(void (*die_nomem)(const char *caller,const char *alloc_fn)) {
 
   while ((j = read(fd,envbuf,SUBSTDIO_INSIZE)) > 0) {
     catb(&ssl_env,envbuf,j);
-      if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2] == 0 && ssl_env.s[ssl_env.len-1] == 0)
-        break;
+    if (ssl_env.len >= 2 && ssl_env.s[ssl_env.len-2] == 0 && ssl_env.s[ssl_env.len-1] == 0)
+      break;
   }
   if (j < 0)
     die_nomem(__func__,"read");
