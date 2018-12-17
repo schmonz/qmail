@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include "auto_uids.h"
 #include "auto_usergroupnames.h"
-#include "error.h"
 #include "qlx.h"
 
 struct group *getgrnam();
@@ -17,9 +16,7 @@ name2uid(name)
 char *name;
 {
   struct passwd *pw;
-  errno = 0;
   pw = getpwnam(name);
-  if (errno) _exit(QLX_SYS);
   if (!pw) _exit(QLX_NOALIAS);
   return (int)(pw->pw_uid);
 }
@@ -29,9 +26,7 @@ name2gid(name)
 char *name;
 {
   struct group *gr;
-  errno = 0;
   gr = getgrnam(name);
-  if (errno) _exit(QLX_SYS);
   if (!gr) _exit(QLX_NOALIAS);
   return (int)(gr->gr_gid);
 }
