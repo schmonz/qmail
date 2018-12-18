@@ -128,6 +128,15 @@ void authup_die(const char *name) {
 }
 
 void die_nomem(const char *caller,const char *alloc_fn) {
+  substdio_puts(&sserr,PROGNAME ": die_nomem: ");
+  if (caller) {
+    substdio_puts(&sserr,caller);
+    substdio_puts(&sserr,": ");
+  }
+  if (alloc_fn) {
+    substdio_puts(&sserr,alloc_fn);
+  }
+  substdio_putsflush(&sserr,"\n");
   authup_die("nomem");
 }
 
