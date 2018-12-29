@@ -11,27 +11,27 @@
 
 #define PROGNAME "reup"
 
-void die() { unistd_exit(1); }
+static void die() { unistd_exit(1); }
 
-char sserrbuf[SUBSTDIO_OUTSIZE];
-substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
+static char sserrbuf[SUBSTDIO_OUTSIZE];
+static substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void errflush(char *s) {
+static void errflush(char *s) {
   substdio_puts(&sserr,PROGNAME ": ");
   substdio_puts(&sserr,s);
   substdio_putsflush(&sserr,"\n");
 }
 
-void dieerrflush(char *s) {
+static void dieerrflush(char *s) {
   errflush(s);
   die();
 }
 
-void die_usage() { dieerrflush("usage: " PROGNAME " [ -t tries ] prog"); }
-void die_fork()  { dieerrflush("unable to fork"); }
-void die_nomem() { dieerrflush("out of memory"); }
+static void die_usage() { dieerrflush("usage: " PROGNAME " [ -t tries ] prog"); }
+static void die_fork()  { dieerrflush("unable to fork"); }
+static void die_nomem() { dieerrflush("out of memory"); }
 
-void logtry(char *try,char *progname) {
+static void logtry(char *try,char *progname) {
   substdio_puts(&sserr,PROGNAME ": try ");
   substdio_puts(&sserr,try);
   substdio_puts(&sserr,": ");
@@ -40,7 +40,7 @@ void logtry(char *try,char *progname) {
   substdio_flush(&sserr);
 }
 
-int try(int attempt,char **childargs) {
+static int try(int attempt,char **childargs) {
   int child;
   int wstat;
   char reup[FMT_ULONG];
@@ -62,13 +62,13 @@ int try(int attempt,char **childargs) {
   return wait_exitcode(wstat);
 }
 
-int keep_trying(int attempt,int max) {
+static int keep_trying(int attempt,int max) {
   if (max == 0) return 1;
   if (attempt <= max) return 1;
   return 0;
 }
 
-int stop_trying(int exitcode) {
+static int stop_trying(int exitcode) {
   switch (exitcode) {
     case 0:
       errflush("success");
