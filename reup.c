@@ -16,14 +16,11 @@ static void die() { unistd_exit(1); }
 static char sserrbuf[SUBSTDIO_OUTSIZE];
 static substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-static void errflush(char *s) {
-  substdio_puts(&sserr,PROGNAME ": ");
-  substdio_puts(&sserr,s);
-  substdio_putsflush(&sserr,"\n");
-}
+static void out(char *s) { substdio_puts(&sserr,s); }
 
 static void dieerrflush(char *s) {
-  errflush(s);
+  out(PROGNAME ": "); out(s);
+  substdio_putsflush(&sserr,"\n");
   die();
 }
 
@@ -31,35 +28,52 @@ static void die_usage() { dieerrflush("usage: " PROGNAME " [ -t tries ] prog"); 
 static void die_fork()  { dieerrflush("unable to fork"); }
 static void die_nomem() { dieerrflush("out of memory"); }
 
-static void logtry(char *try,char *progname) {
-  substdio_puts(&sserr,PROGNAME ": try ");
-  substdio_puts(&sserr,try);
-  substdio_puts(&sserr,": ");
-  substdio_puts(&sserr,progname);
-  substdio_puts(&sserr,"\n");
-  substdio_flush(&sserr);
+static char intstr[FMT_ULONG];
+static void format_intstr(int myint) {
+  str_copy(intstr + fmt_ulong(intstr,myint),"");
 }
 
-static int try(int attempt,char **childargs) {
-  int child;
+static void logtry(int mypid,char *childprogname,int childpid,
+                   char *attempt,int maxtries,int exitcode) {
+  out(PROGNAME);
+  format_intstr(mypid);
+  out(" ");  out(intstr);
+  out(" ");  out(childprogname);
+  format_intstr(childpid);
+  out(" ");  out(intstr);
+  out(" ("); out(attempt);
+  format_intstr(maxtries);
+  out("/");  out(intstr);
+  out("):"); out(" exit");
+  format_intstr(exitcode);
+  out(" ");  out(intstr);
+  substdio_putsflush(&sserr,"\n");
+}
+
+static int do_try(int attempt,int maxtries,char **childargs) {
+  int childpid;
   int wstat;
+  int exitcode;
   char reup[FMT_ULONG];
 
-  switch ((child = unistd_fork())) {
+  str_copy(reup + fmt_ulong(reup,attempt),"");
+
+  switch ((childpid = unistd_fork())) {
     case -1:
       die_fork();
     case 0:
-      str_copy(reup + fmt_ulong(reup,attempt),"");
       if (!env_put2("REUP",reup)) die_nomem();
-      logtry(reup,*childargs);
       unistd_execvp(*childargs,childargs);
       die(); // log something I guess
   }
 
-  if (wait_pid(&wstat,child) == -1) die(); //die why? log something
+  if (wait_pid(&wstat,childpid) == -1) die(); //die why? log something
   if (wait_crashed(wstat)) die(); //die why? log something
 
-  return wait_exitcode(wstat);
+  exitcode = wait_exitcode(wstat);
+  logtry(unistd_getpid(),childargs[0],childpid,reup,maxtries,exitcode);
+
+  return exitcode;
 }
 
 static int keep_trying(int attempt,int max) {
@@ -70,14 +84,9 @@ static int keep_trying(int attempt,int max) {
 
 static int stop_trying(int exitcode) {
   switch (exitcode) {
-    case 0:
-      errflush("success");
-      return 1;
-    case 12:
-      errflush("permanent failure");
-      return 1;
-    default:
-      return 0;
+    case 0:  return 1;
+    case 12: return 1;
+    default: return 0;
   }
 }
 
@@ -103,10 +112,9 @@ int main(int argc,char **argv) {
   if (!*argv) die_usage();
 
   for (i = 1; keep_trying(i,tries); i++) {
-    exitcode = try(i,argv);
+    exitcode = do_try(i,tries,argv);
     if (stop_trying(exitcode)) unistd_exit(exitcode);
   }
 
-  errflush("no more tries");
   unistd_exit(exitcode);
 }
