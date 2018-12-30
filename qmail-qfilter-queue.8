@@ -1,0 +1,61 @@
+.TH QMAIL-QFILTER-QUEUE 8 2018-12-30
+.SH NAME
+qmail-qfilter-queue \- run a sequence of pre-queue filters
+.SH SYNOPSIS
+.B qmail-qfilter-queue
+.SH DESCRIPTION
+.B qmail-qfilter-queue
+runs an administrator-defined sequence of filters
+before calling
+.BR qmail-queue .
+Filters will be run by
+.B qmail-qfilter
+and must adhere to that interface.
+If any filter rejects, the message is rejected.
+.PP
+.B qmail-qfilter-queue
+is most commonly invoked from
+.B qmail-smtpd
+and
+.BR ofmipd ,
+so that incoming and submitted messages are filtered before
+entering the queue.
+.SH "ENVIRONMENT VARIABLES"
+To have
+.B qmail-qfilter-queue
+invoked in place of
+.BR qmail-queue ,
+set
+.B QMAILQUEUE
+to
+.I /var/qmail/bin/qmail-qfilter-queue
+(typically in your
+.BR tcpserver 's
+tcprules).
+.PP
+To run pre-queue filters, set
+.B QMAILQUEUEFILTERS
+with the path to the control file
+containing your sequence of filter programs (one per line).
+.SH "CONTROL FILES"
+Typical values for
+.BR QMAILQUEUEFILTERS :
+.TP 5
+.I control/smtpfilters
+For incoming messages.
+.TP 5
+.I control/ofmipfilters
+For submitted messages.
+.SH "EXAMPLES"
+See
+.IR https://schmonz.com/qmail/rejectutils .
+.SH "AUTHOR"
+.B Amitai Schleier <schmonz-web-rejectutils@schmonz.com>
+.SH "SEE ALSO"
+qmail-queue(8),
+qmail-qfilter(1),
+qmail-smtpd(8),
+ofmipd(8),
+tcpserver(1),
+qmail-qfilter-viruscan(8),
+qmail-qfilter-addtlsheader(8).

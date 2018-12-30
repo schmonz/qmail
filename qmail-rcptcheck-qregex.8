@@ -1,0 +1,28 @@
+.TH QMAIL-RCPTCHECK-QREGEX 8 2018-12-30
+.SH NAME
+qmail-rcptcheck-qregex \- qregex patch as standalone program
+.SH SYNOPSIS
+.B qmail-rcptcheck-qregex
+.SH DESCRIPTION
+.B qmail-rcptcheck-qregex
+is Andrew St. Jean's qregex patch repackaged as a
+.BR qmail-qfilter -compatible
+program.
+.SH "CONTROL FILES"
+.TP 5
+.I badmailto
+For incoming recipients.
+.TP 5
+.I badmailfrom
+For incoming senders.
+.SH "EXAMPLES"
+See
+.IR https://schmonz.com/qmail/rejectutils .
+.SH "AUTHOR"
+.B Amitai Schleier <schmonz-web-rejectutils@schmonz.com>
+.SH HISTORY
+Based on this code from Andrew St. Jean:
+.PP
+.I http://www.arda.homeunix.net/downloads-qmail/
+.SH "SEE ALSO"
+qmail-qfilter(1).

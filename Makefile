@@ -4,6 +4,21 @@ SHELL=/bin/sh
 
 default: it
 
+REJECTUTILS_BIN=qmail-qfilter-queue   qmail-qfilter-viruscan \
+		qmail-rcptcheck   qmail-rcptcheck-badrcptto \
+		qmail-rcptcheck-qregex   qmail-rcptcheck-realrcptto
+REJECTUTILS_MAN=qmail-qfilter-queue.8 qmail-qfilter-viruscan.8 \
+		qmail-rcptcheck.8 qmail-rcptcheck-badrcptto.8 \
+		qmail-rcptcheck-qregex.8 qmail-rcptcheck-realrcptto.8
+
+rejectutils: \
+${REJECTUTILS_BIN} ${REJECTUTILS_MAN}
+
+rejectutils-install: \
+rejectutils
+	cp ${REJECTUTILS_BIN} `head -1 conf-qmail`/bin && \
+	cp ${REJECTUTILS_MAN} `head -1 conf-qmail`/man/man8
+
 addresses.0: \
 addresses.5
 	nroff -man addresses.5 > addresses.0
@@ -312,6 +327,7 @@ exit.h auto_spawn.h
 clean: \
 TARGETS
 	rm -f `cat TARGETS`
+	git checkout -- INSTALL SENDMAIL
 
 coe.o: \
 compile coe.c coe.h
