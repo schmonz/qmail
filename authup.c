@@ -21,6 +21,7 @@
 #include "open.h"
 
 #include "acceptutils_base64.h"
+#include "acceptutils_pfilter.h"
 #include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 #include "acceptutils_unistd.h"
@@ -176,13 +177,13 @@ void exit_according_to_child_exit(int exitcode) {
     case EXITCODE_CHECKPASSWORD_UNACCEPTABLE:
     case EXITCODE_CHECKPASSWORD_MISUSED:
     case EXITCODE_CHECKPASSWORD_TEMPFAIL:
-      authup_die("badauth");
+      pfilter_notify(1, PROGNAME); authup_die("badauth");
     case EXITCODE_FIXSMTPIO_TIMEOUT:
       authup_die("alarm");
     case EXITCODE_FIXSMTPIO_PARSEFAIL:
       authup_die("control");
     default:
-      _exit(0);
+      pfilter_notify(0, PROGNAME); _exit(0);
   }
 }
 

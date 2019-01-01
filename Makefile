@@ -16,6 +16,10 @@ acceptutils_base64.o: \
 compile99 acceptutils_base64.c acceptutils_base64.h
 	./compile99 acceptutils_base64.c
 
+acceptutils_pfilter.o: \
+compile99 acceptutils_pfilter.c acceptutils_pfilter.h hasblacklist.h
+	./compile99 acceptutils_pfilter.c
+
 acceptutils_stralloc.o: \
 compile99 acceptutils_stralloc.c acceptutils_stralloc.h
 	./compile99 acceptutils_stralloc.c
@@ -47,16 +51,18 @@ acceptutils-tests
 	@prove -v -e '' ./test_fixsmtpio | grep -v '^ok'
 
 authup: \
-load authup.o auto_qmail.o acceptutils_base64.o acceptutils_unistd.o acceptutils_ucspitls.o \
-acceptutils_stralloc.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+load authup.o auto_qmail.o acceptutils_base64.o acceptutils_pfilter.o \
+acceptutils_stralloc.o acceptutils_unistd.o acceptutils_ucspitls.o \
+commands.o control.o timeoutread.o timeoutwrite.o now.o \
 case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 substdio.a error.a str.a fs.a \
-socket.lib
-	./load authup auto_qmail.o acceptutils_base64.o acceptutils_unistd.o acceptutils_ucspitls.o \
-	acceptutils_stralloc.o commands.o control.o timeoutread.o timeoutwrite.o now.o \
+socket.lib blacklist.lib
+	./load authup auto_qmail.o acceptutils_base64.o acceptutils_pfilter.o \
+	acceptutils_stralloc.o acceptutils_unistd.o acceptutils_ucspitls.o \
+	commands.o control.o timeoutread.o timeoutwrite.o now.o \
 	case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
 	substdio.a error.a str.a fs.a \
-	`cat socket.lib`
+	`cat socket.lib` `cat blacklist.lib`
 
 authup.o: \
 compile99 authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
@@ -65,6 +71,13 @@ readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h \
 env.h control.h error.h scan.h auto_qmail.h acceptutils_unistd.h \
 acceptutils_stralloc.h
 	./compile99 authup.c
+
+blacklist.lib: \
+tryblist.c compile load
+	( ( ./compile tryblist.c && ./load tryblist -lblacklist ) >/dev/null \
+	2>&1 \
+	&& echo -lblacklist || exit 0 ) > blacklist.lib
+	rm -f tryblist.o tryblist
 
 check.h: \
 conf-check check_stdint.h
@@ -879,6 +892,13 @@ makelib subgetopt.o sgetopt.o
 gfrom.o: \
 compile gfrom.c str.h gfrom.h
 	./compile gfrom.c
+
+hasblacklist.h: \
+tryblist.c compile load
+	( ( ./compile tryblist.c && ./load tryblist -lblacklist ) >/dev/null \
+	2>&1 \
+	&& echo \#define HASBLACKLIST 1 || exit 0 ) > hasblacklist.h
+	rm -f tryblist.o tryblist
 
 hasflock.h: \
 tryflock.c compile load

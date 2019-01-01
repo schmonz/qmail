@@ -388,6 +388,7 @@ check
 make-compile99
 compile99
 acceptutils_base64.o
+acceptutils_pfilter.o
 acceptutils_stralloc.o
 acceptutils_ucspitls.o
 acceptutils_unistd.o
@@ -413,6 +414,8 @@ check.h
 check_stdint.h
 libcheck.a
 rt.lib
+hasblacklist.h
+blacklist.lib
 test_acceptutils_stralloc.o
 test_fixsmtpio_control.o
 test_fixsmtpio_eventq.o
