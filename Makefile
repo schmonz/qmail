@@ -1356,22 +1356,6 @@ fmt.h str.h scan.h open.h error.h getln.h auto_break.h auto_qmail.h \
 auto_usera.h
 	./compile qmail-pw2u.c
 
-qmail-qfilter-ofmipd-queue: \
-load qmail-qfilter-ofmipd-queue.o env.a substdio.a error.a str.a \
-fs.a alloc.a
-	./load qmail-qfilter-ofmipd-queue env.a substdio.a error.a str.a \
-	fs.a alloc.a
-
-qmail-qfilter-ofmipd-queue.c: \
-qmail-qfilter-smtpd-queue.c
-	cat qmail-qfilter-smtpd-queue.c \
-	| sed s}control/smtpfilters}control/ofmipfilters}g \
-	> qmail-qfilter-ofmipd-queue.c
-
-qmail-qfilter-ofmipd-queue.o: \
-compile qmail-qfilter-ofmipd-queue.c env.h substdio.h
-	./compile qmail-qfilter-ofmipd-queue.c
-
 qmail-qfilter-queue: \
 load qmail-qfilter-queue.o control.o env.a error.a fs.a getln.a \
 open.a stralloc.a substdio.a str.a alloc.a wait.a
@@ -1381,16 +1365,6 @@ open.a stralloc.a substdio.a str.a alloc.a wait.a
 qmail-qfilter-queue.o: \
 compile qmail-qfilter-queue.c control.h stralloc.h wait.h
 	./compile qmail-qfilter-queue.c
-
-qmail-qfilter-smtpd-queue: \
-load qmail-qfilter-smtpd-queue.o env.a substdio.a error.a str.a \
-fs.a alloc.a
-	./load qmail-qfilter-smtpd-queue env.a substdio.a error.a str.a \
-	fs.a alloc.a
-
-qmail-qfilter-smtpd-queue.o: \
-compile qmail-qfilter-smtpd-queue.c env.h substdio.h
-	./compile qmail-qfilter-smtpd-queue.c
 
 qmail-qfilter-viruscan: \
 load qmail-qfilter-viruscan.o viruscan.o case_startb2.o control.o \
@@ -1832,7 +1806,6 @@ timeoutread.h timeoutwrite.h remoteinfo.h
 
 rejectutils: \
 qmail-qfilter-queue \
-qmail-qfilter-ofmipd-queue qmail-qfilter-smtpd-queue \
 qmail-qfilter-viruscan \
 qmail-rcptcheck \
 qmail-rcptcheck-badrcptto qmail-rcptcheck-qregex qmail-rcptcheck-realrcptto

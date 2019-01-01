@@ -389,11 +389,6 @@ badrcptto.o
 case_startb2.o
 qmail-qfilter-queue
 qmail-qfilter-queue.o
-qmail-qfilter-ofmipd-queue
-qmail-qfilter-ofmipd-queue.c
-qmail-qfilter-ofmipd-queue.o
-qmail-qfilter-smtpd-queue
-qmail-qfilter-smtpd-queue.o
 qmail-qfilter-viruscan
 qmail-qfilter-viruscan.o
 qmail-rcptcheck
