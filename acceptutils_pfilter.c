@@ -25,11 +25,14 @@ static void socket_info(const struct sockaddr_storage *ss,socklen_t *slen) {
   memset((void *)ss, 0, *slen);
   char *proto = getenv("PROTO");
   if (proto && 0 == strcmp(proto,"TCP6")) {
-    if (0 == ip6(ss,getenv("TCP6REMOTEIP"),getenv("TCP6LOCALPORT")))
+    char *ip = getenv("TCP6REMOTEIP");
+    char *port = getenv("TCP6LOCALPORT");
+    if (!ip || !port || 0 == ip6(ss,ip,port))
       (void)ip6(ss,getenv("TCPREMOTEIP"),getenv("TCPLOCALPORT"));
   } else {
     char *ip = getenv("TCPREMOTEIP");
     char *port = getenv("TCPLOCALPORT");
+    if (!ip || !port) return;
     if (0 == ip4(ss,ip,port))
       (void)ip6(ss,ip,port);
   }
