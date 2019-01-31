@@ -287,49 +287,63 @@ static void adjust_proxy_for_new_kid(int from_proxy,int to_proxy,
   eventq_put(EVENT_GREETING);
 }
 
+static void stop_kid(int kid_pid,int from_server,int to_server) {
+  /* XXX copypasta from teardown_and_exit() */
+  int wstat;
+
+  unistd_close(from_server);
+  unistd_close(to_server);
+
+  if (-1 == kill(kid_pid,SIGTERM)) die_kill();
+
+  if (wait_pid(&wstat,kid_pid) == -1) die_wait();
+}
+
+static int start_kid_with_pipes(int *from_proxy,int *to_server,
+                                int *from_server,int *to_proxy) {
+  make_pipe(from_proxy,to_server);
+  make_pipe(from_server,to_proxy);
+  return unistd_fork();
+}
+
 static void be_proxy(int from_client,int to_client,
                      int from_proxy,int to_proxy,
                      int from_server,int to_server,
                      stralloc *greeting,filter_rule *rules,
                      int kid_pid,char **argv) {
   int exitcode;
+  int in_tls = 0;
   stralloc logstamp = {0};
 
   adjust_proxy_for_new_kid(from_proxy,to_proxy,
                            &logstamp,
                            kid_pid,basename(argv[0]));
-
   exitcode = read_and_process_until_either_end_closes(from_client,to_server,
                                                       from_server,to_client,
                                                       greeting,rules,
-                                                      &logstamp,
-                                                      &kid_pid,argv);
+                                                      &logstamp,in_tls);
+  if (exitcode == BEGIN_STARTTLS_NOW) {
+    stop_kid(kid_pid,from_server,to_server);
+    kid_pid = start_kid_with_pipes(&from_proxy,&to_server,&from_server,&to_proxy);
+    if (kid_pid) {
+      in_tls = 1;
+      adjust_proxy_for_new_kid(from_proxy,to_proxy,
+                               &logstamp,
+                               kid_pid,basename(argv[0]));
+      exitcode = read_and_process_until_either_end_closes(from_client,to_server,
+                                                          from_server,to_client,
+                                                          greeting,rules,
+                                                          &logstamp,in_tls);
+    } else if (0 == kid_pid) {
+      be_proxied(from_proxy,to_proxy,
+                 from_server,to_server,
+                 argv);
+    } else {
+      die_fork();
+    }
+  }
+
   teardown_and_exit(exitcode,kid_pid,rules,from_server,to_server);
-}
-
-static void stop_kid(int kid_pid,int from_server,int to_server) {
-  unistd_close(from_server);
-  unistd_close(to_server);
-  if (-1 == kill(kid_pid,SIGTERM)) die_kill();
-}
-
-static void start_kid(int *kid_pid,int *from_server,int *to_server,
-                      stralloc *logstamp,char **argv) {
-  int from_proxy, to_proxy;
-
-  make_pipe(&from_proxy,to_server);
-  make_pipe(from_server,&to_proxy);
-
-  if ((*kid_pid = unistd_fork()))
-    adjust_proxy_for_new_kid(from_proxy,to_proxy,
-                             logstamp,
-                             *kid_pid,basename(argv[0]));
-  else if (*kid_pid == 0)
-    be_proxied(from_proxy,to_proxy,
-               *from_server,*to_server,
-               argv);
-  else
-    die_fork();
 }
 
 void start_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
@@ -339,10 +353,8 @@ void start_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
   int to_client = 1;
   int kid_pid;
 
-  make_pipe(&from_proxy,&to_server);
-  make_pipe(&from_server,&to_proxy);
-
-  if ((kid_pid = unistd_fork()))
+  kid_pid = start_kid_with_pipes(&from_proxy,&to_server,&from_server,&to_proxy);
+  if (kid_pid)
     be_proxy(from_client,to_client,
              from_proxy,to_proxy,
              from_server,to_server,
@@ -361,11 +373,11 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              stralloc *greeting,
                                              filter_rule *rules,
                                              stralloc *logstamp,
-                                             int *kid_pid,char **argv) {
+                                             int in_tls) {
   char     buf               [SUBSTDIO_INSIZE];
   int      exitcode         = EXIT_LATER_NORMALLY;
   int      tls_level        = ucspitls_level(),
-           want_tls         =  0, in_tls  = 0,
+           want_tls         =  0,
            want_data        =  0, in_data = 0;
   stralloc client_requests  = {0}, one_request  = {0}, proxy_request  = {0},
            server_responses = {0}, one_response = {0}, proxy_response = {0};
@@ -399,9 +411,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
           if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) {
             if (!tls_init() || !tls_info(die_nomem)) die_tls();
             if (!env_put("FIXSMTPIOTLS=1")) die_nomem(__func__,"env_put");
-            stop_kid(*kid_pid,from_server,to_server);
-            start_kid(kid_pid,&from_server,&to_server,logstamp,argv);
-            in_tls = 1;
+            exitcode = BEGIN_STARTTLS_NOW;
           }
         }
       }

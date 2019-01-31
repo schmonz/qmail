@@ -22,6 +22,7 @@
 
 #define RESPONSELINE_NOCHANGE    "&" PROGNAME "_noop"
 
+#define BEGIN_STARTTLS_NOW       -2
 #define EXIT_LATER_NORMALLY      -1
 #define EXIT_NOW_SUCCESS         0
 #define EXIT_NOW_TEMPFAIL        14
