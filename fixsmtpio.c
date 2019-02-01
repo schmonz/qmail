@@ -29,5 +29,5 @@ int main(int argc,char **argv) {
   load_smtp_greeting(&greeting,"control/smtpgreeting");
   rules = load_filter_rules();
 
-  start_proxy(&greeting,rules,argv);
+  be_proxy(&greeting,rules,argv);
 }

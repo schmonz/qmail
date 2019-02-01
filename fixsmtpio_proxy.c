@@ -246,20 +246,6 @@ static void be_proxied(int from_proxy,int to_proxy,
   die_exec();
 }
 
-static void teardown_and_exit(int exitcode,int child,filter_rule *rules,
-                              int from_server,int to_server) {
-  int wstat;
-
-  unistd_close(from_server);
-  unistd_close(to_server);
-
-  if (wait_pid(&wstat,child) == -1) die_wait();
-  if (wait_crashed(wstat)) die_crash();
-
-  if (exitcode == EXIT_LATER_NORMALLY) unistd_exit(wait_exitcode(wstat));
-  else unistd_exit(exitcode);
-}
-
 static char *format_pid(unsigned int pid) {
   char pidbuf[FMT_ULONG];
   stralloc sa = {0};
@@ -278,94 +264,73 @@ static void prepare_logstamp(stralloc *sa,int kid_pid,char *kid_name) {
   cats(sa,format_pid(kid_pid));         cats(sa," ");
 }
 
-static void adjust_proxy_for_new_kid(int from_proxy,int to_proxy,
-                                     stralloc *logstamp,
-                                     int kid_pid,char *kid_name) {
-  unistd_close(from_proxy);
-  unistd_close(to_proxy);
-  prepare_logstamp(logstamp,kid_pid,kid_name);
-  eventq_put(EVENT_GREETING);
-}
-
-static void stop_kid(int kid_pid,int from_server,int to_server) {
-  /* XXX copypasta from teardown_and_exit() */
+static void stop_kid_and_maybe_myself(int exitcode,int kid_pid,
+                                      int from_server,int to_server) {
   int wstat;
+  int startingtls = (exitcode == BEGIN_STARTTLS_NOW);
 
   unistd_close(from_server);
   unistd_close(to_server);
 
-  if (-1 == kill(kid_pid,SIGTERM)) die_kill();
+  if (startingtls && -1 == kill(kid_pid,SIGTERM)) die_kill();
 
   if (wait_pid(&wstat,kid_pid) == -1) die_wait();
+
+  if (startingtls) return;
+
+  if (wait_crashed(wstat)) die_crash();
+
+  if (exitcode == EXIT_LATER_NORMALLY)
+    unistd_exit(wait_exitcode(wstat));
+  else
+    unistd_exit(exitcode);
 }
 
-static int start_kid_with_pipes(int *from_proxy,int *to_server,
-                                int *from_server,int *to_proxy) {
-  make_pipe(from_proxy,to_server);
-  make_pipe(from_server,to_proxy);
-  return unistd_fork();
-}
-
-static void be_proxy(int from_client,int to_client,
-                     int from_proxy,int to_proxy,
-                     int from_server,int to_server,
-                     stralloc *greeting,filter_rule *rules,
-                     int kid_pid,char **argv) {
-  int exitcode;
-  int in_tls = 0;
-  stralloc logstamp = {0};
-
-  adjust_proxy_for_new_kid(from_proxy,to_proxy,
-                           &logstamp,
-                           kid_pid,basename(argv[0]));
-  exitcode = read_and_process_until_either_end_closes(from_client,to_server,
-                                                      from_server,to_client,
-                                                      greeting,rules,
-                                                      &logstamp,in_tls);
-  if (exitcode == BEGIN_STARTTLS_NOW) {
-    stop_kid(kid_pid,from_server,to_server);
-    kid_pid = start_kid_with_pipes(&from_proxy,&to_server,&from_server,&to_proxy);
-    if (kid_pid) {
-      in_tls = 1;
-      adjust_proxy_for_new_kid(from_proxy,to_proxy,
-                               &logstamp,
-                               kid_pid,basename(argv[0]));
-      exitcode = read_and_process_until_either_end_closes(from_client,to_server,
-                                                          from_server,to_client,
-                                                          greeting,rules,
-                                                          &logstamp,in_tls);
-    } else if (0 == kid_pid) {
-      be_proxied(from_proxy,to_proxy,
-                 from_server,to_server,
-                 argv);
-    } else {
-      die_fork();
-    }
-  }
-
-  teardown_and_exit(exitcode,kid_pid,rules,from_server,to_server);
-}
-
-void start_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
-  int from_client = 0;
-  int from_proxy, to_server;
-  int from_server, to_proxy;
-  int to_client = 1;
+static void run_new_kid_in_read_loop(int *from_client,int *to_proxy,
+                                    int *from_proxy,int *to_server,
+                                    int *from_server,int *to_client,
+                                    stralloc *logstamp,stralloc *greeting,
+                                    filter_rule *rules,char **argv,
+                                    int in_tls) {
   int kid_pid;
 
-  kid_pid = start_kid_with_pipes(&from_proxy,&to_server,&from_server,&to_proxy);
-  if (kid_pid)
-    be_proxy(from_client,to_client,
-             from_proxy,to_proxy,
-             from_server,to_server,
-             greeting,rules,
-             kid_pid,argv);
-  else if (kid_pid == 0)
-    be_proxied(from_proxy,to_proxy,
-               from_server,to_server,
+  make_pipe(from_proxy,to_server);
+  make_pipe(from_server,to_proxy);
+  kid_pid = unistd_fork();
+
+  if (kid_pid) {
+    unistd_close(*from_proxy);
+    unistd_close(*to_proxy);
+    prepare_logstamp(logstamp,kid_pid,basename(argv[0]));
+    eventq_put(EVENT_GREETING);
+    stop_kid_and_maybe_myself(
+        read_and_process_until_either_end_closes(*from_client,*to_server,
+                                                 *from_server,*to_client,
+                                                 greeting,rules,
+                                                 logstamp,in_tls),
+        kid_pid,*from_server,*to_server);
+  } else if (0 == kid_pid) {
+    be_proxied(*from_proxy,*to_proxy,
+               *from_server,*to_server,
                argv);
-  else
+  } else {
     die_fork();
+  }
+}
+
+void be_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
+  int from_client = 0, to_proxy;
+  int from_proxy, to_server;
+  int from_server, to_client = 1;
+  stralloc logstamp = {0};
+
+  for (int in_tls = 0; in_tls <= 1; in_tls++)
+    run_new_kid_in_read_loop(&from_client,&to_proxy,
+                             &from_proxy,&to_server,
+                             &from_server,&to_client,
+                             &logstamp,greeting,
+                             rules,argv,
+                             in_tls);
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
