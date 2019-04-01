@@ -236,10 +236,10 @@ static void make_pipe(int *from,int *to) {
 }
 
 static void be_proxied(int from_proxy,int to_proxy,
-                       int from_proxied,int to_proxied,
+                       int from_server,int to_server,
                        char **argv) {
-  unistd_close(from_proxied);
-  unistd_close(to_proxied);
+  unistd_close(from_server);
+  unistd_close(to_server);
   use_as_stdin(from_proxy);
   use_as_stdout(to_proxy);
   unistd_execvp(*argv,argv);
@@ -352,6 +352,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_client)) {
       if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
+        // XXX maybe telnet and Ctrl-C gets here??
         munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,tls_level,in_tls);
         break;
       }
