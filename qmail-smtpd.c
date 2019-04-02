@@ -472,7 +472,7 @@ RSA *tmp_rsa_cb(SSL *ssl, int export, int keylen)
       if (rsa) return rsa;
     }
   }
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
   e = BN_new(); 
   BN_set_word(e, RSA_F4);
   if (RSA_generate_key_ex(rsa, keylen, e, NULL) == 1)
@@ -496,7 +496,7 @@ DH *tmp_dh_cb(SSL *ssl, int export, int keylen)
       if (dh) return dh;
     }
   }
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
   if((dh = DH_new()) && (DH_generate_parameters_ex(dh, keylen, DH_GENERATOR_2, NULL) == 1))
     return dh;
   return NULL;
@@ -650,7 +650,7 @@ void tls_init()
     X509_STORE_set_flags(store, X509_V_FLAG_CRL_CHECK |
                                 X509_V_FLAG_CRL_CHECK_ALL);
   
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
   /* support ECDH */
   SSL_CTX_set_ecdh_auto(ctx,1);
 #endif
