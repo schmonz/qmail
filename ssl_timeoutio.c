@@ -76,7 +76,7 @@ int ssl_timeoutrehandshake(int t, int rfd, int wfd, SSL *ssl)
   fd_set fds;
 
   SSL_renegotiate(ssl);
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
   r = ssl_timeoutio(SSL_do_handshake, t, rfd, wfd, ssl, NULL, 0);
   if (r <=0) return r;
 
