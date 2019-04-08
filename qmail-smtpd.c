@@ -28,7 +28,7 @@
 unsigned int databytes = 0;
 int timeout = 1200;
 
-const char *protocol = "SMTP";
+static const char *protocol = "SMTP";
 
 #ifdef TLS
 #include <sys/stat.h>
@@ -461,7 +461,6 @@ void smtp_tls(char *arg)
 RSA *tmp_rsa_cb(SSL *ssl, int export, int keylen)
 {
   RSA *rsa;
-  BIGNUM *e; /*exponent */
 
   if (!export) keylen = 2048;
   if (keylen == 2048) {
@@ -473,6 +472,7 @@ RSA *tmp_rsa_cb(SSL *ssl, int export, int keylen)
     }
   }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+  BIGNUM *e; /*exponent */
   e = BN_new(); 
   BN_set_word(e, RSA_F4);
   if (RSA_generate_key_ex(rsa, keylen, e, NULL) == 1)
