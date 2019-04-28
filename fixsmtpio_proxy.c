@@ -286,32 +286,28 @@ static void stop_kid_and_maybe_myself(int exitcode,int kid_pid,
     unistd_exit(exitcode);
 }
 
-static void run_new_kid_in_read_loop(int *from_client,int *to_proxy,
-                                    int *from_proxy,int *to_server,
-                                    int *from_server,int *to_client,
+static void run_new_kid_in_read_loop(int from_client,int to_proxy,
+                                    int from_proxy,int to_server,
+                                    int from_server,int to_client,
                                     stralloc *logstamp,stralloc *greeting,
                                     filter_rule *rules,char **argv,
                                     int in_tls) {
-  int kid_pid;
-
-  make_pipe(from_proxy,to_server);
-  make_pipe(from_server,to_proxy);
-  kid_pid = unistd_fork();
+  int kid_pid = unistd_fork();
 
   if (kid_pid) {
-    unistd_close(*from_proxy);
-    unistd_close(*to_proxy);
+    unistd_close(from_proxy);
+    unistd_close(to_proxy);
     prepare_logstamp(logstamp,kid_pid,basename(argv[0]));
     eventq_put(EVENT_GREETING);
     stop_kid_and_maybe_myself(
-        read_and_process_until_either_end_closes(*from_client,*to_server,
-                                                 *from_server,*to_client,
+        read_and_process_until_either_end_closes(from_client,to_server,
+                                                 from_server,to_client,
                                                  greeting,rules,
                                                  logstamp,in_tls),
-        kid_pid,*from_server,*to_server);
+        kid_pid,from_server,to_server);
   } else if (0 == kid_pid) {
-    be_proxied(*from_proxy,*to_proxy,
-               *from_server,*to_server,
+    be_proxied(from_proxy,to_proxy,
+               from_server,to_server,
                argv);
   } else {
     die_fork();
@@ -324,13 +320,16 @@ void be_proxy(stralloc *greeting,filter_rule *rules,char **argv) {
   int from_server, to_client = 1;
   stralloc logstamp = {0};
 
-  for (int in_tls = 0; in_tls <= 1; in_tls++)
-    run_new_kid_in_read_loop(&from_client,&to_proxy,
-                             &from_proxy,&to_server,
-                             &from_server,&to_client,
+  for (int in_tls = 0; in_tls <= 1; in_tls++) {
+    make_pipe(&from_proxy,&to_server);
+    make_pipe(&from_server,&to_proxy);
+    run_new_kid_in_read_loop(from_client,to_proxy,
+                             from_proxy,to_server,
+                             from_server,to_client,
                              &logstamp,greeting,
                              rules,argv,
                              in_tls);
+  }
 }
 
 int read_and_process_until_either_end_closes(int from_client,int to_server,
