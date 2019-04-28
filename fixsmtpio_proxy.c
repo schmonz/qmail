@@ -191,7 +191,10 @@ static void handle_data_specially(stralloc *data,int *in_data,stralloc *logstamp
     *in_data = 0;
 }
 
-static void handle_request(stralloc *proxy_request,stralloc *request,int tls_level,int *want_tls,int in_tls,int *want_data,filter_rule *rules,stralloc *logstamp) {
+static void handle_request(stralloc *proxy_request,stralloc *request,
+                           int tls_level,int *want_tls,int in_tls,
+                           int *want_data,
+                           filter_rule *rules,stralloc *logstamp) {
   stralloc event = {0}, verb = {0}, arg = {0};
 
   logit(logstamp,'1',request);
@@ -209,7 +212,12 @@ static void handle_request(stralloc *proxy_request,stralloc *request,int tls_lev
   logit(logstamp,'2',proxy_request);
 }
 
-static void handle_response(stralloc *proxy_response,int *exitcode,stralloc *response,int tls_level,int want_tls,int in_tls,int *want_data,int *in_data,filter_rule *rules,stralloc *greeting,stralloc *logstamp) {
+static void handle_response(int *exitcode,
+                            stralloc *proxy_response,stralloc *response,
+                            int tls_level,int want_tls,int in_tls,
+                            int *want_data,int *in_data,
+                            filter_rule *rules,stralloc *greeting,
+                            stralloc *logstamp) {
   char *event;
   logit(logstamp,'3',response);
   event = eventq_get();
@@ -352,7 +360,10 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
     if (can_read(from_client)) {
       if (!safeappend(&client_requests,from_client,buf,sizeof buf)) {
         // XXX maybe telnet and Ctrl-C gets here??
-        munge_response_line(0,&client_requests,&exitcode,greeting,rules,EVENT_CLIENTEOF,tls_level,in_tls);
+        munge_response_line(0,
+                            &client_requests,&exitcode,
+                            greeting,rules,EVENT_CLIENTEOF,
+                            tls_level,in_tls);
         break;
       }
       while (client_requests.len) {
@@ -360,7 +371,10 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
           handle_data_specially(&client_requests,&in_data,logstamp);
           safewrite(to_server,&client_requests);
         } else if (get_one_request(&one_request,&client_requests)) {
-          handle_request(&proxy_request,&one_request,tls_level,&want_tls,in_tls,&want_data,rules,logstamp);
+          handle_request(&proxy_request,&one_request,
+                         tls_level,&want_tls,in_tls,
+                         &want_data,
+                         rules,logstamp);
           safewrite(to_server,&proxy_request);
         }
       }
@@ -368,8 +382,15 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
 
     if (can_read(from_server)) {
       if (!safeappend(&server_responses,from_server,buf,sizeof buf)) break;
-      while (server_responses.len && exitcode == EXIT_LATER_NORMALLY && get_one_response(&one_response,&server_responses)) {
-        handle_response(&proxy_response,&exitcode,&one_response,tls_level,want_tls,in_tls,&want_data,&in_data,rules,greeting,logstamp);
+      while (server_responses.len
+             && exitcode == EXIT_LATER_NORMALLY
+             && get_one_response(&one_response,&server_responses)) {
+        handle_response(&exitcode,
+                        &proxy_response,&one_response,
+                        tls_level,want_tls,in_tls,
+                        &want_data,&in_data,
+                        rules,greeting,
+                        logstamp);
         safewrite(to_client,&proxy_response);
         if (want_tls) {
           want_tls = 0;
