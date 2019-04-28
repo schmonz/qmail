@@ -34,14 +34,15 @@ does so.
 
 .B authup
 expects distinct exit codes for distinct conditions.
+Since
 .B checkpassword
-exits 1 when a password is unacceptable.
+exits 1 when a password is unacceptable, and
 .B ofmipd
 and
 .B qmail-smtpd
-exit 1 when any error occurs.
+also exit 1 when any sort of error occurs,
 .B fixsmtpio
-can and should be configured to exit
+can and should be configured to exit uniquely for each SMTP condition:
 .TP 3
 14
 when the server greeting code starts with 4 (temporary failure),
