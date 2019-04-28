@@ -340,7 +340,7 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                                              int in_tls) {
   char     buf               [SUBSTDIO_INSIZE];
   int      exitcode         = EXIT_LATER_NORMALLY;
-  int      tls_level        = ucspitls_level(),
+  int      tls_level        = ucspitls_level_configured(),
            want_tls         =  0,
            want_data        =  0, in_data = 0;
   stralloc client_requests  = {0}, one_request  = {0}, proxy_request  = {0},

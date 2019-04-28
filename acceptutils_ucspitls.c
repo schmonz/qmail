@@ -8,7 +8,7 @@
 #include "acceptutils_stralloc.h"
 #include "acceptutils_ucspitls.h"
 
-int ucspitls_level(void) {
+int ucspitls_level_configured(void) {
   char *ucspitls = env_get("UCSPITLS");
   char *disabletls = env_get("DISABLETLS");
   env_unset("UCSPITLS");

@@ -584,7 +584,7 @@ int main(int argc,char **argv) {
   childargs = argv + 2;
   if (!*childargs) die_usage();
 
-  tls_level = ucspitls_level();
+  tls_level = ucspitls_level_configured();
 
   for (i = 0; p[i].name; ++i)
     if (case_equals(p[i].name,protocol))
