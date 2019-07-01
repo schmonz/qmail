@@ -57,32 +57,35 @@ and
 0
 when the server receives EOF from the client.
 .SH "ENVIRONMENT VARIABLES"
-.B authup
-sets
-.B AUTHUP_USER
-in the environment.
-Many typical filter rules apply if and only if this variable is present.
+When running under
+.BR authup ,
+the authenticated user is available as
+.BR AUTHUP_USER .
+Many typical filter rules operate only in the presence of this variable.
+Other rules apply equally well to public SMTP service.
 
-If
-.B UCSPITLS
-is set while running under
+When running under
 .BR "sslserver -n" ,
 .B fixsmtpio
-supports STARTTLS.
-The special value
-.B !
-requires peers to negotiate TLS before doing much of anything else.
-The empty string is a more sensible choice for public SMTP service.
+can offer TLS.
+Set
+.B UCSPITLS
+to the empty string to enable opportunistic server-to-server encryption.
+(The special value
+.B "!"
+requires peers to negotiate TLS before doing much of anything else --
+not likely useful for public SMTP service.)
+
+If TLS has been negotiated,
 .B fixsmtpio
 sets
-.B FIXSMTPIOTLS
-in the environment when TLS has been negotiated.
+.BR FIXSMTPIOTLS .
 
 If
 .B DISABLETLS
-is set,
+is set, the presence and value of
 .B UCSPITLS
-will not be honored.
+will be ignored.
 
 If
 .B NOFIXSMTPIO
