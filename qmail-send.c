@@ -31,6 +31,7 @@
 #include "constmap.h"
 #include "fmtqfn.h"
 #include "readsubdir.h"
+#include "srs.h"
 
 /* critical timing feature #1: if not triggered, do not busy-loop */
 /* critical timing feature #2: if triggered, respond within fixed time */
@@ -55,6 +56,7 @@ stralloc bouncefrom = {0};
 stralloc bouncehost = {0};
 stralloc doublebounceto = {0};
 stralloc doublebouncehost = {0};
+stralloc srs_domain = {0};
 
 char strnum2[FMT_ULONG];
 char strnum3[FMT_ULONG];
@@ -689,9 +691,31 @@ unsigned long id;
     { log1("warning: unable to start qmail-queue, will try later\n"); return 0; }
    qp = qmail_qp(&qqt);
 
-   if (*sender.s) { bouncesender = ""; bouncerecip = sender.s; }
-   else { bouncesender = "#@[]"; bouncerecip = doublebounceto.s; }
-
+   if (*sender.s) {
+     if (srs_domain.len) {
+       int j = 0;
+       j = byte_rchr(sender.s, sender.len, '@');
+       if (j < sender.len) {
+         if (srs_domain.len == sender.len - j - 1 && stralloc_starts(&srs_domain, sender.s + j + 1)) {
+           switch(srsreverse(sender.s)) {
+             case -3: log1(srs_error.s); log1("\n"); _exit(111); break;
+             case -2: nomem(); break;
+             case -1: log1("alert: unable to read controls\n"); _exit(111); break;
+             case 0: break;
+             case 1: if (!stralloc_copy(&sender,&srs_result)) nomem(); break;
+           }
+           if (chdir(auto_qmail) == -1) { log1("alert: unable to switch to home directory\n"); _exit(111); }
+           if (chdir("queue") == -1) { log1("alert: unable to switch to queue directory\n"); _exit(111); }
+         }
+       }
+     }
+     bouncesender = "";
+     bouncerecip = sender.s;
+   } else {
+     bouncesender = "#@[]";
+     bouncerecip = doublebounceto.s;
+   }
+   
    while (!newfield_datemake(now())) nomem();
    qmail_put(&qqt,newfield_date.s,newfield_date.len);
    qmail_puts(&qqt,"From: ");
@@ -1449,6 +1473,8 @@ int getcontrols() { if (control_init() == -1) return 0;
  if (control_rldef(&bouncefrom,"control/bouncefrom",0,"MAILER-DAEMON") != 1) return 0;
  if (control_rldef(&bouncehost,"control/bouncehost",1,"bouncehost") != 1) return 0;
  if (control_rldef(&doublebouncehost,"control/doublebouncehost",1,"doublebouncehost") != 1) return 0;
+ if (control_readline(&srs_domain,"control/srs_domain") == -1) return 0;
+ if (srs_domain.len && !stralloc_0(&srs_domain)) return 0;
  if (control_rldef(&doublebounceto,"control/doublebounceto",0,"postmaster") != 1) return 0;
  if (!stralloc_cats(&doublebounceto,"@")) return 0;
  if (!stralloc_cat(&doublebounceto,&doublebouncehost)) return 0;

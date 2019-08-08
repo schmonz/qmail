@@ -28,6 +28,7 @@
 #include "myctime.h"
 #include "gfrom.h"
 #include "auto_patrn.h"
+#include "srs.h"
 
 void usage() { strerr_die1x(100,"qmail-local: usage: qmail-local [ -nN ] user homedir local dash ext domain sender aliasempty"); }
 
@@ -66,6 +67,14 @@ stralloc foo = {0};
 
 char buf[1024];
 char outbuf[1024];
+
+void die_control() { strerr_die1x(111,"Unable to read controls (#4.3.0)"); }
+void die_srs() {
+  if (!stralloc_copys(&foo,srs_error.s)) temp_nomem();
+  if (!stralloc_cats(&foo," (#4.3.0)")) temp_nomem();
+  if (!stralloc_0(&foo)) temp_nomem();
+  strerr_die1x(111,foo.s);
+}
 
 /* child process */
 
@@ -282,6 +291,15 @@ char **recips;
    qmail_put(&qqt,messline.s,messline.len);
   }
  while (match);
+ 
+ switch(srsforward(ueo.s)) {
+   case -3: die_srs(); break;
+   case -2: temp_nomem(); break;
+   case -1: die_control(); break;
+   case 0: break;
+   case 1: if (!stralloc_copy(&ueo,&srs_result)) temp_nomem(); break;
+ } 
+ 
  qmail_from(&qqt,ueo.s);
  while (*recips) qmail_to(&qqt,*recips++);
  qqx = qmail_close(&qqt);

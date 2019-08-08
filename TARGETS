@@ -196,6 +196,10 @@ ssl_timeoutio.o
 timeoutconn.o
 tcpto.o
 dns.o
+srsfilter
+srsfilter.o
+srs
+srs.o
 ip.o
 ipalloc.o
 hassalen.h
