@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "byte.h"
 #include "substdio.h"
 #include "readwrite.h"
 #include "subfd.h"
@@ -15,7 +16,7 @@
 #include "getln.h"
 #include "auto_break.h"
 #include "auto_qmail.h"
-#include "auto_usera.h"
+#include "auto_users.h"
 
 void die_chdir()
 {

@@ -1,3 +1,15 @@
+20190819 version: notqmail 1.07.
+20190810 code: remove incorrect usage of vfork()
+20190710 code: add instchown to set ownership and mode on installed files.
+20190709 code: add instpackage to install without root access.
+20190714 code: removed idedit, install-big. var-qmail packages are no more.
+20190708 code: lookup uid/gid at runtime.
+20190711 portability problem: explicitly initialize strerr_sys and
+         define BIND_8_COMPAT to work around Mac OS X.
+20190709 doc: rename INSTALL, SENDMAIL to INSTALL.md, SENDMAIL.md to
+         support building on case-insensitive filesystems.
+20190715 code: detect and prefer utmpx where available.
+20190708 code: use DESTDIR environment variable as root directory in install.
 20071130 version: netqmail 1.06
 20071130 legal: qmail-1.03 is now in the public domain
 20051103 doc: dot-qmail.9 updated for changed (19980613) conf-patrn default, tnx ADM
