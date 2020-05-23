@@ -1,11 +1,14 @@
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <string.h>
+#include <unistd.h>
 #include "substdio.h"
 #include "strerr.h"
 #include "env.h"
 #include "error.h"
 #include "fifo.h"
+#include "hier.h"
 #include "open.h"
-#include "readwrite.h"
-#include "exit.h"
 #include "alloc.h"
 #include "str.h"
 #include "stralloc.h"
@@ -21,9 +24,7 @@ static void die_nomem()
   strerr_die2sys(111,FATAL,"out of memory");
 }
 
-static void ddhome(dd,home)
-stralloc *dd;
-char *home;
+static void ddhome(stralloc *dd, char *home)
 {
   const char *denv = env_get("DESTDIR");
   if (denv)
@@ -33,9 +34,7 @@ char *home;
   if (!stralloc_0(dd)) die_nomem();
 }
 
-static int mkdir_p(home,mode)
-char *home;
-int mode;
+static int mkdir_p(char *home, int mode)
 {
   stralloc parent = { 0 };
   unsigned int sl;
@@ -55,11 +54,7 @@ int mode;
   return mkdir(home,mode);
 }
 
-void h(home,uid,gid,mode)
-char *home;
-int uid;
-int gid;
-int mode;
+void h(char *home, uid_t uid, gid_t gid, int mode)
 {
   stralloc dh = { 0 };
   ddhome(&dh, home);
@@ -72,12 +67,7 @@ int mode;
   alloc_free(dh.s);
 }
 
-void d(home,subdir,uid,gid,mode)
-char *home;
-char *subdir;
-int uid;
-int gid;
-int mode;
+void d(char *home, char *subdir, uid_t uid, gid_t gid, int mode)
 {
   stralloc dh = { 0 };
   ddhome(&dh, home);
@@ -92,12 +82,7 @@ int mode;
   alloc_free(dh.s);
 }
 
-void p(home,fifo,uid,gid,mode)
-char *home;
-char *fifo;
-int uid;
-int gid;
-int mode;
+void p(char *home, char *fifo, uid_t uid, gid_t gid, int mode)
 {
   stralloc dh = { 0 };
   ddhome(&dh, home);
@@ -117,26 +102,37 @@ char outbuf[SUBSTDIO_OUTSIZE];
 substdio ssin;
 substdio ssout;
 
-void c(home,subdir,file,uid,gid,mode)
-char *home;
-char *subdir;
-char *file;
-int uid;
-int gid;
-int mode;
+void c(char *home, char *subdir, char *file, uid_t uid, gid_t gid, int mode)
 {
   int fdin;
   int fdout;
   stralloc dh = { 0 };
 
-  ddhome(&dh, home);
-  home=dh.s;
   if (fchdir(fdsourcedir) == -1)
     strerr_die2sys(111,FATAL,"unable to switch back to source directory: ");
 
   fdin = open_read(file);
-  if (fdin == -1)
+  if (fdin == -1) {
+    /* silently ignore missing catman pages */
+    if (errno == error_noent && strncmp(subdir, "man/cat", 7) == 0)
+      return;
     strerr_die4sys(111,FATAL,"unable to read ",file,": ");
+  }
+
+  /* if the user decided to build only dummy catman pages then don't install */
+  if (strncmp(subdir, "man/cat", 7) == 0) {
+    struct stat st;
+    if (fstat(fdin, &st) != 0)
+      strerr_die4sys(111,FATAL,"unable to stat ",file,": ");
+    if (st.st_size == 0) {
+      close(fdin);
+      return;
+    }
+  }
+
+  ddhome(&dh, home);
+  home=dh.s;
+
   substdio_fdbuf(&ssin,read,fdin,inbuf,sizeof inbuf);
 
   if (chdir(home) == -1)
@@ -169,13 +165,7 @@ int mode;
   alloc_free(dh.s);
 }
 
-void z(home,file,len,uid,gid,mode)
-char *home;
-char *file;
-int len;
-int uid;
-int gid;
-int mode;
+void z(char *home, char *file, int len, uid_t uid, gid_t gid, int mode)
 {
   int fdout;
   stralloc dh = { 0 };
@@ -207,13 +197,13 @@ int mode;
 }
 
 /* these are ignored, but hier() passes them to h() and friends */
-int auto_uida = -1;
-int auto_uido = -1;
-int auto_uidq = -1;
-int auto_uidr = -1;
-int auto_uids = -1;
+uid_t auto_uida = -1;
+uid_t auto_uido = -1;
+uid_t auto_uidq = -1;
+uid_t auto_uidr = -1;
+uid_t auto_uids = -1;
 
-int auto_gidq = -1;
+gid_t auto_gidq = -1;
 
 void main()
 {

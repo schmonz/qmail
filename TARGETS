@@ -1,7 +1,5 @@
 auto-ccld.sh
 make-load
-find-systype
-systype
 load
 make-compile
 compile
@@ -27,6 +25,7 @@ subgetopt.o
 sgetopt.o
 getopt.a
 sig_alarm.o
+oflops.h
 hassgprm.h
 sig_block.o
 hassgact.h
@@ -130,7 +129,6 @@ auto_patrn.c
 auto_patrn.o
 socket.lib
 qmail-local
-uint32.h
 qmail-lspawn.o
 select.h
 chkspawn.o
@@ -140,9 +138,6 @@ auto_spawn.c
 auto_spawn.o
 chkspawn
 spawn.o
-chkshsgr.o
-chkshsgr
-hasshsgr.h
 prot.o
 coe.o
 cdb_hash.o
@@ -284,15 +279,11 @@ qmail-newmrh.o
 qmail-newmrh
 config
 config-fast
-dnscname.o
 dnsdoe.o
-dnscname
 dnsptr.o
 dnsptr
 dnsip.o
 dnsip
-dnsmxip.o
-dnsmxip
 dnsfq.o
 dnsfq
 hostname.o
@@ -406,3 +397,4 @@ envelopes.0
 forgeries.0
 setup
 qtmp.h
+qmail-send.service
