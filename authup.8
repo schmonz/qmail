@@ -16,19 +16,14 @@ It then runs
 via the
 .B checkpassword
 interface.
-
 .B authup
-is most commonly invoked from
-.B sslserver
-as root, so that
+is most commonly invoked as root so
 .B checkpassword
-can run
-.B ofmipd
-(or
-.BR qmail-smtpd )
+can change to the UID of the authenticated user before running
+.BR ofmipd ,
+.BR qmail-smtpd ,
 or
-.B qmail-pop3d
-under the UID of the authenticated user.
+.BR qmail-pop3d .
 
 .B authup
 waits for
@@ -46,16 +41,18 @@ If authentication failed, and
 is SMTP, it waits 5 seconds
 before printing the message.
 
-When run under
-.BR "sslserver -n" ,
-.B authup
-can be configured to offer TLS and/or refuse to authenticate without it.
 .SH "ENVIRONMENT VARIABLES"
 If
 .B UCSPITLS
 is set to "!",
 .B authup
-will require the client to negotiate TLS before attempting to authenticate.
+will both offer TLS and refuse to authenticate without it.
+.B authup
+must be running under
+.BR "sslserver -n" ,
+.BR "s6-ucspitlsd" ,
+or another program that implements
+.BR ucspi-tls(2) .
 
 If
 .B DISABLETLS
@@ -124,10 +121,9 @@ $ echo EHLO | qmail-smtpd \\
 
 .B authup
 will automatically advertise TLS support when run under
-.B sslserver
-with the
-.B -n
-flag.
+.B "sslserver -n"
+or
+.BR "s6-ucspitlsd" .
 .TP 5
 .I timeoutsmtpd / timeoutpop3d
 Number of seconds
@@ -155,6 +151,7 @@ reup(8),
 checknotroot(8),
 fixsmtpio(8),
 sslserver(1),
+s6-ucspitlsd,
 ucspi-tls(2),
 qmail-qfilter-queue(8),
 ofmipd(8),

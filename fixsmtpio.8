@@ -65,7 +65,9 @@ Many typical filter rules operate only in the presence of this variable.
 Other rules apply equally well to public SMTP service.
 
 When running under
-.BR "sslserver -n" ,
+.B "sslserver -n"
+or
+.BR "s6-ucspitlsd" ,
 .B fixsmtpio
 can offer TLS.
 Set
@@ -247,6 +249,7 @@ See
 .SH "SEE ALSO"
 authup(8),
 sslserver(1),
+s6-ucspitlsd,
 ucspi-tls(2),
 checkpassword(8),
 checknotroot(8),
