@@ -177,13 +177,13 @@ void exit_according_to_child_exit(int exitcode) {
     case EXITCODE_CHECKPASSWORD_UNACCEPTABLE:
     case EXITCODE_CHECKPASSWORD_MISUSED:
     case EXITCODE_CHECKPASSWORD_TEMPFAIL:
-      pfilter_notify(1, PROGNAME); authup_die("badauth");
+      pfilter_notify(1, 0, PROGNAME); authup_die("badauth");
     case EXITCODE_FIXSMTPIO_TIMEOUT:
       authup_die("alarm");
     case EXITCODE_FIXSMTPIO_PARSEFAIL:
       authup_die("control");
     default:
-      pfilter_notify(0, PROGNAME); _exit(0);
+      pfilter_notify(0, 0, PROGNAME); _exit(0);
   }
 }
 
