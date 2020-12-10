@@ -219,6 +219,7 @@ static void handle_response(int *exitcode,
                             filter_rule *rules,stralloc *greeting,
                             stralloc *logstamp) {
   char *event;
+  //stralloc event_sa = {0};
   logit(logstamp,'3',response);
   event = eventq_get();
   construct_proxy_response(proxy_response,
@@ -229,6 +230,8 @@ static void handle_response(int *exitcode,
                            want_tls,in_tls,
                            want_data,in_data);
   logit(logstamp,'4',proxy_response);
+  //copys(&event_sa,"SCHMONZ: gonna free "); cats(&event_sa,event);
+  //logit(logstamp,'5',&event_sa);
   alloc_free(event);
   blank(response);
 }
@@ -376,6 +379,9 @@ int read_and_process_until_either_end_closes(int from_client,int to_server,
                          &want_data,
                          rules,logstamp);
           safewrite(to_server,&proxy_request);
+        //} else {
+        //  /* not in_data and no full request received yet */
+        //  break;
         }
       }
     }
