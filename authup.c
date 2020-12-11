@@ -36,26 +36,26 @@
 static int auth_tries_remaining = 0;
 
 static int timeout = 1200;
-int tls_level = UCSPITLS_UNAVAILABLE;
-int in_tls = 0;
+static int tls_level = UCSPITLS_UNAVAILABLE;
+static int in_tls = 0;
 
-void die()         { unistd_exit( 1); }
+static void die()         { unistd_exit( 1); }
 
-int safewrite(int fd,char *buf,int len) {
+static int safewrite(int fd,char *buf,int len) {
   int r;
   r = timeoutwrite(timeout,fd,buf,len);
   if (r <= 0) die();
   return r;
 }
 
-char ssoutbuf[SUBSTDIO_OUTSIZE];
-substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
+static char ssoutbuf[SUBSTDIO_OUTSIZE];
+static substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
 
-void out(char *s) { substdio_puts(&ssout,s); }
-void flush() { substdio_flush(&ssout); }
+static void out(char *s) { substdio_puts(&ssout,s); }
+static void flush() { substdio_flush(&ssout); }
 
-void pop3_err(char *s) { out("-ERR "); out(s); out("\r\n"); flush(); }
-void smtp_out(char *s) {               out(s); out("\r\n"); flush(); }
+static void pop3_err(char *s) { out("-ERR "); out(s); out("\r\n"); flush(); }
+static void smtp_out(char *s) {               out(s); out("\r\n"); flush(); }
 
 struct authup_error {
   char *name;
@@ -64,7 +64,7 @@ struct authup_error {
   char *smtperror;
 };
 
-struct authup_error fatals[] = {
+static struct authup_error fatals[] = {
   { "control", "unable to read controls",      "421", "4.3.0" }
 , { "nomem",   "out of memory",                "451", "4.3.0" }
 , { "alarm",   "timeout",                      "451", "4.4.2" }
@@ -79,7 +79,7 @@ struct authup_error fatals[] = {
 , { 0,         "unknown or unspecified error", "421", "4.3.0" }
 };
 
-struct authup_error errors[] = {
+static struct authup_error errors[] = {
   { "badauth", "authorization failed",         "535", "5.7.0" }
 , { "noauth",  "auth type unimplemented",      "504", "5.5.1" }
 , { "input",   "malformed auth input",         "501", "5.5.4" }
@@ -88,13 +88,13 @@ struct authup_error errors[] = {
 , { "needtls", "Must start TLS first",         "530", "5.7.0" }
 };
 
-void pop3_auth_error(struct authup_error ae) {
+static void pop3_auth_error(struct authup_error ae) {
   out("-ERR");
   out(" " PROGNAME " ");
   out(ae.message);
 }
 
-void smtp_auth_error(struct authup_error ae) {
+static void smtp_auth_error(struct authup_error ae) {
   out(ae.smtpcode);
   out(" " PROGNAME " ");
   out(ae.message);
@@ -103,12 +103,12 @@ void smtp_auth_error(struct authup_error ae) {
   out(")");
 }
 
-void (*protocol_error)();
+static void (*protocol_error)();
 
-char sserrbuf[SUBSTDIO_OUTSIZE];
-substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
+static char sserrbuf[SUBSTDIO_OUTSIZE];
+static substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void authup_die(const char *name) {
+static void authup_die(const char *name) {
   int i;
   for (i = 0;fatals[i].name;++i) if (case_equals(fatals[i].name,name)) break;
   protocol_error(fatals[i]);
@@ -117,7 +117,7 @@ void authup_die(const char *name) {
   die();
 }
 
-void authup_err(const char *name) {
+static void authup_err(const char *name) {
   int i;
   for (i = 0;errors[i].name;++i) if (case_equals(errors[i].name,name)) break;
   protocol_error(errors[i]);
@@ -125,7 +125,7 @@ void authup_err(const char *name) {
   flush();
 }
 
-void die_nomem(const char *caller,const char *alloc_fn) {
+static void die_nomem(const char *caller,const char *alloc_fn) {
   substdio_puts(&sserr,PROGNAME ": die_nomem: ");
   if (caller) {
     substdio_puts(&sserr,caller);
@@ -138,20 +138,20 @@ void die_nomem(const char *caller,const char *alloc_fn) {
   authup_die("nomem");
 }
 
-void die_usage() {
+static void die_usage() {
   substdio_puts(&sserr,PROGNAME ": ");
   substdio_puts(&sserr,"usage: " PROGNAME " [ -t tries ] <smtp|pop3> prog");
   substdio_putsflush(&sserr,"\n");
   die();
 }
 
-void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
-void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
+static void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
+static void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
 
-void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
-void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
+static void pop3_err_syntax()   { pop3_err(PROGNAME " syntax error"); }
+static void pop3_err_wantuser() { pop3_err(PROGNAME " USER first"); }
 
-int saferead(int fd,char *buf,int len) {
+static int saferead(int fd,char *buf,int len) {
   int r;
   r = timeoutread(timeout,fd,buf,len);
   if (r == -1) if (errno == error_timeout) authup_die("alarm");
@@ -159,21 +159,21 @@ int saferead(int fd,char *buf,int len) {
   return r;
 }
 
-char ssinbuf[SUBSTDIO_INSIZE];
-substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
+static char ssinbuf[SUBSTDIO_INSIZE];
+static substdio ssin = SUBSTDIO_FDBUF(saferead,0,ssinbuf,sizeof ssinbuf);
 
-stralloc greeting = {0};
-stralloc capabilities = {0};
-char **childargs;
+static stralloc greeting = {0};
+static stralloc capabilities = {0};
+static char **childargs;
 
-void pop3_okay() { out("+OK \r\n"); flush(); }
-void pop3_quit() { pop3_okay(); unistd_exit(0); }
-void smtp_quit() { out("221 "); smtp_out(greeting.s); unistd_exit(0); }
+static void pop3_okay() { out("+OK \r\n"); flush(); }
+static void pop3_quit() { pop3_okay(); unistd_exit(0); }
+static void smtp_quit() { out("221 "); smtp_out(greeting.s); unistd_exit(0); }
 
-stralloc username = {0};
-stralloc logname = {0};
-stralloc password = {0};
-stralloc timestamp = {0};
+static stralloc username = {0};
+static stralloc logname = {0};
+static stralloc password = {0};
+static stralloc timestamp = {0};
 
 static char *format_pid(unsigned int pid) {
   char pidbuf[FMT_ULONG];
@@ -219,7 +219,7 @@ static void logstart(char *protocol) {
   substdio_putsflush(&sserr,"\n");
 }
 
-void exit_according_to_child_exit(int exitcode,int child) {
+static void exit_according_to_child_exit(int exitcode,int child) {
   switch (exitcode) {
     case EXITCODE_CHECKPASSWORD_UNACCEPTABLE:
     case EXITCODE_CHECKPASSWORD_MISUSED:
@@ -239,7 +239,7 @@ void exit_according_to_child_exit(int exitcode,int child) {
   unistd_exit(exitcode);
 }
 
-void logtry(int checkpassword_pid) {
+static void logtry(int checkpassword_pid) {
   substdio_puts(&sserr,PROGNAME);
   substdio_puts(&sserr," ");
   substdio_puts(&sserr,authup_pid);
@@ -250,7 +250,7 @@ void logtry(int checkpassword_pid) {
   substdio_putsflush(&sserr,"\n");
 }
 
-void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
+static void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int child;
   int wstat;
   int pi[2];
@@ -303,7 +303,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
 
 static char unique[FMT_ULONG + FMT_ULONG + 3];
 
-void pop3_greet() {
+static void pop3_greet() {
   char *s;
   s = unique;
   s += fmt_uint(s,unistd_getpid());
@@ -318,11 +318,11 @@ void pop3_greet() {
   flush();
 }
 
-void pop3_format_capa(stralloc *multiline) {
+static void pop3_format_capa(stralloc *multiline) {
   cats(multiline,".\r\n");
 }
 
-void pop3_capa(char *arg) {
+static void pop3_capa(char *arg) {
   out("+OK capability list follows\r\n");
   if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) out("STLS\r\n");
   out("USER\r\n");
@@ -332,7 +332,7 @@ void pop3_capa(char *arg) {
 
 static int seenuser = 0;
 
-void pop3_stls(char *arg) {
+static void pop3_stls(char *arg) {
   if (tls_level < UCSPITLS_AVAILABLE || in_tls) return pop3_err("STLS not available");
   out("+OK starting TLS negotiation\r\n");
   flush();
@@ -344,7 +344,7 @@ void pop3_stls(char *arg) {
   in_tls = 1;
 }
 
-void pop3_user(char *arg) {
+static void pop3_user(char *arg) {
   if (tls_level >= UCSPITLS_REQUIRED && !in_tls) return authup_err("needtls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
@@ -352,7 +352,7 @@ void pop3_user(char *arg) {
   copys(&username,arg);
 }
 
-void pop3_pass(char *arg) {
+static void pop3_pass(char *arg) {
   if (!seenuser) { pop3_err_wantuser(); return; }
   if (!*arg) { pop3_err_syntax(); return; }
 
@@ -367,20 +367,20 @@ void pop3_pass(char *arg) {
   checkpassword(&username,&password,&timestamp);
 }
 
-void smtp_greet() {
+static void smtp_greet() {
   out("220 ");
   out(greeting.s);
   out(" ESMTP\r\n");
   flush();
 }
 
-void smtp_helo(char *arg) {
+static void smtp_helo(char *arg) {
   out("250 ");
   smtp_out(greeting.s);
 }
 
 // copy from fixsmtpio_munge.c:change_last_line_fourth_char_to_space()
-void smtp_format_ehlo(stralloc *multiline) {
+static void smtp_format_ehlo(stralloc *multiline) {
   int pos = 0;
   int i;
   for (i = multiline->len - 2; i >= 0; i--) {
@@ -392,7 +392,7 @@ void smtp_format_ehlo(stralloc *multiline) {
   capabilities.s[pos+3] = ' ';
 }
 
-void smtp_ehlo(char *arg) {
+static void smtp_ehlo(char *arg) {
   char *x;
   out("250-"); out(greeting.s); out("\r\n");
   if (tls_level >= UCSPITLS_AVAILABLE && !in_tls) out("250-STARTTLS\r\n");
@@ -403,7 +403,7 @@ void smtp_ehlo(char *arg) {
   flush();
 }
 
-void smtp_starttls() {
+static void smtp_starttls() {
   if (tls_level < UCSPITLS_AVAILABLE || in_tls) return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
@@ -416,7 +416,7 @@ void smtp_starttls() {
 
 static stralloc authin = {0};
 
-void smtp_authgetl() {
+static void smtp_authgetl() {
   int i;
 
   blank(&authin);
@@ -440,7 +440,7 @@ static int b64decode2(char *c,int i,stralloc *sa) {
   return b64decode((const unsigned char *)c,i,sa);
 }
 
-void auth_login(char *arg) {
+static void auth_login(char *arg) {
   int r;
 
   if (*arg) {
@@ -465,7 +465,7 @@ void auth_login(char *arg) {
 
 static stralloc resp = {0};
 
-void auth_plain(char *arg) {
+static void auth_plain(char *arg) {
   int r, id = 0;
 
   if (*arg) {
@@ -489,7 +489,7 @@ void auth_plain(char *arg) {
   checkpassword(&username,&password,&timestamp);
 }
 
-void smtp_auth(char *arg) {
+static void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
@@ -505,15 +505,15 @@ void smtp_auth(char *arg) {
   return authup_err("noauth");
 }
 
-void smtp_help() {
+static void smtp_help() {
   smtp_out("214 " PROGNAME " home page: " HOMEPAGE);
 }
 
-void smtp_noop() {
+static void smtp_noop() {
   smtp_out("250 ok");
 }
 
-struct commands pop3commands[] = {
+static struct commands pop3commands[] = {
   { "stls", pop3_stls, 0 }
 , { "user", pop3_user, 0 }
 , { "pass", pop3_pass, 0 }
@@ -523,7 +523,7 @@ struct commands pop3commands[] = {
 , { 0, pop3_err_authoriz, 0 }
 };
 
-struct commands smtpcommands[] = {
+static struct commands smtpcommands[] = {
   { "starttls", smtp_starttls, 0 }
 , { "auth", smtp_auth, flush }
 , { "quit", smtp_quit, 0 }
@@ -544,13 +544,13 @@ struct protocol {
   struct commands *c;
 };
 
-struct protocol p[] = {
+static struct protocol p[] = {
   { "pop3", "",     pop3_format_capa, pop3_auth_error, pop3_greet, 1, pop3commands }
 , { "smtp", "250-", smtp_format_ehlo, smtp_auth_error, smtp_greet, 5, smtpcommands }
 , { 0,      "",     0,                die_usage,       die_usage,  0, 0            }
 };
 
-int control_readgreeting(char *p) {
+static int control_readgreeting(char *p) {
   stralloc file = {0};
   int retval;
 
@@ -567,7 +567,7 @@ int control_readgreeting(char *p) {
   return retval;
 }
 
-int control_readtimeout(char *p) {
+static int control_readtimeout(char *p) {
   stralloc file = {0};
 
   copys(&file,"control/timeout");
@@ -578,7 +578,7 @@ int control_readtimeout(char *p) {
   return control_readint(&timeout,file.s);
 }
 
-int control_readcapabilities(struct protocol p) {
+static int control_readcapabilities(struct protocol p) {
   stralloc file = {0};
   stralloc lines = {0};
   int linestart;
@@ -606,7 +606,7 @@ int control_readcapabilities(struct protocol p) {
   return 1;
 }
 
-void doprotocol(struct protocol p) {
+static void doprotocol(struct protocol p) {
   protocol_error = p.error;
 
   logstart(p.name);
