@@ -232,7 +232,7 @@ static void handle_response(int *exitcode,
   logit(logstamp,'4',proxy_response);
   //copys(&event_sa,"SCHMONZ: gonna free "); cats(&event_sa,event);
   //logit(logstamp,'5',&event_sa);
-  alloc_free(event);
+  //alloc_free(event);
   blank(response);
 }
 
