@@ -86,6 +86,7 @@ static const struct authup_error errors[] = {
 , { "authabrt","auth exchange cancelled",      "501", "5.0.0" }
 , { "starttls","TLS temporarily not available","454", "5.7.3" }
 , { "needtls", "Must start TLS first",         "530", "5.7.0" }
+, { 0,         "unknown or unspecified error", "421", "4.3.0" }
 };
 
 static void pop3_auth_error(struct authup_error ae) {
