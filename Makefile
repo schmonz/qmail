@@ -76,7 +76,7 @@ blacklist.lib: \
 tryblist.c compile load
 	( ( ./compile tryblist.c && ./load tryblist -lblacklist ) >/dev/null \
 	2>&1 \
-	&& echo -lblacklist || exit 0 ) > blacklist.lib
+	&& echo || exit 0 ) > blacklist.lib
 	rm -f tryblist.o tryblist
 
 check.h: \
@@ -889,7 +889,7 @@ hasblacklist.h: \
 tryblist.c compile load
 	( ( ./compile tryblist.c && ./load tryblist -lblacklist ) >/dev/null \
 	2>&1 \
-	&& echo \#define HASBLACKLIST 1 || exit 0 ) > hasblacklist.h
+	&& echo || exit 0 ) > hasblacklist.h
 	rm -f tryblist.o tryblist
 
 hasflock.h: \
