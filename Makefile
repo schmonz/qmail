@@ -4,9 +4,9 @@ SHELL=/bin/sh
 
 default: it
 
-ACCEPTUTILS_BIN=reup   authup   checknotroot \
+ACCEPTUTILS_BIN=authup   checknotroot \
 		fixsmtpio   qmail-qfilter-addtlsheader
-ACCEPTUTILS_MAN=reup.8 authup.8 checknotroot.8 \
+ACCEPTUTILS_MAN=authup.8 checknotroot.8 \
 		fixsmtpio.8 qmail-qfilter-addtlsheader.8
 
 acceptutils: \
@@ -51,25 +51,25 @@ acceptutils-tests
 	@prove -v -e '' ./test_fixsmtpio | grep -v '^ok'
 
 authup: \
-load authup.o auto_qmail.o acceptutils_base64.o acceptutils_pfilter.o \
-acceptutils_stralloc.o acceptutils_unistd.o acceptutils_ucspitls.o \
-commands.o control.o timeoutread.o timeoutwrite.o now.o \
-case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
-substdio.a error.a str.a fs.a \
+load authup.o auto_qmail.o commands.o control.o timeoutread.o timeoutwrite.o \
+now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
+substdio.a error.a str.a fs.a getopt.a \
+acceptutils_base64.o acceptutils_pfilter.o acceptutils_stralloc.o \
+acceptutils_unistd.o acceptutils_ucspitls.o \
 socket.lib blacklist.lib
 	./load authup auto_qmail.o acceptutils_base64.o acceptutils_pfilter.o \
 	acceptutils_stralloc.o acceptutils_unistd.o acceptutils_ucspitls.o \
 	commands.o control.o timeoutread.o timeoutwrite.o now.o \
 	case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
-	substdio.a error.a str.a fs.a \
+	substdio.a error.a str.a fs.a getopt.a \
 	`cat socket.lib` `cat blacklist.lib`
 
 authup.o: \
-compile99 authup.c commands.h fd.h sig.h stralloc.h gen_alloc.h \
-substdio.h alloc.h wait.h str.h byte.h now.h datetime.h fmt.h exit.h \
-readwrite.h timeoutread.h timeoutwrite.h acceptutils_base64.h case.h \
-env.h control.h error.h scan.h auto_qmail.h acceptutils_unistd.h \
-acceptutils_stralloc.h
+compile99 authup.c auto_qmail.h commands.h sig.h substdio.h wait.h \
+str.h byte.h now.h fmt.h scan.h readwrite.h timeoutread.h timeoutwrite.h \
+case.h env.h control.h error.h sgetopt.h \
+acceptutils_base64.h acceptutils_pfilter.h acceptutils_stralloc.h \
+acceptutils_ucspitls.h acceptutils_unistd.h 
 	./compile99 authup.c
 
 blacklist.lib: \
@@ -230,14 +230,6 @@ compile99 test_fixsmtpio.c fixsmtpio.h check.h
 libcheck.a: \
 conf-check
 	cp `head -1 conf-check`/lib/libcheck.a .
-
-reup: \
-load reup.o acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
-	./load reup acceptutils_unistd.o wait.a error.a getopt.a substdio.a env.a alloc.a str.a fs.a
-
-reup.o: \
-compile99 reup.c acceptutils_unistd.h env.h fmt.h readwrite.h scan.h sgetopt.h str.h substdio.h wait.h
-	./compile99 reup.c
 
 qmail-qfilter-addtlsheader: \
 load qmail-qfilter-addtlsheader.o date822fmt.o now.o \

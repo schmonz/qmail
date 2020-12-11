@@ -6,4 +6,3 @@ int unistd_fork(void);
 int unistd_getpid(void);
 int unistd_getuid(void);
 int unistd_pipe(int [2]);
-int unistd_sleep(int);

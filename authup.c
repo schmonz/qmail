@@ -1,16 +1,13 @@
 #include "auto_qmail.h"
 #include "commands.h"
-#include "fd.h"
 #include "sig.h"
 #include "substdio.h"
-#include "alloc.h"
 #include "wait.h"
 #include "str.h"
 #include "byte.h"
 #include "now.h"
 #include "fmt.h"
 #include "scan.h"
-#include "exit.h"
 #include "readwrite.h"
 #include "timeoutread.h"
 #include "timeoutwrite.h"
@@ -18,7 +15,7 @@
 #include "env.h"
 #include "control.h"
 #include "error.h"
-#include "open.h"
+#include "sgetopt.h"
 
 #include "acceptutils_base64.h"
 #include "acceptutils_pfilter.h"
@@ -36,12 +33,13 @@
 #define EXITCODE_FIXSMTPIO_TIMEOUT           16
 #define EXITCODE_FIXSMTPIO_PARSEFAIL         18
 
+static int auth_tries_remaining = 0;
+
 static int timeout = 1200;
 int tls_level = UCSPITLS_UNAVAILABLE;
 int in_tls = 0;
 
-void die()         { _exit( 1); }
-void die_noretry() { _exit(12); }
+void die()         { unistd_exit( 1); }
 
 int safewrite(int fd,char *buf,int len) {
   int r;
@@ -64,28 +62,30 @@ struct authup_error {
   char *message;
   char *smtpcode;
   char *smtperror;
-  int sleep;
-  void (*die)();
 };
 
-struct authup_error e[] = {
-  { "control", "unable to read controls",      "421", "4.3.0", 0, die_noretry }
-, { "nomem",   "out of memory",                "451", "4.3.0", 0, die_noretry }
-, { "alarm",   "timeout",                      "451", "4.4.2", 0, die_noretry }
-, { "pipe",    "unable to open pipe",          "454", "4.3.0", 0, die_noretry }
-, { "read",    "unable to read pipe",          "454", "4.3.0", 0, die_noretry }
-, { "write",   "unable to write pipe",         "454", "4.3.0", 0, die_noretry }
-, { "fork",    "unable to fork",               "454", "4.3.0", 0, die_noretry }
-, { "wait",    "unable to wait for child",     "454", "4.3.0", 0, die_noretry }
-, { "crash",   "aack, child crashed",          "454", "4.3.0", 0, die_noretry }
-, { "badauth", "authorization failed",         "535", "5.7.0", 5, die         }
-, { "noauth",  "auth type unimplemented",      "504", "5.5.1", 5, die         }
-, { "input",   "malformed auth input",         "501", "5.5.4", 5, die         }
-, { "authabrt","auth exchange cancelled",      "501", "5.0.0", 5, die         }
-, { "protocol","protocol exchange ended",      "501", "5.0.0", 0, die_noretry }
-, { "starttls","TLS temporarily not available","454", "5.7.3", 0, die         }
-, { "needtls", "Must start TLS first",         "530", "5.7.0", 0, die         }
-, { 0,         "unknown or unspecified error", "421", "4.3.0", 0, die_noretry }
+struct authup_error fatals[] = {
+  { "control", "unable to read controls",      "421", "4.3.0" }
+, { "nomem",   "out of memory",                "451", "4.3.0" }
+, { "alarm",   "timeout",                      "451", "4.4.2" }
+, { "pipe",    "unable to open pipe",          "454", "4.3.0" }
+, { "read",    "unable to read pipe",          "454", "4.3.0" }
+, { "write",   "unable to write pipe",         "454", "4.3.0" }
+, { "fork",    "unable to fork",               "454", "4.3.0" }
+, { "wait",    "unable to wait for child",     "454", "4.3.0" }
+, { "crash",   "aack, child crashed",          "454", "4.3.0" }
+, { "badauth", "authorization failed",         "535", "5.7.0" }
+, { "protocol","protocol exchange ended",      "501", "5.0.0" }
+, { 0,         "unknown or unspecified error", "421", "4.3.0" }
+};
+
+struct authup_error errors[] = {
+  { "badauth", "authorization failed",         "535", "5.7.0" }
+, { "noauth",  "auth type unimplemented",      "504", "5.5.1" }
+, { "input",   "malformed auth input",         "501", "5.5.4" }
+, { "authabrt","auth exchange cancelled",      "501", "5.0.0" }
+, { "starttls","TLS temporarily not available","454", "5.7.3" }
+, { "needtls", "Must start TLS first",         "530", "5.7.0" }
 };
 
 void pop3_auth_error(struct authup_error ae) {
@@ -105,27 +105,24 @@ void smtp_auth_error(struct authup_error ae) {
 
 void (*protocol_error)();
 
-void pop3_sleep(int s) { return; }
-void smtp_sleep(int s) { unistd_sleep(s); }
-void (*protocol_sleep)();
-
 char sserrbuf[SUBSTDIO_OUTSIZE];
 substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
 
-void errflush(char *s) {
-  substdio_puts(&sserr,PROGNAME ": ");
-  substdio_puts(&sserr,s);
-  substdio_putsflush(&sserr,"\n");
-}
-
 void authup_die(const char *name) {
   int i;
-  for (i = 0;e[i].name;++i) if (case_equals(e[i].name,name)) break;
-  protocol_sleep(e[i].sleep);
-  protocol_error(e[i]);
+  for (i = 0;fatals[i].name;++i) if (case_equals(fatals[i].name,name)) break;
+  protocol_error(fatals[i]);
   out("\r\n");
   flush();
-  e[i].die();
+  die();
+}
+
+void authup_err(const char *name) {
+  int i;
+  for (i = 0;errors[i].name;++i) if (case_equals(errors[i].name,name)) break;
+  protocol_error(errors[i]);
+  out("\r\n");
+  flush();
 }
 
 void die_nomem(const char *caller,const char *alloc_fn) {
@@ -141,7 +138,12 @@ void die_nomem(const char *caller,const char *alloc_fn) {
   authup_die("nomem");
 }
 
-void die_usage() { errflush("usage: " PROGNAME " <smtp|pop3> prog"); die(); }
+void die_usage() {
+  substdio_puts(&sserr,PROGNAME ": ");
+  substdio_puts(&sserr,"usage: " PROGNAME " [ -t tries ] <smtp|pop3> prog");
+  substdio_putsflush(&sserr,"\n");
+  die();
+}
 
 void smtp_err_authoriz() { smtp_out("530 " PROGNAME " authentication required (#5.7.1)"); }
 void pop3_err_authoriz() { pop3_err(PROGNAME " authorization first"); }
@@ -165,31 +167,86 @@ stralloc capabilities = {0};
 char **childargs;
 
 void pop3_okay() { out("+OK \r\n"); flush(); }
-void pop3_quit() { pop3_okay(); _exit(0); }
-void smtp_quit() { out("221 "); smtp_out(greeting.s); _exit(0); }
+void pop3_quit() { pop3_okay(); unistd_exit(0); }
+void smtp_quit() { out("221 "); smtp_out(greeting.s); unistd_exit(0); }
 
 stralloc username = {0};
+stralloc logname = {0};
 stralloc password = {0};
 stralloc timestamp = {0};
 
-void exit_according_to_child_exit(int exitcode) {
+static char *format_pid(unsigned int pid) {
+  char pidbuf[FMT_ULONG];
+  stralloc sa = {0};
+  if (!sa.len) {
+    int len = fmt_ulong(pidbuf,pid);
+    if (len) copyb(&sa,pidbuf,len);
+    append0(&sa);
+  }
+  return sa.s;
+}
+
+static char *authup_pid;
+
+static void logpass(int checkpassword_pid) {
+  substdio_puts(&sserr,PROGNAME);
+  substdio_puts(&sserr," ");
+  substdio_puts(&sserr,authup_pid);
+  substdio_puts(&sserr," checkpassword ");
+  substdio_puts(&sserr,format_pid(checkpassword_pid));
+  substdio_puts(&sserr," succeeded, child completed");
+  substdio_putsflush(&sserr,"\n");
+}
+
+static void logfail(int checkpassword_pid) {
+  substdio_puts(&sserr,PROGNAME);
+  substdio_puts(&sserr," ");
+  substdio_puts(&sserr,authup_pid);
+  substdio_puts(&sserr," checkpassword ");
+  substdio_puts(&sserr,format_pid(checkpassword_pid));
+  substdio_puts(&sserr," login failed, ");
+  substdio_puts(&sserr,format_pid(auth_tries_remaining));
+  substdio_puts(&sserr," remaining");
+  substdio_putsflush(&sserr,"\n");
+}
+
+static void logstart(char *protocol) {
+  substdio_puts(&sserr,PROGNAME);
+  substdio_puts(&sserr," ");
+  substdio_puts(&sserr,authup_pid);
+  substdio_puts(&sserr," protocol ");
+  substdio_puts(&sserr,protocol);
+  substdio_putsflush(&sserr,"\n");
+}
+
+void exit_according_to_child_exit(int exitcode,int child) {
   switch (exitcode) {
     case EXITCODE_CHECKPASSWORD_UNACCEPTABLE:
     case EXITCODE_CHECKPASSWORD_MISUSED:
     case EXITCODE_CHECKPASSWORD_TEMPFAIL:
-      pfilter_notify(1, 0, PROGNAME); authup_die("badauth");
+      logfail(child);
+      pfilter_notify(1, 0, PROGNAME);
+      if (auth_tries_remaining) return authup_err("badauth");
+      authup_die("badauth");
     case EXITCODE_FIXSMTPIO_TIMEOUT:
       authup_die("alarm");
     case EXITCODE_FIXSMTPIO_PARSEFAIL:
       authup_die("control");
-    default:
-      pfilter_notify(0, 0, PROGNAME); _exit(0);
   }
+
+  logpass(child);
+  pfilter_notify(0, 0, PROGNAME);
+  unistd_exit(exitcode);
 }
 
-void logtry(char *username) {
-  substdio_puts(&sserr,PROGNAME ": login attempt by ");
-  substdio_puts(&sserr,username);
+void logtry(int checkpassword_pid) {
+  substdio_puts(&sserr,PROGNAME);
+  substdio_puts(&sserr," ");
+  substdio_puts(&sserr,authup_pid);
+  substdio_puts(&sserr," checkpassword ");
+  substdio_puts(&sserr,format_pid(checkpassword_pid));
+  substdio_puts(&sserr," login attempt for ");
+  substdio_puts(&sserr,logname.s);
   substdio_putsflush(&sserr,"\n");
 }
 
@@ -199,6 +256,10 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   int pi[2];
   char upbuf[SUBSTDIO_OUTSIZE];
   substdio ssup;
+
+  copy(&logname,username); append0(&logname);
+
+  auth_tries_remaining--;
 
   unistd_close(3);
   if (unistd_pipe(pi) == -1) authup_die("pipe");
@@ -210,7 +271,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
       unistd_close(pi[1]);
       sig_pipedefault();
       append0(username);
-      logtry(username->s);
+      logtry(unistd_getpid());
       if (!env_put2("AUTHUP_USER",username->s)) authup_die("nomem");
       unistd_execvp(*childargs,childargs);
       authup_die("fork");
@@ -237,7 +298,7 @@ void checkpassword(stralloc *username,stralloc *password,stralloc *timestamp) {
   if (wait_pid(&wstat,child) == -1) authup_die("wait");
   if (wait_crashed(wstat)) authup_die("crash");
 
-  exit_according_to_child_exit(wait_exitcode(wstat));
+  exit_according_to_child_exit(wait_exitcode(wstat),child);
 }
 
 static char unique[FMT_ULONG + FMT_ULONG + 3];
@@ -276,7 +337,7 @@ void pop3_stls(char *arg) {
   out("+OK starting TLS negotiation\r\n");
   flush();
 
-  if (!tls_init() || !tls_info(die_nomem)) authup_die("starttls");
+  if (!tls_init() || !tls_info(die_nomem)) return authup_err("starttls");
   /* reset state */
   seenuser = 0;
 
@@ -284,7 +345,7 @@ void pop3_stls(char *arg) {
 }
 
 void pop3_user(char *arg) {
-  if (tls_level >= UCSPITLS_REQUIRED && !in_tls) authup_die("needtls");
+  if (tls_level >= UCSPITLS_REQUIRED && !in_tls) return authup_err("needtls");
   if (!*arg) { pop3_err_syntax(); return; }
   pop3_okay();
   seenuser = 1;
@@ -346,7 +407,7 @@ void smtp_starttls() {
   if (tls_level < UCSPITLS_AVAILABLE || in_tls) return smtp_out("502 unimplemented (#5.5.1)");
   smtp_out("220 Ready to start TLS (#5.7.0)");
 
-  if (!tls_init() || !tls_info(die_nomem)) authup_die("starttls");
+  if (!tls_init() || !tls_info(die_nomem)) return authup_err("starttls");
   /* reset state */
   ssin.p = 0;
 
@@ -371,8 +432,8 @@ void smtp_authgetl() {
   if (authin.len > 0) if (authin.s[authin.len - 1] == '\r') --authin.len;
   authin.s[authin.len] = 0;
 
-  if (*authin.s == '*' && *(authin.s + 1) == 0) authup_die("authabrt");
-  if (authin.len == 0) authup_die("input");
+  if (*authin.s == '*' && *(authin.s + 1) == 0) return authup_err("authabrt");
+  if (authin.len == 0) return authup_err("input");
 }
 
 static int b64decode2(char *c,int i,stralloc *sa) {
@@ -383,22 +444,22 @@ void auth_login(char *arg) {
   int r;
 
   if (*arg) {
-    if ((r = b64decode2(arg,str_len(arg),&username)) == 1) authup_die("input");
+    if ((r = b64decode2(arg,str_len(arg),&username)) == 1) return authup_err("input");
   }
   else {
     smtp_out("334 VXNlcm5hbWU6"); /* Username: */
     smtp_authgetl();
-    if ((r = b64decode2(authin.s,authin.len,&username)) == 1) authup_die("input");
+    if ((r = b64decode2(authin.s,authin.len,&username)) == 1) return authup_err("input");
   }
   if (r == -1) authup_die("nomem");
 
   smtp_out("334 UGFzc3dvcmQ6"); /* Password: */
 
   smtp_authgetl();
-  if ((r = b64decode2(authin.s,authin.len,&password)) == 1) authup_die("input");
+  if ((r = b64decode2(authin.s,authin.len,&password)) == 1) return authup_err("input");
   if (r == -1) authup_die("nomem");
 
-  if (!username.len || !password.len) authup_die("input");
+  if (!username.len || !password.len) return authup_err("input");
   checkpassword(&username,&password,&timestamp);
 }
 
@@ -408,12 +469,12 @@ void auth_plain(char *arg) {
   int r, id = 0;
 
   if (*arg) {
-    if ((r = b64decode2(arg,str_len(arg),&resp)) == 1) authup_die("input");
+    if ((r = b64decode2(arg,str_len(arg),&resp)) == 1) return authup_err("input");
   }
   else {
     smtp_out("334 ");
     smtp_authgetl();
-    if ((r = b64decode2(authin.s,authin.len,&resp)) == 1) authup_die("input");
+    if ((r = b64decode2(authin.s,authin.len,&resp)) == 1) return authup_err("input");
   }
   if (r == -1) authup_die("nomem");
   append0(&resp);
@@ -424,7 +485,7 @@ void auth_plain(char *arg) {
   if (resp.len > id + username.len + 2)
     copys(&password,resp.s + id + username.len + 2);
 
-  if (!username.len || !password.len) authup_die("input");
+  if (!username.len || !password.len) return authup_err("input");
   checkpassword(&username,&password,&timestamp);
 }
 
@@ -432,16 +493,16 @@ void smtp_auth(char *arg) {
   int i;
   char *cmd = arg;
 
-  if (tls_level >= UCSPITLS_REQUIRED && !in_tls) authup_die("needtls");
+  if (tls_level >= UCSPITLS_REQUIRED && !in_tls) return authup_err("needtls");
 
   i = str_chr(cmd,' ');
   arg = cmd + i;
   while (*arg == ' ') ++arg;
   cmd[i] = 0;
 
-  if (case_equals("login",cmd)) auth_login(arg);
-  if (case_equals("plain",cmd)) auth_plain(arg);
-  authup_die("noauth");
+  if (case_equals("login",cmd)) return auth_login(arg);
+  if (case_equals("plain",cmd)) return auth_plain(arg);
+  return authup_err("noauth");
 }
 
 void smtp_help() {
@@ -478,15 +539,15 @@ struct protocol {
   char *cap_prefix;
   void (*cap_format_response)();
   void (*error)();
-  void (*sleep)();
   void (*greet)();
+  int auth_tries_remaining;
   struct commands *c;
 };
 
 struct protocol p[] = {
-  { "pop3", "",     pop3_format_capa, pop3_auth_error, pop3_sleep, pop3_greet, pop3commands }
-, { "smtp", "250-", smtp_format_ehlo, smtp_auth_error, smtp_sleep, smtp_greet, smtpcommands }
-, { 0,      "",     0,                die_usage,       0,     die_usage,  0            }
+  { "pop3", "",     pop3_format_capa, pop3_auth_error, pop3_greet, 1, pop3commands }
+, { "smtp", "250-", smtp_format_ehlo, smtp_auth_error, smtp_greet, 5, smtpcommands }
+, { 0,      "",     0,                die_usage,       die_usage,  0, 0            }
 };
 
 int control_readgreeting(char *p) {
@@ -545,32 +606,25 @@ int control_readcapabilities(struct protocol p) {
   return 1;
 }
 
-int should_greet() {
-  char *x;
-  int r;
-
-  if (!(x = env_get("REUP"))) return 1;
-  if (!scan_ulong(x,&r)) return 1;
-  if (r > 1) return 0;
-  return 1;
-}
-
 void doprotocol(struct protocol p) {
   protocol_error = p.error;
-  protocol_sleep = p.sleep;
 
+  logstart(p.name);
+
+  if (auth_tries_remaining == 0) auth_tries_remaining = p.auth_tries_remaining;
   if (unistd_chdir(auto_qmail) == -1) authup_die("control");
   if (control_init() == -1) authup_die("control");
   if (control_readgreeting(p.name) == -1) authup_die("control");
   if (control_readtimeout(p.name) == -1) authup_die("control");
   if (control_readcapabilities(p) == -1) authup_die("control");
-  if (should_greet()) p.greet();
+  p.greet();
   commands(&ssin,p.c);
   authup_die("protocol");
 }
 
 int main(int argc,char **argv) {
   char *protocol;
+  int opt;
   int i;
 
   sig_alarmcatch(die);
@@ -578,13 +632,30 @@ int main(int argc,char **argv) {
 
   stralloc_set_die(die_nomem);
 
-  protocol = argv[1];
+  auth_tries_remaining = 0;
+  while ((opt = getopt(argc,argv,"t:")) != opteof) {
+    switch (opt) {
+      case 't':
+        if (!scan_ulong(optarg,&auth_tries_remaining)) die_usage();
+        break;
+      default:
+        die_usage();
+    }
+  }
+  argc -= optind;
+  argv += optind;
+
+  if (!*argv) die_usage();
+
+  protocol = argv[0];
   if (!protocol) die_usage();
 
-  childargs = argv + 2;
+  childargs = argv + 1;
   if (!*childargs) die_usage();
 
   tls_level = ucspitls_level_configured();
+
+  authup_pid = format_pid(unistd_getpid());
 
   for (i = 0; p[i].name; ++i)
     if (case_equals(p[i].name,protocol))

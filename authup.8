@@ -1,8 +1,11 @@
-.TH AUTHUP 8 2018-12-01
+.TH AUTHUP 8 2020-12-11
 .SH NAME
 authup \- offer SMTP or POP3 authentication
 .SH SYNOPSIS
 .B authup
+[
+.B \-t \fItries
+]
 .I protocol
 .I checkpassword
 .I prog
@@ -10,56 +13,59 @@ authup \- offer SMTP or POP3 authentication
 .B authup
 speaks just enough SMTP (AUTH LOGIN or PLAIN)
 or POP3 (USER-PASS)
-to parse a username and password.
-It then runs
-.I checkpassword
-via the
-.B checkpassword
-interface.
+to parse a username and password and pass them to
+.IR checkpassword .
 .B authup
 is most commonly invoked as root so
-.B checkpassword
+.I checkpassword
 can change to the UID of the authenticated user before running
-.BR ofmipd ,
-.BR qmail-smtpd ,
-or
-.BR qmail-pop3d .
-
+.IR prog .
+.P
+Common combinations of 
+.I protocol
+and
+.IR prog :
+.TP 5
+.B smtp
+and
+.B "checknotroot fixsmtpio ofmipd"
+.TP 5
+.B pop3
+and
+.B "checknotroot qmail-pop3d"
+.P
 .B authup
 waits for
 .I checkpassword
 and
 .I prog
-to finish.
-It prints an error message if
-.I checkpassword
-or
-.IR prog
-crashes or exits nonzero.
-If authentication failed, and
-.I protocol
-is SMTP, it waits 5 seconds
-before printing the message.
-
+to finish, and prints an error message if either of them crashes or exits nonzero.
+.SH "OPTIONS"
+.TP
+.B \-t \fItries
+Disconnect after
+.I tries
+failed authentication attempts.
+Default: 5 for SMTP, 1 for POP3.
 .SH "ENVIRONMENT VARIABLES"
-If
-.B UCSPITLS
-is set to "!",
-.B authup
-will both offer TLS and refuse to authenticate without it.
-.B authup
-must be running under
-.BR "sslserver -n" ,
+When running under
+.B "sslserver -n"
+or
 .BR "s6-ucspitlsd" ,
-or another program that implements
-.BR ucspi-tls(2) .
-
+.B authup
+can offer TLS.
+Set
+.B UCSPITLS
+to the special value
+.B !
+to require that clients negotiate TLS before authenticating.
+.P
 If
 .B DISABLETLS
-is set,
+is set, the presence and value of
 .B UCSPITLS
-will not be honored.
-
+will be ignored.
+.P
 If
 .B AUTHUP_SASL_BROKEN_CLIENTS
 is set,
@@ -67,12 +73,12 @@ is set,
 will additionally advertise AUTH support in a second, non-standard way
 to interoperate with Outlook Express 4, Exchange 5,
 and other SMTP clients that implement an obsolete version of the AUTH command.
-
+.P
 If authentication succeeds,
 .IR prog 's
 environment will contain the username in
 .BR AUTHUP_USER .
-
+.P
 Since
 .I prog
 will run with the privileges of the authenticated user, so will
@@ -147,7 +153,6 @@ See
 .SH "AUTHOR"
 .B Amitai Schleier <schmonz-web-acceptutils@schmonz.com>
 .SH "SEE ALSO"
-reup(8),
 checknotroot(8),
 fixsmtpio(8),
 sslserver(1),

@@ -17,5 +17,3 @@ int unistd_getpid(void) { return getpid(); }
 int unistd_getuid(void) { return getuid(); }
 
 int unistd_pipe(int fildes[2]) { return pipe(fildes); }
-
-int unistd_sleep(int seconds) { return sleep(seconds); }

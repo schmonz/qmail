@@ -1,4 +1,4 @@
-.TH FIXSMTPIO 8 2018-12-01
+.TH FIXSMTPIO 8 2020-12-11
 .SH NAME
 fixsmtpio \- filter SMTP I/O and exit status
 .SH SYNOPSIS
@@ -8,39 +8,44 @@ fixsmtpio \- filter SMTP I/O and exit status
 .B fixsmtpio
 is a proxy for changing how an SMTP service behaves without changing its code.
 By default, with no configuration, it changes almost no observable behavior.
-In a typical configuration, it makes
-.B ofmipd
-or
-.B qmail-smtpd
-behave as though they were designed to run under
-.B authup
-by adjusting certain
+.P
+In a typical configuration,
+.B fixsmtpio
+enables TLS for
+.BR qmail-smtpd ,
+modernizes responses from
+.BR ofmipd ,
+and makes both programs behave as though they were designed to run under
+.BR authup(8) .
+.B fixsmtpio
+accomplishes this by adjusting certain
 client requests,
 server responses,
 and exit codes.
 The
 .B "EXIT CODES"
-section is important enough to be all the way up here.
+section is important enough to be all the way up here:
 .SH "EXIT CODES"
-.B authup
-expects
 .B fixsmtpio
-to exit 18
-when
+exits 18 when
 .I control/fixsmtpio
 exists and fails to parse.
-.B fixsmtpio
-does so.
-
+.P
+Part of
+.BR fixsmtpio 's
+job is to return distinct exit codes for distinct conditions.
+For instance,
 .B authup
-expects distinct exit codes for distinct conditions.
-Since
+needs to distinguish
 .B checkpassword
-exits 1 when a password is unacceptable, and
+exiting 1 (to reject a password)
+from
 .B ofmipd
-and
+or
 .B qmail-smtpd
-also exit 1 when any sort of error occurs,
+exiting 1 (on any error).
+When running under
+.BR authup ,
 .B fixsmtpio
 can and should be configured to exit uniquely for each SMTP condition:
 .TP 3
@@ -58,13 +63,6 @@ and
 when the server receives EOF from the client.
 .SH "ENVIRONMENT VARIABLES"
 When running under
-.BR authup ,
-the authenticated user is available as
-.BR AUTHUP_USER .
-Many typical filter rules operate only in the presence of this variable.
-Other rules apply equally well to public SMTP service.
-
-When running under
 .B "sslserver -n"
 or
 .BR "s6-ucspitlsd" ,
@@ -72,30 +70,31 @@ or
 can offer TLS.
 Set
 .B UCSPITLS
-to the empty string to enable opportunistic server-to-server encryption.
-(The special value
-.B "!"
-requires peers to negotiate TLS before doing much of anything else --
-not likely useful for public SMTP service.)
-
-If TLS has been negotiated,
-.B fixsmtpio
-sets
-.BR FIXSMTPIOTLS .
-
+to the empty string to permit peers to negotiate TLS before transferring messages.
+If the peer has negotiated TLS,
+.B FIXSMTPIOTLS
+will be set for use by filter rules.
+.P
+When running under
+.BR authup ,
+.B AUTHUP_USER
+will be set for use by filter rules
+(such as those recommended in
+.BR "EXIT CODES" ).
+.P
 If
 .B DISABLETLS
 is set, the presence and value of
 .B UCSPITLS
 will be ignored.
-
+.P
 If
 .B NOFIXSMTPIO
 is set,
 .B fixsmtpio
 will simply replace itself with
 .IR prog .
-
+.P
 If
 .B FIXSMTPIODEBUG
 is set,
@@ -112,12 +111,11 @@ Lines are prefixed like so:
 4: Response sent to client
 .TP 3
 D: DATA received from client and sent to server as is
-
 .SH "FILTER RULES"
 Filter rules follow the format:
-
+.P
 .I [env]:event:[request-prepend]:response-line-glob:[exitcode]:[response]
-
+.P
 (Values other than
 .I response
 may not contain ":", the field separator.)
@@ -179,7 +177,7 @@ causes the response to be sent as is.
 computes the replacement string via an event-specific internal routine.
 (If no corresponding routine exists,
 .B fixsmtpio
-will refuse to run.)
+
 Routines exist for
 .TP 10
 .BR HELP :
@@ -206,14 +204,14 @@ and brings
 behavior up to par.
 .TP 0
 Rules are applied in the order written. For instance, if two rules
-match, the later rule modifies the response returned by the
+match, the later rule re-modifies the response returned by the
 earlier rule.
 If multiple matching rules for an event set
 .BR exitcode ,
 the last one wins.
-
+.P
 Not all rules (alone or in combination) make practical sense.
-An earlier rule can cause a later one to start (or stop) matching.
+An earlier rule can cause a later one to start or stop matching.
 Keep your configuration as simple as possible, and test it well.
 .SH "CONTROL FILES"
 .TP 5
@@ -235,11 +233,10 @@ The first word of
 should be the current host's name.
 .SH "COMPATIBILITY"
 .B fixsmtpio
-handles STARTTLS internally, terminating TLS in order to continue
-observing requests and responses and do its job.
-If you rely on STARTTLS support directly in
+must terminate TLS in order to observe and modify requests and responses.
+If you rely on
 .B qmail-smtpd
-via a patch,
+being patched to support STARTTLS directly,
 please share your use case with the author.
 .SH "EXAMPLES"
 See

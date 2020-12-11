@@ -396,8 +396,6 @@ authup
 authup.o
 checknotroot
 checknotroot.o
-reup
-reup.o
 fixsmtpio
 fixsmtpio.o
 test_fixsmtpio
