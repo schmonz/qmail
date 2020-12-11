@@ -51,20 +51,20 @@ static int safewrite(int fd,char *buf,int len) {
 static char ssoutbuf[SUBSTDIO_OUTSIZE];
 static substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
 
-static void out(char *s) { substdio_puts(&ssout,s); }
+static void out(const char *s) { substdio_puts(&ssout,s); }
 static void flush() { substdio_flush(&ssout); }
 
-static void pop3_err(char *s) { out("-ERR "); out(s); out("\r\n"); flush(); }
-static void smtp_out(char *s) {               out(s); out("\r\n"); flush(); }
+static void pop3_err(const char *s) { out("-ERR "); out(s); out("\r\n"); flush(); }
+static void smtp_out(const char *s) {               out(s); out("\r\n"); flush(); }
 
 struct authup_error {
-  char *name;
-  char *message;
-  char *smtpcode;
-  char *smtperror;
+  const char *name;
+  const char *message;
+  const char *smtpcode;
+  const char *smtperror;
 };
 
-static struct authup_error fatals[] = {
+static const struct authup_error fatals[] = {
   { "control", "unable to read controls",      "421", "4.3.0" }
 , { "nomem",   "out of memory",                "451", "4.3.0" }
 , { "alarm",   "timeout",                      "451", "4.4.2" }
@@ -79,7 +79,7 @@ static struct authup_error fatals[] = {
 , { 0,         "unknown or unspecified error", "421", "4.3.0" }
 };
 
-static struct authup_error errors[] = {
+static const struct authup_error errors[] = {
   { "badauth", "authorization failed",         "535", "5.7.0" }
 , { "noauth",  "auth type unimplemented",      "504", "5.5.1" }
 , { "input",   "malformed auth input",         "501", "5.5.4" }
@@ -89,8 +89,7 @@ static struct authup_error errors[] = {
 };
 
 static void pop3_auth_error(struct authup_error ae) {
-  out("-ERR");
-  out(" " PROGNAME " ");
+  out("-ERR " PROGNAME " ");
   out(ae.message);
 }
 
