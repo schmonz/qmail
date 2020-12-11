@@ -204,7 +204,7 @@ static void logfail(int checkpassword_pid) {
   substdio_puts(&sserr,authup_pid);
   substdio_puts(&sserr," checkpassword ");
   substdio_puts(&sserr,format_pid(checkpassword_pid));
-  substdio_puts(&sserr," login failed, ");
+  substdio_puts(&sserr," failed, ");
   substdio_puts(&sserr,format_pid(auth_tries_remaining));
   substdio_puts(&sserr," remaining");
   substdio_putsflush(&sserr,"\n");
@@ -225,7 +225,7 @@ void exit_according_to_child_exit(int exitcode,int child) {
     case EXITCODE_CHECKPASSWORD_MISUSED:
     case EXITCODE_CHECKPASSWORD_TEMPFAIL:
       logfail(child);
-      pfilter_notify(1, 0, PROGNAME);
+      pfilter_notify(1, 0, PROGNAME, authup_pid);
       if (auth_tries_remaining) return authup_err("badauth");
       authup_die("badauth");
     case EXITCODE_FIXSMTPIO_TIMEOUT:
@@ -235,7 +235,7 @@ void exit_according_to_child_exit(int exitcode,int child) {
   }
 
   logpass(child);
-  pfilter_notify(0, 0, PROGNAME);
+  pfilter_notify(0, 0, PROGNAME, authup_pid);
   unistd_exit(exitcode);
 }
 
@@ -245,7 +245,7 @@ void logtry(int checkpassword_pid) {
   substdio_puts(&sserr,authup_pid);
   substdio_puts(&sserr," checkpassword ");
   substdio_puts(&sserr,format_pid(checkpassword_pid));
-  substdio_puts(&sserr," login attempt for ");
+  substdio_puts(&sserr," attempt for ");
   substdio_puts(&sserr,logname.s);
   substdio_putsflush(&sserr,"\n");
 }

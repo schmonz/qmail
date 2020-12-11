@@ -53,7 +53,7 @@ acceptutils-tests
 authup: \
 load authup.o auto_qmail.o commands.o control.o timeoutread.o timeoutwrite.o \
 now.o case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
-substdio.a error.a str.a fs.a getopt.a \
+getopt.a substdio.a error.a str.a fs.a \
 acceptutils_base64.o acceptutils_pfilter.o acceptutils_stralloc.o \
 acceptutils_unistd.o acceptutils_ucspitls.o \
 socket.lib blacklist.lib
@@ -61,7 +61,7 @@ socket.lib blacklist.lib
 	acceptutils_stralloc.o acceptutils_unistd.o acceptutils_ucspitls.o \
 	commands.o control.o timeoutread.o timeoutwrite.o now.o \
 	case.a env.a fd.a getln.a open.a sig.a wait.a stralloc.a alloc.a \
-	substdio.a error.a str.a fs.a getopt.a \
+	getopt.a substdio.a error.a str.a fs.a \
 	`cat socket.lib` `cat blacklist.lib`
 
 authup.o: \

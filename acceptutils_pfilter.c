@@ -43,15 +43,15 @@ static void fill_sockaddr_info(const struct sockaddr_storage *ss,socklen_t *slen
     fill_sockaddr_maybe_ip4(ss,slen);
 }
 
-void pfilter_notify(int action,int fd,const char *msg) {
+void pfilter_notify(int action,int fd,const char *msg,const char *pidstr) {
   const struct sockaddr_storage ss;
   socklen_t slen = sizeof(ss);
 
   fill_sockaddr_info(&ss,&slen);
   if (0 == blacklist_sa(action, fd, (void *)&ss, slen, msg))
-    fprintf(stderr,"%s: blacklist_sa(%d, %d...)\n", msg, action, fd);
+    fprintf(stderr,"%s %s blacklist_sa(%d, %d...)\n", msg, pidstr, action, fd);
   else
-    fprintf(stderr,"%s: blacklist_sa(%d, %d...) failed with errno %d\n", msg, action, fd, errno);
+    fprintf(stderr,"%s %s blacklist_sa(%d, %d...) failed with errno %d\n", msg, pidstr, action, fd, errno);
 }
 
 #else

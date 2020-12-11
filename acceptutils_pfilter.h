@@ -1,1 +1,1 @@
-void pfilter_notify(int,int,const char *);
+void pfilter_notify(int,int,const char *,const char *);
