@@ -130,7 +130,7 @@ void construct_proxy_response(stralloc *proxy_response,
     copys(proxy_response,"530 Must start TLS first (#5.7.0)\r\n");
   else
     copy(proxy_response,server_response);
-    munge_response(proxy_response,proxy_exitcode,greeting,rules,event,tls_level,in_tls);
+  munge_response(proxy_response,proxy_exitcode,greeting,rules,event,tls_level,in_tls);
 }
 
 int get_one(const char *caller,stralloc *one,stralloc *pile,int (*fn)(stralloc *)) {
