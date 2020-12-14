@@ -1,2 +1,2 @@
 void eventq_put(const char *);
-char *eventq_get(void);
+const char *eventq_get(void);

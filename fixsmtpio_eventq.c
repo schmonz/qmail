@@ -40,19 +40,20 @@ void eventq_put(const char *event) {
   node_t *e;
   eventq_init();
   e = eventq_alloc_node();
-  e->event = event;
+  e->event = eventq_alloc_event(event);
+  str_copy(e->event,event);
   TAILQ_INSERT_TAIL(&head, e, nodes);
 }
 
-char *eventq_get() {
-  char *event;
+const char *eventq_get() {
+  const char *event;
   node_t *e;
   if (TAILQ_EMPTY(&head)) {
-    event = EVENT_TIMEOUT;
+    event = eventq_alloc_event(EVENT_TIMEOUT);
+    str_copy(event,EVENT_TIMEOUT);
   } else {
     e = TAILQ_FIRST(&head);
-    event = eventq_alloc_event(e->event);
-    str_copy(event,e->event);
+    event = e->event;
     TAILQ_REMOVE(&head, e, nodes);
     alloc_free(e);
   }

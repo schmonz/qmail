@@ -58,7 +58,7 @@ void parse_client_request(stralloc *verb,stralloc *arg,stralloc *request) {
     verb_and_arg(verb,arg,++pos,request);
 }
 
-static int need_starttls_first(int tls_level,int in_tls,char *event) {
+static int need_starttls_first(int tls_level,int in_tls,const char *event) {
   return tls_level >= UCSPITLS_REQUIRED
     && !in_tls
     && !event_matches(EVENT_GREETING,event)
@@ -72,7 +72,7 @@ static int need_starttls_first(int tls_level,int in_tls,char *event) {
 
 void construct_proxy_request(stralloc *proxy_request,
                              filter_rule *rules,
-                             char *event,stralloc *arg,
+                             const char *event,stralloc *arg,
                              stralloc *client_request,
                              int tls_level,
                              int *want_tls,int in_tls,
@@ -105,7 +105,7 @@ static int accepted_data(stralloc *response) { return starts(response,"354 "); }
 void construct_proxy_response(stralloc *proxy_response,
                               stralloc *greeting,
                               filter_rule *rules,
-                              char *event,
+                              const char *event,
                               stralloc *server_response,
                               int *proxy_exitcode,
                               int tls_level,
@@ -218,8 +218,7 @@ static void handle_response(int *exitcode,
                             int *want_data,int *in_data,
                             filter_rule *rules,stralloc *greeting,
                             stralloc *logstamp) {
-  char *event;
-  //stralloc event_sa = {0};
+  const char *event;
   logit(logstamp,'3',response);
   event = eventq_get();
   construct_proxy_response(proxy_response,
@@ -230,9 +229,7 @@ static void handle_response(int *exitcode,
                            want_tls,in_tls,
                            want_data,in_data);
   logit(logstamp,'4',proxy_response);
-  //copys(&event_sa,"SCHMONZ: gonna free "); cats(&event_sa,event);
-  //logit(logstamp,'5',&event_sa);
-  //alloc_free(event);
+  alloc_free(event);
   blank(response);
 }
 
