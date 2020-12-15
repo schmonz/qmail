@@ -1,4 +1,4 @@
-.TH QMAIL-RCPTCHECK 8 2018-12-30
+.TH QMAIL-RCPTCHECK 8 2020-12-15
 .SH NAME
 qmail-rcptcheck \- run a sequence of sender/recipient checks
 .SH SYNOPSIS
@@ -30,17 +30,17 @@ set
 .B RCPTCHECK
 to
 .I /var/qmail/bin/qmail-rcptcheck
-(typically in your
+in your
 .BR tcpserver 's
-tcprules).
+tcprules (and restart).
 .PP
-To write a check:
+To perform checks, inspect these variables:
 .TP 5
 .I SENDER
-contains the envelope sender.
+Contains the envelope sender.
 .TP 5
 .I RECIPIENT
-contains the envelope recipient.
+Contains the envelope recipient.
 .SH "CONTROL FILES"
 To run under
 .BR qmail-spp :
@@ -55,18 +55,33 @@ To run under
 .BR RCPTCHECK :
 none needed.
 .PP
-To control
+In either case, to control
 .BR qmail-rcptcheck :
 .TP 5
 .I rcptchecks
-Sequence of checks (one per line).
+Sequence of checks.
+.P
+RCPTCHECK-compatible programs must be listed one per line,
+with no arguments.
+Changing the sequence takes effect immediately (no restart required).
+If the control file is empty,
+contains only comments,
+or doesn't exist,
+messages are not rejected.
+.P
+To test your configuration, as
+.IR root ,
+in
+.IR /var/qmail :
+.P
+# env SENDER=a RECIPIENT=b setuidgid qmaild qmail-rcptcheck; echo $?
 .SH "EXIT CODES"
 As defined by the
 .B RCPTCHECK
 interface,
 .I 120
 is reserved.
-Programs should exit
+Recipient-checking programs should exit
 .I 111
 when unable to verify,
 .I 100
@@ -78,6 +93,12 @@ programs can run unmodified under
 .B qmail-spp
 simply by running them from
 .BR qmail-rcptcheck .
+.SH "ERRORS"
+Some typical SMTP errors and their likely causes:
+.TP 5
+.I "421 unable to execute recipient check (#4.3.0)"
+The control file lists a program that doesn't exist
+or otherwise can't be executed.
 .SH "EXAMPLES"
 See
 .IR https://schmonz.com/qmail/rejectutils .
