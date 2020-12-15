@@ -1375,7 +1375,7 @@ str.a alloc.a
 	str.a alloc.a
 
 qmail-qfilter-viruscan.o: \
-compile qmail-qfilter-viruscan.c viruscan.h
+compile qmail-qfilter-viruscan.c viruscan.h substdio.h
 	./compile qmail-qfilter-viruscan.c
 
 qmail-qmqpc: \
