@@ -5,12 +5,12 @@ qmail-rcptcheck \- run a sequence of sender/recipient checks
 .B qmail-rcptcheck
 .SH DESCRIPTION
 .B qmail-rcptcheck
-runs an administrator-defined sequence of filters
-on SMTP envelope senders and recipients.
-Filters must adhere to the
+runs an administrator-defined sequence of programs
+to check SMTP envelope senders and recipients.
+Checks must adhere to the
 .B RCPTCHECK
 interface.
-If any filter rejects, the message is rejected.
+If any check rejects, the message is rejected.
 .PP
 .B qmail-rcptcheck
 is most commonly invoked from
@@ -34,7 +34,7 @@ to
 .BR tcpserver 's
 tcprules).
 .PP
-To write a filter:
+To write a check:
 .TP 5
 .I SENDER
 contains the envelope sender.
@@ -59,14 +59,14 @@ To control
 .BR qmail-rcptcheck :
 .TP 5
 .I rcptchecks
-Sequence of filter programs (one per line).
+Sequence of checks (one per line).
 .SH "EXIT CODES"
 As defined by the
 .B RCPTCHECK
 interface,
 .I 120
 is reserved.
-Filters should exit
+Programs should exit
 .I 111
 when unable to verify,
 .I 100
@@ -74,7 +74,7 @@ to reject, or
 any other non-reserved code to accept.
 .SH COMPATIBILITY
 .BR RCPTCHECK -compatible
-filter programs can run unmodified under
+programs can run unmodified under
 .B qmail-spp
 simply by running them from
 .BR qmail-rcptcheck .
