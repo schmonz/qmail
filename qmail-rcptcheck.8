@@ -32,7 +32,7 @@ to
 .I /var/qmail/bin/qmail-rcptcheck
 in your
 .BR tcpserver 's
-tcprules (and restart).
+tcprules (and rebuild the CDB).
 .PP
 To perform checks, inspect these variables:
 .TP 5
@@ -63,7 +63,7 @@ Sequence of checks.
 .P
 RCPTCHECK-compatible programs must be listed one per line,
 with no arguments.
-Changing the sequence takes effect immediately (no restart required).
+Changing the sequence takes effect immediately, no restart required.
 If the control file is empty,
 contains only comments,
 or doesn't exist,

@@ -35,14 +35,13 @@ to
 .I /var/qmail/bin/qmail-qfilter-queue
 in your
 .BR tcpserver 's
-tcprules (and restart).
+tcprules (and rebuild the CDB).
 .PP
 To have
 .B qmail-qfilter-queue
 filter messages before they reach the queue, also set
 .B QMAILQUEUEFILTERS
-to the relevant control file (and restart
-.BR tcpserver ).
+to the relevant control file (and rebuild the CDB).
 .SH "CONTROL FILES"
 .B qmail-qfilter-queue
 expects a sequence of filter programs.
@@ -57,7 +56,7 @@ For submitted messages.
 .P
 Filter programs must be listed one per line,
 with no arguments.
-Changing the sequence takes effect immediately (no restart required).
+Changing the sequence takes effect immediately, no restart required.
 If the control file is empty,
 contains only comments,
 or doesn't exist,
