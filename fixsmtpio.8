@@ -178,30 +178,31 @@ computes the replacement string via an event-specific internal routine.
 (If no corresponding routine exists,
 .B fixsmtpio
 will refuse to run.)
-
 Routines exist for
-.TP 10
+.RS 10
+.TP 6
 .BR HELP :
 .br
 Prepend this program's home page,
 in an attempt to direct support requests to
 .BR AUTHOR .
 Please enable it!
-.TP 10
-.BR "greeting",
+.TP 6
 .BR EHLO ,
 .BR HELO ,
-and
-.BR QUIT :
+.BR QUIT ,
+and "greeting":
 .br
 Include
 .I smtpgreeting
-in the response.
+in the response,
+matching what
 .B qmail-smtpd
-already does so,
-and this brings
+already does.
+This brings
 .B ofmipd
 up to par.
+.RE
 .TP 0
 Rules are applied in the order written. For instance, if two rules
 match, the later rule re-modifies the response returned by the
