@@ -126,10 +126,13 @@ $ echo EHLO | qmail-smtpd \\
      | sed -e '1,2d' -e 's|^....||' | egrep -v '^(STARTTLS|AUTH)'
 
 .B authup
-will automatically advertise TLS support when run under
+will automatically advertise TLS support when
+.B UCSPITLS
+has been enabled in the
 .B "sslserver -n"
 or
-.BR "s6-ucspitlsd" .
+.B "s6-ucspitlsd"
+environment.
 .TP 5
 .I timeoutsmtpd / timeoutpop3d
 Number of seconds
