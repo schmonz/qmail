@@ -219,6 +219,14 @@ static void logstart(char *protocol) {
   substdio_putsflush(&sserr,"\n");
 }
 
+static void logtls() {
+  substdio_puts(&sserr,PROGNAME);
+  substdio_puts(&sserr," ");
+  substdio_puts(&sserr,authup_pid);
+  substdio_puts(&sserr," negotiated TLS");
+  substdio_putsflush(&sserr,"\n");
+}
+
 static void exit_according_to_child_exit(int exitcode,int child) {
   switch (exitcode) {
     case EXITCODE_CHECKPASSWORD_UNACCEPTABLE:
@@ -342,6 +350,7 @@ static void pop3_stls(char *arg) {
   seenuser = 0;
 
   in_tls = 1;
+  logtls();
 }
 
 static void pop3_user(char *arg) {
@@ -412,6 +421,7 @@ static void smtp_starttls() {
   ssin.p = 0;
 
   in_tls = 1;
+  logtls();
 }
 
 static stralloc authin = {0};
