@@ -177,6 +177,7 @@ causes the response to be sent as is.
 computes the replacement string via an event-specific internal routine.
 (If no corresponding routine exists,
 .B fixsmtpio
+will refuse to run.)
 
 Routines exist for
 .TP 10
@@ -196,12 +197,11 @@ and
 Include
 .I smtpgreeting
 in the response.
-This is harmless with
-.BR qmail-smtpd ,
-which already does so,
-and brings
-.BR ofmipd 's
-behavior up to par.
+.B qmail-smtpd
+already does so,
+and this brings
+.B ofmipd
+up to par.
 .TP 0
 Rules are applied in the order written. For instance, if two rules
 match, the later rule re-modifies the response returned by the
