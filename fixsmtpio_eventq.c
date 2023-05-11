@@ -5,9 +5,6 @@
 
 #include "fixsmtpio_eventq.h"
 
-#define NULL 0
-#include <sys/queue.h>
-
 typedef struct node {
   const char *event;
   TAILQ_ENTRY(node) nodes;
