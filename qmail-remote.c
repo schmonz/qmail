@@ -266,14 +266,18 @@ char *append;
 {
 #ifdef TLS
   /* shouldn't talk to the client unless in an appropriate state */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+
+#if OPENSSL_VERSION_NUMBER < 0x00908000L
+#define SSL_get_state(ssl) ssl->state
+#endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+#define OSSL_HANDSHAKE_STATE int
+#define TLS_ST_BEFORE SSL_ST_BEFORE
+#define TLS_ST_OK SSL_ST_OK
+#endif
   OSSL_HANDSHAKE_STATE state = ssl ? SSL_get_state(ssl) : TLS_ST_BEFORE;
   if (state & TLS_ST_OK || (!smtps && state & TLS_ST_BEFORE))
   
-#else
-  int state = ssl ? ssl->state : SSL_ST_BEFORE;
-  if (state & SSL_ST_OK || (!smtps && state & SSL_ST_BEFORE))
-#endif
 #endif
   substdio_putsflush(&smtpto,"QUIT\r\n");
   /* waiting for remote side is just too ridiculous */
