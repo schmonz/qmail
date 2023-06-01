@@ -10,7 +10,7 @@
 #include "substdio.h"
 #include "wait.h"
 
-#define HOMEPAGE                 "https://schmonz.com/qmail/acceptutils"
+#define HOMEPAGE                 "https://schmonz.com/software/acceptutils"
 #define PROGNAME                 "fixsmtpio"
 
 #define EVENT_GREETING           "greeting"

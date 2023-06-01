@@ -23,7 +23,7 @@
 #include "acceptutils_ucspitls.h"
 #include "acceptutils_unistd.h"
 
-#define HOMEPAGE "https://schmonz.com/qmail/acceptutils"
+#define HOMEPAGE "https://schmonz.com/software/acceptutils"
 #define PROGNAME "authup"
 
 #define EXITCODE_CHECKPASSWORD_UNACCEPTABLE   1

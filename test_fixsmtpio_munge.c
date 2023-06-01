@@ -135,7 +135,7 @@ START_TEST (test_munge_line_internally) {
   assert_munge_line_internally("250-STARTSOMETHING", 1, "yo.sup.local", "ehlo", "250-STARTSOMETHING");
   assert_munge_line_internally("250 ENDSOMETHING", 2, "yo.sup.local", "ehlo", "250 ENDSOMETHING");
   assert_munge_line_internally("250 applesauce", 0, "yo.sup.local", "helo", "250 yo.sup.local");
-  assert_munge_line_internally("214 ask your grandmother\r\n", 0, "yo.sup.local", "help", "214 fixsmtpio home page: https://schmonz.com/qmail/acceptutils\r\n214 ask your grandmother\r\n");
+  assert_munge_line_internally("214 ask your grandmother\r\n", 0, "yo.sup.local", "help", "214 fixsmtpio home page: https://schmonz.com/software/acceptutils\r\n214 ask your grandmother\r\n");
   assert_munge_line_internally("221 get outta here", 0, "yo.sup.local", "quit", "221 yo.sup.local");
 }
 END_TEST
